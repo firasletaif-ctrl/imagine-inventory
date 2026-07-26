@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Créer un compte{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="brand-icon large">✦</div>
+            <h1>IMAGINE<span class="text-red"> EVENTS</span></h1>
+            <p class="auth-subtitle">Créer votre compte</p>
+        </div>
+
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="full_name">Nom complet</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="full_name" name="full_name" required
+                           placeholder="Votre nom et prénom" autocomplete="name">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">📧</span>
+                    <input type="email" id="email" name="email" required
+                           placeholder="vous@imagine-events.com" autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" id="password" name="password" required
+                           placeholder="Au moins 6 caractères" autocomplete="new-password">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirmer le mot de passe</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" id="confirm_password" name="confirm_password" required
+                           placeholder="Répétez le mot de passe" autocomplete="new-password">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">
+                Créer mon compte
+                <span class="btn-arrow">→</span>
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <span>Déjà un compte ?</span>
+            <a href="{{ url_for('login') }}">Se connecter</a>
+        </div>
+
+        <div class="auth-badge">
+            <span>🇹🇳 Imagine Events Tunisia</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

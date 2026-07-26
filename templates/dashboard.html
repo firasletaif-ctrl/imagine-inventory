@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Dépôt{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- Header -->
+    <div class="dash-header">
+        <div>
+            <h1 class="dash-title">Dépôt Imagine Events</h1>
+            <p class="dash-subtitle">{{ equipment_list | length }} matériel(s) disponible(s)</p>
+        </div>
+        <div class="dash-actions">
+            <a href="{{ url_for('add_equipment') }}" class="btn btn-accent">
+                ➕ Ajouter du matériel
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-value">{{ equipment_list | length }}</div>
+            <div class="stat-label">Articles au dépôt</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📤</div>
+            <div class="stat-value">{{ active_borrows | length }}</div>
+            <div class="stat-label">Emprunts actifs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value">{{ equipment_list | selectattr('available_quantity', 'gt', 0) | list | length }}</div>
+            <div class="stat-label">Disponibles</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-value">{{ active_borrows | selectattr('status', 'eq', 'late') | list | length }}</div>
+            <div class="stat-label">En retard</div>
+        </div>
+    </div>
+
+    <!-- Search + Filter -->
+    <div class="search-section">
+        <form method="GET" action="{{ url_for('dashboard') }}" class="search-form">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" name="search" value="{{ search }}"
+                       placeholder="Rechercher par nom, référence, caractéristiques..."
+                       class="search-input" autocomplete="off">
+                {% if search %}
+                <a href="{{ url_for('dashboard') }}" class="search-clear">✕</a>
+                {% endif %}
+            </div>
+            <select name="category" class="filter-select" onchange="this.form.submit()">
+                <option value="">📂 Toutes les catégories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if category_filter == cat.id|string %}selected{% endif %}>
+                    {{ cat.icon }} {{ cat.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <!-- Quick category filter -->
+        <div class="category-chips">
+            <a href="{{ url_for('dashboard') }}" class="chip {% if not category_filter %}active{% endif %}">Tout</a>
+            {% for cat in categories %}
+            <a href="{{ url_for('dashboard', category=cat.id) }}"
+               class="chip {% if category_filter == cat.id|string %}active{% endif %}">
+                {{ cat.icon }} {{ cat.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Equipment Grid -->
+    <div class="equipment-grid">
+        {% for eq in equipment_list %}
+        <div class="equipment-card {% if eq.available_quantity == 0 %}unavailable{% endif %}"
+             onclick="window.location='{{ url_for('equipment_detail', equipment_id=eq.id) }}'">
+            <div class="card-image">
+                {% if eq.primary_image() %}
+                <img src="{{ url_for('uploaded_file', filename=eq.primary_image()) }}" alt="{{ eq.name }}" loading="lazy">
+                {% else %}
+                <div class="card-placeholder">
+                    <span class="placeholder-icon">{{ eq.category.icon if eq.category else '📦' }}</span>
+                </div>
+                {% endif %}
+                <div class="card-badge {% if eq.available_quantity > 0 %}badge-available{% else %}badge-unavailable{% endif %}">
+                    {% if eq.available_quantity > 0 %}
+                    ✅ {{ eq.available_quantity }} dispo
+                    {% else %}
+                    🔴 Indisponible
+                    {% endif %}
+                </div>
+                {% if eq.condition == 'Excellent' %}
+                <div class="card-quality">Premium</div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="card-category">
+                    {% if eq.category %}
+                    {{ eq.category.icon }} {{ eq.category.name }}
+                    {% endif %}
+                </div>
+                <h3 class="card-title">{{ eq.name }}</h3>
+                <p class="card-desc">{{ eq.description[:80] }}{% if eq.description | length > 80 %}...{% endif %}</p>
+                <div class="card-meta">
+                    <span class="meta-ref">{{ eq.reference }}</span>
+                    <span class="meta-qty">Qté: {{ eq.total_quantity }}</span>
+                </div>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-sm btn-borrow"
+                        onclick="event.stopPropagation(); openBorrowModal('{{ eq.id }}', '{{ eq.name | escape }}', {{ eq.available_quantity }})"
+                        {% if eq.available_quantity == 0 %}disabled{% endif %}>
+                    📤 Emprunter
+                </button>
+                <span class="card-location">📍 {{ eq.location }}</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h3>Aucun matériel trouvé</h3>
+            <p>Essayez de modifier votre recherche ou ajoutez du nouveau matériel.</p>
+            <a href="{{ url_for('add_equipment') }}" class="btn btn-primary">➕ Ajouter du matériel</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Borrow Modal -->
+<div class="modal-overlay" id="borrowModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>📤 Emprunter du matériel</h2>
+            <button class="modal-close" onclick="closeBorrowModal()">✕</button>
+        </div>
+        <form id="borrowForm" method="POST" onsubmit="submitBorrow(event)">
+            <input type="hidden" id="borrowEquipmentId" name="equipment_id">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Matériel</label>
+                    <div class="selected-equipment" id="selectedEquipmentName"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="borrowQuantity">Quantité</label>
+                        <input type="number" id="borrowQuantity" name="quantity" min="1" value="1" required>
+                        <small id="maxQtyHint"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="borrowReturnDate">Date de retour</label>
+                        <input type="date" id="borrowReturnDate" name="return_date" required
+                               min="{{ today.strftime('%Y-%m-%d') }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="borrowEvent">Événement (optionnel)</label>
+                    <input type="text" id="borrowEvent" name="event_name" placeholder="Ex: Congrès Médical Tunis 2026">
+                </div>
+                <div class="form-group">
+                    <label for="borrowNotes">Notes (optionnel)</label>
+                    <textarea id="borrowNotes" name="notes" rows="2" placeholder="Détails supplémentaires..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeBorrowModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary">Confirmer l'emprunt</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Active Borrows Panel -->
+{% if active_borrows %}
+<div class="borrows-panel">
+    <h2 class="section-title">📤 Emprunts en cours</h2>
+    <div class="borrows-list">
+        {% for b in active_borrows %}
+        <div class="borrow-row {% if b.status == 'late' %}borrow-late{% endif %}">
+            <div class="borrow-info">
+                <strong>{{ b.equipment.name }}</strong>
+                <span class="borrow-qty">×{{ b.quantity }}</span>
+                <span class="borrow-user">par {{ b.user.full_name }}</span>
+                {% if b.event_name %}
+                <span class="borrow-event">🎯 {{ b.event_name }}</span>
+                {% endif %}
+            </div>
+            <div class="borrow-dates">
+                <span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">
+                    ⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}
+                    {% if b.status == 'late' %}⚠️ EN RETARD{% endif %}
+                </span>
+            </div>
+            <form method="POST" action="{{ url_for('return_equipment', borrow_id=b.id) }}" class="borrow-action">
+                <button class="btn btn-sm btn-success">✅ Retourner</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openBorrowModal(id, name, maxQty) {
+    document.getElementById('borrowEquipmentId').value = id;
+    document.getElementById('selectedEquipmentName').textContent = name;
+    document.getElementById('borrowQuantity').max = maxQty;
+    document.getElementById('borrowQuantity').value = 1;
+    document.getElementById('maxQtyHint').textContent = 'Max disponible: ' + maxQty;
+    document.getElementById('borrowReturnDate').value = '';
+    document.getElementById('borrowEvent').value = '';
+    document.getElementById('borrowNotes').value = '';
+    document.getElementById('borrowModal').classList.add('open');
+}
+
+function closeBorrowModal() {
+    document.getElementById('borrowModal').classList.remove('open');
+}
+
+function submitBorrow(e) {
+    e.preventDefault();
+    const form = document.getElementById('borrowForm');
+    const id = document.getElementById('borrowEquipmentId').value;
+    form.action = '/borrow/' + id;
+    form.submit();
+}
+
+// Close modal on overlay click
+document.getElementById('borrowModal').addEventListener('click', function(e) {
+    if (e.target === this) closeBorrowModal();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeBorrowModal();
+});
+</script>
+{% endblock %}

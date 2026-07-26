@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Modifier : {{ equipment.name }}{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <div class="breadcrumb">
+        <a href="{{ url_for('equipment_detail', equipment_id=equipment.id) }}">← Retour à la fiche</a>
+    </div>
+
+    <div class="page-header">
+        <h1>✏️ Modifier : {{ equipment.name }}</h1>
+        <p>Réf: {{ equipment.reference }}</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="equipment-form">
+        <div class="form-card">
+            <h2>📦 Informations générales</h2>
+            <div class="form-row">
+                <div class="form-group flex-2">
+                    <label for="name">Nom du matériel *</label>
+                    <input type="text" id="name" name="name" required value="{{ equipment.name }}">
+                </div>
+                <div class="form-group">
+                    <label for="reference">Référence</label>
+                    <input type="text" id="reference" name="reference" value="{{ equipment.reference }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="3">{{ equipment.description }}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="category_id">Catégorie</label>
+                    <select id="category_id" name="category_id">
+                        <option value="">— Aucune —</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if equipment.category_id == cat.id %}selected{% endif %}>
+                            {{ cat.icon }} {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="total_quantity">Quantité totale</label>
+                    <input type="number" id="total_quantity" name="total_quantity"
+                           min="1" value="{{ equipment.total_quantity }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="condition">État</label>
+                    <select id="condition" name="condition">
+                        {% for cond in ['Excellent', 'Très bon état', 'Bon état', 'État moyen', 'À réviser'] %}
+                        <option {% if equipment.condition == cond %}selected{% endif %}>{{ cond }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="location">Emplacement</label>
+                    <input type="text" id="location" name="location" value="{{ equipment.location }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card">
+            <h2>📋 Spécifications techniques</h2>
+            <div class="form-group">
+                <label for="specifications">Caractéristiques</label>
+                <textarea id="specifications" name="specifications" rows="5">{{ equipment.specifications }}</textarea>
+                <small>Format recommandé : <code>Clé: Valeur</code> — une par ligne.</small>
+            </div>
+        </div>
+
+        <!-- Existing Images -->
+        {% if equipment.images %}
+        <div class="form-card">
+            <h2>🖼️ Images actuelles</h2>
+            <div class="existing-images">
+                {% for img in equipment.images %}
+                <div class="existing-img">
+                    <img src="{{ url_for('uploaded_file', filename=img.filename) }}" alt="Image {{ loop.index }}">
+                    <form method="POST" action="{{ url_for('delete_image', equipment_id=equipment.id, image_id=img.id) }}"
+                          onsubmit="return confirm('Supprimer cette image ?')" class="delete-img-form">
+                        <button class="btn btn-sm btn-danger">🗑️</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="form-card">
+            <h2>📸 Ajouter des photos</h2>
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📸</div>
+                <p>Glissez-déposez des images ici ou cliquez pour parcourir</p>
+                <small>PNG, JPG, WEBP — Max 16 Mo par fichier</small>
+                <input type="file" id="images" name="images" accept="image/*"
+                       multiple style="display:none" onchange="previewImages(event)">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('images').click()">
+                    📁 Choisir des fichiers
+                </button>
+            </div>
+            <div class="image-previews" id="imagePreviews"></div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('equipment_detail', equipment_id=equipment.id) }}" class="btn btn-secondary">Annuler</a>
+            <button type="submit" class="btn btn-accent btn-lg">
+                💾 Enregistrer les modifications
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewImages(event) {
+    const container = document.getElementById('imagePreviews');
+    container.innerHTML = '';
+    for (const file of event.target.files) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.innerHTML = '<img src="' + e.target.result + '" alt="Aperçu">' +
+                           '<span class="preview-name">' + file.name + '</span>';
+            container.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const input = document.getElementById('images');
+    const dt = new DataTransfer();
+    for (const file of e.dataTransfer.files) {
+        if (file.type.startsWith('image/')) dt.items.add(file);
+    }
+    input.files = dt.files;
+    previewImages({ target: input });
+});
+zone.addEventListener('click', () => document.getElementById('images').click());
+</script>
+{% endblock %}
