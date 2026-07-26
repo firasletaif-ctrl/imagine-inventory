@@ -123,11 +123,27 @@ class Borrow(db.Model):
     event_name = db.Column(db.String(200), default='')
 
 
+class ActivityLog(db.Model):
+    __tablename__ = 'activity_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    action = db.Column(db.String(50), nullable=False)  # login, borrow, return, delete, create_user, delete_borrow, clear_history
+    description = db.Column(db.Text, default='')
+    equipment_name = db.Column(db.String(200), default='')
+    quantity = db.Column(db.Integer, default=0)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # ── Login manager ───────────────────────────────────────────
 
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+@app.template_filter('get_user')
+def get_user_filter(user_id):
+    return db.session.get(User, int(user_id)) if user_id else None
 
 
 # ── Helpers ─────────────────────────────────────────────────
@@ -159,14 +175,23 @@ def update_availability(equipment_id):
     equipment = db.session.get(Equipment, equipment_id)
     if not equipment:
         return
-    active_borrows = Borrow.query.filter_by(
-        equipment_id=equipment_id, status='active'
-    ).count()
-    # Also sum quantities
     active_qty = db.session.query(db.func.sum(Borrow.quantity)).filter_by(
         equipment_id=equipment_id, status='active'
     ).scalar() or 0
     equipment.available_quantity = max(0, equipment.total_quantity - active_qty)
+    db.session.commit()
+
+
+def log_action(action, description='', equipment_name='', quantity=0):
+    """Record an activity in the logs."""
+    log = ActivityLog(
+        user_id=current_user.id,
+        action=action,
+        description=description,
+        equipment_name=equipment_name,
+        quantity=quantity
+    )
+    db.session.add(log)
     db.session.commit()
 
 
@@ -205,6 +230,9 @@ def login():
         if user and user.check_password(password):
             login_user(user, remember=request.form.get('remember'))
             next_page = request.args.get('next')
+            # Log it
+            log = ActivityLog(user_id=user.id, action='login', description=f'Connexion de {user.full_name}')
+            db.session.add(log); db.session.commit()
             flash(f'Bienvenue {user.full_name} !', 'success')
             return redirect(next_page or url_for('dashboard'))
         else:
@@ -349,8 +377,8 @@ def borrow_equipment(equipment_id):
     except ValueError:
         return jsonify({'success': False, 'message': 'Format de date invalide.'}), 400
 
-    if return_date <= date.today():
-        return jsonify({'success': False, 'message': 'La date de retour doit être dans le futur.'}), 400
+    if return_date < date.today():
+        return jsonify({'success': False, 'message': 'La date de retour ne peut pas etre dans le passe.'}), 400
 
     if qty < 1 or qty > equipment.available_quantity:
         return jsonify({
@@ -370,6 +398,8 @@ def borrow_equipment(equipment_id):
     db.session.add(borrow)
     db.session.commit()
     update_availability(equipment_id)
+
+    log_action('borrow', f'Emprunt de {qty}x {equipment.name}', equipment.name, qty)
 
     flash(f'{qty} × {equipment.name} emprunté(s) jusqu\'au {return_date.strftime("%d/%m/%Y")}.', 'success')
 
@@ -391,6 +421,8 @@ def return_equipment(borrow_id):
     borrow.actual_return_date = datetime.utcnow()
     db.session.commit()
     update_availability(borrow.equipment_id)
+
+    log_action('return', f'Retour de {borrow.quantity}x {borrow.equipment.name}', borrow.equipment.name, borrow.quantity)
 
     flash(f'{borrow.equipment.name} retourné avec succès.', 'success')
     return redirect(url_for('dashboard'))
@@ -643,6 +675,38 @@ def delete_user(user_id):
         flash(f'{user.full_name} supprime.', 'info')
 
     return redirect(url_for('manage_users'))
+
+
+# ── Routes: Delete borrow history (admin only, password required) ──
+
+@app.route('/admin/clear-history', methods=['POST'])
+@admin_required
+def clear_history():
+    password = request.form.get('password', '')
+    if not current_user.check_password(password):
+        flash('Mot de passe administrateur incorrect.', 'error')
+        return redirect(url_for('dashboard'))
+
+    count = Borrow.query.filter_by(status='returned').count()
+    Borrow.query.filter_by(status='returned').delete()
+    db.session.commit()
+
+    log_action('clear_history', f'Historique efface ({count} emprunts termines)')
+    flash(f'{count} emprunt(s) termines effaces de l\'historique.', 'success')
+    return redirect(url_for('dashboard'))
+
+
+# ── Routes: Activity Logs (admin only) ──────────────────────
+
+@app.route('/admin/logs')
+@admin_required
+def activity_logs():
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    return render_template('activity_logs.html', logs=logs)
 
 
 # ── Routes: Categories ──────────────────────────────────────
