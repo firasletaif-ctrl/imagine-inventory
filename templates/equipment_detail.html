@@ -13,15 +13,15 @@
         <div class="detail-gallery">
             {% if eq.all_images() %}
             <div class="gallery-main" id="galleryMain">
-                <img src="{{ url_for('uploaded_file', filename=eq.all_images()[0]) }}"
+                <img src="{{ url_for('uploaded_file', fn=eq.all_images()[0]) }}"
                      alt="{{ eq.name }}" id="mainImage">
             </div>
             {% if eq.all_images() | length > 1 %}
             <div class="gallery-thumbs">
                 {% for img in eq.all_images() %}
                 <div class="gallery-thumb {% if loop.first %}active{% endif %}"
-                     onclick="switchImage('{{ url_for('uploaded_file', filename=img) }}', this)">
-                    <img src="{{ url_for('uploaded_file', filename=img) }}" alt="Image {{ loop.index }}">
+                     onclick="switchImage('{{ url_for('uploaded_file', fn=img) }}', this)">
+                    <img src="{{ url_for('uploaded_file', fn=img) }}" alt="Image {{ loop.index }}">
                 </div>
                 {% endfor %}
             </div>

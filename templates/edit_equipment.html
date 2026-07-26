@@ -77,7 +77,7 @@
             <div class="existing-images">
                 {% for img in eq.images %}
                 <div class="existing-img">
-                    <img src="{{ url_for('uploaded_file', filename=img.filename) }}" alt="Image {{ loop.index }}">
+                    <img src="{{ url_for('uploaded_file', fn=img.filename) }}" alt="Image {{ loop.index }}">
                     <form method="POST" action="{{ url_for('delete_image', eid=eq.id, iid=img.id) }}"
                           onsubmit="return confirm('Supprimer cette image ?')" class="delete-img-form">
                         <button class="btn btn-sm btn-danger">🗑️</button>

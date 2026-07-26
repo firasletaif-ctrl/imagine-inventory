@@ -138,17 +138,35 @@ def get_user_filter(uid): return db.session.get(User, int(uid)) if uid else None
 def allowed_file(fn): return '.' in fn and fn.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_uploaded_image(file):
-    if file and allowed_file(file.filename):
-        ext = file.filename.rsplit('.',1)[1].lower()
-        uname = f"{uuid.uuid4().hex}.{ext}"
-        fpath = os.path.join(app.config['UPLOAD_FOLDER'], uname)
+    """Enregistre une image, retourne le nom du fichier ou None."""
+    if not file or not file.filename:
+        return None
+    if not allowed_file(file.filename):
+        return None
+    file.seek(0, 2)
+    if file.tell() == 0:
+        return None
+    file.seek(0)
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    uname = f"{uuid.uuid4().hex}.{ext}"
+    fpath = os.path.join(app.config['UPLOAD_FOLDER'], uname)
+    try:
         file.save(fpath)
-        try:
-            img = Image.open(fpath); img.thumbnail((1200,1200))
-            img.save(fpath, optimize=True, quality=85)
-        except: pass
-        return uname
-    return None
+        img = Image.open(fpath)
+        img.thumbnail((1200, 1200))
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        jpg_name = f"{uuid.uuid4().hex}.jpg"
+        jpg_path = os.path.join(app.config['UPLOAD_FOLDER'], jpg_name)
+        img.save(jpg_path, 'JPEG', optimize=True, quality=85)
+        if ext != 'jpg':
+            try: os.remove(fpath)
+            except: pass
+        return jpg_name
+    except Exception:
+        if os.path.exists(fpath):
+            return uname
+        return None
 
 def update_availability(eq_id):
     eq = db.session.get(Equipment, eq_id)
@@ -287,11 +305,21 @@ def borrow_equipment(eid):
 @permission_required('return_equipment')
 def return_equipment(bid):
     b = db.session.get(Borrow, bid)
-    if b and b.status in ('active','late'):
-        b.status = 'returned'; b.actual_return_date = tunisia_now()
-        db.session.commit(); update_availability(b.equipment_id)
-        log_action('return', f'Retour de {b.quantity}x {b.equipment.name}', b.equipment.name, b.quantity)
-        flash(f'{b.equipment.name} retourne.','success')
+    if not b or b.status not in ('active','late'):
+        flash('Emprunt introuvable ou deja retourne.', 'error')
+        return redirect(url_for('dashboard'))
+
+    # Seul l'emprunteur ou un admin peut retourner
+    is_admin = current_user.has_permission('manage_users')
+    if b.user_id != current_user.id and not is_admin:
+        flash('Vous ne pouvez retourner que vos propres emprunts. Seul un admin peut retourner pour quelqu\'un d\'autre.', 'error')
+        return redirect(url_for('dashboard'))
+
+    b.status = 'returned'; b.actual_return_date = tunisia_now()
+    db.session.commit(); update_availability(b.equipment_id)
+    who = current_user.full_name if b.user_id == current_user.id else f'{current_user.full_name} (admin) pour {b.user.full_name}'
+    log_action('return', f'Retour de {b.quantity}x {b.equipment.name} par {who}', b.equipment.name, b.quantity)
+    flash(f'{b.equipment.name} retourne avec succes.', 'success')
     return redirect(url_for('dashboard'))
 
 @app.route('/equipment/add', methods=['GET','POST'])
