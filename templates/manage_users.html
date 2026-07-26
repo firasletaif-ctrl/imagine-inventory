@@ -28,7 +28,7 @@
                 <td>{{ u.created_at.strftime('%d/%m/%Y') }}</td>
                 <td>{% if u.id != current_user.id %}
                     <button class="btn btn-sm btn-secondary" onclick="openEditUser('{{ u.id }}','{{ u.full_name|replace("'","\\'") }}',{{ u.role_id or 0 }})">✏️</button>
-                    <form method="POST" action="{{ url_for('delete_user',user_id=u.id) }}" style="display:inline" onsubmit="return confirm('Supprimer {{ u.full_name|replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                    <form method="POST" action="{{ url_for('delete_user',uid=u.id) }}" style="display:inline" onsubmit="return confirm('Supprimer {{ u.full_name|replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
                     {% else %}<span style="color:var(--gray-400);font-size:.8rem">Vous</span>{% endif %}
                 </td>
             </tr>{% endfor %}

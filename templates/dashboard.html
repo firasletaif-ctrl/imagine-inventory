@@ -38,7 +38,12 @@
         <div class="category-chips">
             <a href="{{ url_for('dashboard') }}" class="chip {% if not category_filter %}active{% endif %}">Tout</a>
             {% for cat in categories %}
-            <a href="{{ url_for('dashboard', category=cat.id) }}" class="chip {% if category_filter == cat.id|string %}active{% endif %}">{{ cat.icon }} {{ cat.name }}</a>
+            <span style="display:inline-flex;align-items:center;gap:0">
+                <a href="{{ url_for('dashboard', category=cat.id) }}" class="chip {% if category_filter == cat.id|string %}active{% endif %}">{{ cat.icon }} {{ cat.name }}</a>
+                {% if current_user.has_permission('manage_categories') %}
+                <form method="POST" action="{{ url_for('delete_category', cid=cat.id) }}" style="display:inline;margin-left:-8px" onsubmit="return confirm('Supprimer la categorie {{ cat.name|replace("'","\\'") }} ?')"><button style="background:none;border:none;color:var(--gray-400);cursor:pointer;font-size:.8rem;padding:0 .3rem" title="Supprimer">×</button></form>
+                {% endif %}
+            </span>
             {% endfor %}
             <button class="chip" style="border:2px dashed var(--blue);color:var(--blue);cursor:pointer" onclick="openAddCategoryModal()" title="Ajouter une categorie">➕ Nouvelle categorie</button>
         </div>

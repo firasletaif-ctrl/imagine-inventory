@@ -313,6 +313,7 @@ def add_equipment():
             sn = save_uploaded_image(f)
             if sn: db.session.add(EquipmentImage(filename=sn, equipment_id=eq.id))
         db.session.commit()
+        log_action('add_equipment', f'Ajout de {name}', name)
         flash(f'"{name}" ajoute au depot !','success')
         return redirect(url_for('equipment_detail', eid=eq.id))
     cats = Category.query.order_by(Category.name).all()
@@ -362,6 +363,7 @@ def delete_equipment(eid):
             fp = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
             if os.path.exists(fp): os.remove(fp)
         db.session.delete(eq); db.session.commit()
+        log_action('delete_equipment', f'Suppression de {eq.name}', eq.name)
         flash(f'"{eq.name}" supprime.','info')
     return redirect(url_for('dashboard'))
 
@@ -514,7 +516,21 @@ def add_category():
     icon = request.form.get('icon','\U0001f4e6')
     if name and not Category.query.filter_by(name=name).first():
         db.session.add(Category(name=name, icon=icon)); db.session.commit()
+        log_action('add_category', f'Ajout de la categorie {name}')
         flash(f'Categorie "{name}" ajoutee.','success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/categories/<int:cid>/delete', methods=['POST'])
+@permission_required('manage_categories')
+def delete_category(cid):
+    cat = db.session.get(Category, cid)
+    if not cat: flash('Categorie introuvable.','error')
+    elif Equipment.query.filter_by(category_id=cid).first(): flash(f'Des materiels utilisent la categorie {cat.name}. Reassignez-les d\'abord.','error')
+    else:
+        db.session.delete(cat); db.session.commit()
+        log_action('delete_category', f'Suppression de la categorie {cat.name}')
+        flash(f'Categorie "{cat.name}" supprimee.','info')
     return redirect(url_for('dashboard'))
 
 # ── Init DB ──

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ equipment.name }}{% endblock %}
+{% block title %}{{ eq.name }}{% endblock %}
 
 {% block content %}
 <div class="detail-page">
@@ -11,14 +11,14 @@
     <!-- Hero -->
     <div class="detail-hero">
         <div class="detail-gallery">
-            {% if equipment.all_images() %}
+            {% if eq.all_images() %}
             <div class="gallery-main" id="galleryMain">
-                <img src="{{ url_for('uploaded_file', filename=equipment.all_images()[0]) }}"
-                     alt="{{ equipment.name }}" id="mainImage">
+                <img src="{{ url_for('uploaded_file', filename=eq.all_images()[0]) }}"
+                     alt="{{ eq.name }}" id="mainImage">
             </div>
-            {% if equipment.all_images() | length > 1 %}
+            {% if eq.all_images() | length > 1 %}
             <div class="gallery-thumbs">
-                {% for img in equipment.all_images() %}
+                {% for img in eq.all_images() %}
                 <div class="gallery-thumb {% if loop.first %}active{% endif %}"
                      onclick="switchImage('{{ url_for('uploaded_file', filename=img) }}', this)">
                     <img src="{{ url_for('uploaded_file', filename=img) }}" alt="Image {{ loop.index }}">
@@ -29,7 +29,7 @@
             {% else %}
             <div class="gallery-placeholder">
                 <span class="placeholder-icon large">
-                    {{ equipment.category.icon if equipment.category else '📦' }}
+                    {{ eq.category.icon if eq.category else '📦' }}
                 </span>
                 <p>Aucune image</p>
             </div>
@@ -38,42 +38,42 @@
 
         <div class="detail-info">
             <div class="detail-header">
-                {% if equipment.category %}
-                <span class="detail-cat">{{ equipment.category.icon }} {{ equipment.category.name }}</span>
+                {% if eq.category %}
+                <span class="detail-cat">{{ eq.category.icon }} {{ eq.category.name }}</span>
                 {% endif %}
-                {% if equipment.condition == 'Excellent' %}
+                {% if eq.condition == 'Excellent' %}
                 <span class="quality-badge">Premium</span>
                 {% endif %}
             </div>
 
-            <h1 class="detail-name">{{ equipment.name }}</h1>
-            <p class="detail-ref">Ref: {{ equipment.reference }}</p>
+            <h1 class="detail-name">{{ eq.name }}</h1>
+            <p class="detail-ref">Ref: {{ eq.reference }}</p>
 
-            {% if equipment.description %}
-            <p class="detail-desc">{{ equipment.description }}</p>
+            {% if eq.description %}
+            <p class="detail-desc">{{ eq.description }}</p>
             {% endif %}
 
             <!-- Availability -->
-            <div class="availability-box {% if equipment.available_quantity > 0 %}available{% else %}unavailable{% endif %}">
+            <div class="availability-box {% if eq.available_quantity > 0 %}available{% else %}unavailable{% endif %}">
                 <div class="avail-icon">
-                    {% if equipment.available_quantity > 0 %}✅{% else %}🔴{% endif %}
+                    {% if eq.available_quantity > 0 %}✅{% else %}🔴{% endif %}
                 </div>
                 <div class="avail-info">
                     <div class="avail-status">
-                        {% if equipment.available_quantity > 0 %}
+                        {% if eq.available_quantity > 0 %}
                         Disponible
                         {% else %}
                         Indisponible
                         {% endif %}
                     </div>
                     <div class="avail-qty">
-                        {{ equipment.available_quantity }} / {{ equipment.total_quantity }} disponible(s)
+                        {{ eq.available_quantity }} / {{ eq.total_quantity }} disponible(s)
                     </div>
                 </div>
             </div>
 
             <!-- Quick borrow -->
-            {% if equipment.available_quantity > 0 %}
+            {% if eq.available_quantity > 0 %}
             <button class="btn btn-accent btn-full" onclick="openDetailBorrow()">
                 📤 Emprunter ce matériel
             </button>
@@ -83,29 +83,29 @@
             <div class="detail-meta-grid">
                 <div class="meta-item">
                     <span class="meta-label">État</span>
-                    <span class="meta-value">{{ equipment.condition }}</span>
+                    <span class="meta-value">{{ eq.condition }}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Emplacement</span>
-                    <span class="meta-value">📍 {{ equipment.location }}</span>
+                    <span class="meta-value">📍 {{ eq.location }}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Quantité totale</span>
-                    <span class="meta-value">{{ equipment.total_quantity }}</span>
+                    <span class="meta-value">{{ eq.total_quantity }}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Ajouté le</span>
-                    <span class="meta-value">{{ equipment.created_at.strftime('%d/%m/%Y') }}</span>
+                    <span class="meta-value">{{ eq.created_at.strftime('%d/%m/%Y') }}</span>
                 </div>
             </div>
 
             <!-- Actions -->
             <div class="detail-actions">
-                <a href="{{ url_for('edit_equipment', equipment_id=equipment.id) }}" class="btn btn-secondary">
+                <a href="{{ url_for('edit_equipment', eid=eq.id) }}" class="btn btn-secondary">
                     ✏️ Modifier
                 </a>
-                <form method="POST" action="{{ url_for('delete_equipment', equipment_id=equipment.id) }}"
-                      onsubmit="return confirm('Supprimer définitivement {{ equipment.name | escape }} ?')" style="display:inline">
+                <form method="POST" action="{{ url_for('delete_equipment', eid=eq.id) }}"
+                      onsubmit="return confirm('Supprimer definitivement {{ eq.name | escape }} ?')" style="display:inline">
                     <button type="submit" class="btn btn-danger">🗑️ Supprimer</button>
                 </form>
             </div>
@@ -113,11 +113,11 @@
     </div>
 
     <!-- Specifications -->
-    {% if equipment.specifications %}
+    {% if eq.specifications %}
     <div class="detail-section">
         <h2>📋 Spécifications</h2>
         <div class="specs-card">
-            {% for line in equipment.specifications.split('\n') if line.strip() %}
+            {% for line in eq.specifications.split('\n') if line.strip() %}
             <div class="spec-row">
                 {% if ':' in line %}
                 <span class="spec-key">{{ line.split(':', 1)[0].strip() }}</span>
@@ -184,11 +184,11 @@
 {% if current_user.has_permission('clear_history') %}
 <div class="modal-overlay" id="clearEqHistoryModal">
     <div class="modal">
-        <div class="modal-header"><h2>⚠️ Effacer l'historique de {{ equipment.name }}</h2><button class="modal-close" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')">✕</button></div>
-        <form method="POST" action="{{ url_for('clear_equipment_history', equipment_id=equipment.id) }}">
+        <div class="modal-header"><h2>⚠️ Effacer l'historique de {{ eq.name }}</h2><button class="modal-close" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')">✕</button></div>
+        <form method="POST" action="{{ url_for('clear_equipment_history', eid=eq.id) }}">
             <div class="modal-body">
                 <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin-bottom:1rem">
-                    <strong>⚠️ Attention :</strong> Ceci supprimera definitivement l'historique des emprunts termines pour <strong>{{ equipment.name }}</strong> uniquement.
+                    <strong>⚠️ Attention :</strong> Ceci supprimera definitivement l'historique des emprunts termines pour <strong>{{ eq.name }}</strong> uniquement.
                 </div>
                 <div class="form-group"><label>✅ Confirmez votre mot de passe administrateur</label><input type="password" name="password" required placeholder="Votre mot de passe"></div>
             </div>
@@ -202,17 +202,17 @@
 <div class="modal-overlay" id="detailBorrowModal">
     <div class="modal">
         <div class="modal-header">
-            <h2>📤 Emprunter : {{ equipment.name }}</h2>
+            <h2>📤 Emprunter : {{ eq.name }}</h2>
             <button class="modal-close" onclick="closeDetailBorrow()">✕</button>
         </div>
-        <form method="POST" action="{{ url_for('borrow_equipment', equipment_id=equipment.id) }}">
+        <form method="POST" action="{{ url_for('borrow_equipment', eid=eq.id) }}">
             <div class="modal-body">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="dQuantity">Quantité</label>
                         <input type="number" id="dQuantity" name="quantity" min="1"
-                               max="{{ equipment.available_quantity }}" value="1" required>
-                        <small>Max: {{ equipment.available_quantity }}</small>
+                               max="{{ eq.available_quantity }}" value="1" required>
+                        <small>Max: {{ eq.available_quantity }}</small>
                     </div>
                     <div class="form-group">
                         <label for="dReturnDate">Date de retour</label>
