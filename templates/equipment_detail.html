@@ -133,7 +133,12 @@
 
     <!-- Borrow History -->
     <div class="detail-section">
-        <h2>📜 Historique des emprunts</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <h2 style="margin:0">📜 Historique des emprunts</h2>
+            {% if current_user.has_permission('clear_history') and borrows | selectattr('status','eq','returned') | list | length > 0 %}
+            <button class="btn btn-sm btn-danger" onclick="document.getElementById('clearEqHistoryModal').classList.add('open')">🗑️ Effacer l'historique</button>
+            {% endif %}
+        </div>
         {% if borrows %}
         <div class="history-table-wrapper">
             <table class="history-table">
@@ -174,6 +179,24 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Clear History Modal (admin only) -->
+{% if current_user.has_permission('clear_history') %}
+<div class="modal-overlay" id="clearEqHistoryModal">
+    <div class="modal">
+        <div class="modal-header"><h2>⚠️ Effacer l'historique de {{ equipment.name }}</h2><button class="modal-close" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')">✕</button></div>
+        <form method="POST" action="{{ url_for('clear_equipment_history', equipment_id=equipment.id) }}">
+            <div class="modal-body">
+                <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin-bottom:1rem">
+                    <strong>⚠️ Attention :</strong> Ceci supprimera definitivement l'historique des emprunts termines pour <strong>{{ equipment.name }}</strong> uniquement.
+                </div>
+                <div class="form-group"><label>✅ Confirmez votre mot de passe administrateur</label><input type="password" name="password" required placeholder="Votre mot de passe"></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')">Annuler</button><button class="btn btn-danger">🗑️ Confirmer la suppression</button></div>
+        </form>
+    </div>
+</div>
+{% endif %}
 
 <!-- Borrow Modal (same as dashboard) -->
 <div class="modal-overlay" id="detailBorrowModal">
@@ -232,8 +255,10 @@ function closeDetailBorrow() {
 document.getElementById('detailBorrowModal').addEventListener('click', function(e) {
     if (e.target === this) closeDetailBorrow();
 });
+var chm = document.getElementById('clearEqHistoryModal');
+if (chm) { chm.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); }); }
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeDetailBorrow();
+    if (e.key === 'Escape') { closeDetailBorrow(); if (chm) chm.classList.remove('open'); }
 });
 </script>
 {% endblock %}

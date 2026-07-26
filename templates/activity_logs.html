@@ -34,9 +34,11 @@
                             {{ u.full_name if u else '—' }}
                         </td>
                         <td>
-                            {% if log.action == 'login' %}
-                            <span class="status-badge s-active">🔑 Connexion</span>
-                            {% elif log.action == 'borrow' %}
+                        {% elif log.action == 'login' %}
+                        <span class="status-badge s-active">🔑 Connexion</span>
+                        {% elif log.action == 'logout' %}
+                        <span class="status-badge" style="background:#F1F5F9;color:#64748B">🚪 Déconnexion</span>
+                        {% elif log.action == 'borrow' %}
                             <span class="status-badge s-late">📤 Emprunt</span>
                             {% elif log.action == 'return' %}
                             <span class="status-badge s-ok">✅ Retour</span>

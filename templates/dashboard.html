@@ -109,7 +109,7 @@
 </div>
 
 <!-- Clear History Modal -->
-{% if current_user.role == 'admin' %}
+{% if current_user.has_permission('clear_history') %}
 <div class="modal-overlay" id="clearHistoryModal">
     <div class="modal">
         <div class="modal-header"><h2>⚠️ Effacer l'historique</h2><button class="modal-close" onclick="closeAnyModal('clearHistoryModal')">✕</button></div>

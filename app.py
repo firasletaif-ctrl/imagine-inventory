@@ -4,8 +4,14 @@ Application Flask pour la digitalisation du dépôt Imagine Events Tunisia
 """
 import os
 import uuid
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from functools import wraps
+
+# Fuseau horaire Tunisie (UTC+1)
+TUNISIA_TZ = timezone(timedelta(hours=1))
+
+def tunisia_now():
+    return datetime.now(TUNISIA_TZ)
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import (
@@ -54,8 +60,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     full_name = db.Column(db.String(150), nullable=False)
-    role = db.Column(db.String(50), default='staff')  # admin / staff
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
     borrows = db.relationship('Borrow', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -63,6 +69,42 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def has_permission(self, perm):
+        role = db.session.get(CustomRole, self.role_id) if self.role_id else None
+        if not role:
+            return False
+        return role.has_permission(perm)
+
+    @property
+    def role_name(self):
+        role = db.session.get(CustomRole, self.role_id) if self.role_id else None
+        return role.name if role else 'Aucun role'
+
+
+class CustomRole(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    icon = db.Column(db.String(10), default='👤')
+    description = db.Column(db.String(250), default='')
+    permissions = db.Column(db.Text, default='')  # JSON list
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    users = db.relationship('User', backref='role', lazy=True)
+
+    def get_permissions(self):
+        import json
+        try:
+            return json.loads(self.permissions) if self.permissions else []
+        except:
+            return []
+
+    def set_permissions(self, perms_list):
+        import json
+        self.permissions = json.dumps(perms_list)
+
+    def has_permission(self, perm):
+        return perm in self.get_permissions()
 
 
 class Category(db.Model):
@@ -85,7 +127,7 @@ class Equipment(db.Model):
     specifications = db.Column(db.Text, default='')  # JSON-like string
     condition = db.Column(db.String(50), default='Bon état')
     location = db.Column(db.String(100), default='Dépôt principal')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
     images = db.relationship('EquipmentImage', backref='equipment', lazy=True, cascade='all, delete-orphan')
     borrows = db.relationship('Borrow', backref='equipment', lazy=True)
 
@@ -106,7 +148,7 @@ class EquipmentImage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(300), nullable=False)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=tunisia_now)
 
 
 class Borrow(db.Model):
@@ -115,7 +157,7 @@ class Borrow(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
     quantity = db.Column(db.Integer, default=1)
-    borrow_date = db.Column(db.DateTime, default=datetime.utcnow)
+    borrow_date = db.Column(db.DateTime, default=tunisia_now)
     expected_return_date = db.Column(db.Date, nullable=False)
     actual_return_date = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(50), default='active')  # active / returned / late
@@ -131,7 +173,7 @@ class ActivityLog(db.Model):
     description = db.Column(db.Text, default='')
     equipment_name = db.Column(db.String(200), default='')
     quantity = db.Column(db.Integer, default=0)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=tunisia_now)
 
 
 # ── Login manager ───────────────────────────────────────────
@@ -195,17 +237,19 @@ def log_action(action, description='', equipment_name='', quantity=0):
     db.session.commit()
 
 
-# ── Decorator for admin ─────────────────────────────────────
+# ── Decorator for permissions ──────────────────────────────
 
-def admin_required(f):
-    @wraps(f)
-    @login_required
-    def decorated(*args, **kwargs):
-        if current_user.role != 'admin':
-            flash('Accès réservé aux administrateurs.', 'error')
-            return redirect(url_for('dashboard'))
-        return f(*args, **kwargs)
-    return decorated
+def permission_required(perm):
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated(*args, **kwargs):
+            if not current_user.has_permission(perm):
+                flash('Acces refuse. Permission requise : ' + perm, 'error')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
 
 
 # ── Routes: Auth ────────────────────────────────────────────
@@ -277,8 +321,9 @@ def register():
 @app.route('/logout')
 @login_required
 def logout():
+    log_action('logout', f'Deconnexion de {current_user.full_name}')
     logout_user()
-    flash('Vous êtes déconnecté.', 'info')
+    flash('Vous etes deconnecte.', 'info')
     return redirect(url_for('login'))
 
 
@@ -356,6 +401,7 @@ def equipment_detail(equipment_id):
 
 # ── Routes: Borrow ──────────────────────────────────────────
 
+@permission_required("borrow_equipment")
 @app.route('/borrow/<int:equipment_id>', methods=['POST'])
 @login_required
 def borrow_equipment(equipment_id):
@@ -409,6 +455,7 @@ def borrow_equipment(equipment_id):
     return redirect(url_for('dashboard'))
 
 
+@permission_required("return_equipment")
 @app.route('/return/<int:borrow_id>', methods=['POST'])
 @login_required
 def return_equipment(borrow_id):
@@ -418,7 +465,7 @@ def return_equipment(borrow_id):
         return redirect(url_for('dashboard'))
 
     borrow.status = 'returned'
-    borrow.actual_return_date = datetime.utcnow()
+    borrow.actual_return_date = tunisia_now()
     db.session.commit()
     update_availability(borrow.equipment_id)
 
@@ -429,6 +476,7 @@ def return_equipment(borrow_id):
 
 
 # ── Routes: Add / Edit equipment ────────────────────────────
+@permission_required("manage_equipment")
 
 @app.route('/equipment/add', methods=['GET', 'POST'])
 @login_required
@@ -483,6 +531,7 @@ def add_equipment():
 
     return render_template('add_equipment.html', categories=categories)
 
+@permission_required("manage_equipment")
 
 @app.route('/equipment/<int:equipment_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -543,6 +592,7 @@ def delete_image(equipment_id, image_id):
         db.session.commit()
         flash('Image supprimée.', 'info')
     return redirect(url_for('edit_equipment', equipment_id=equipment_id))
+@permission_required("manage_equipment")
 
 
 @app.route('/equipment/<int:equipment_id>/delete', methods=['POST'])
@@ -601,19 +651,23 @@ def change_password():
 # ── Routes: User Management (admin only) ─────────────────────
 
 @app.route('/admin/users')
-@admin_required
+@permission_required("manage_users")
 def manage_users():
     users = User.query.order_by(User.created_at.desc()).all()
-    return render_template('manage_users.html', users=users)
+    all_roles = CustomRole.query.order_by(CustomRole.name).all()
+    return render_template('manage_users.html', users=users, all_roles=all_roles)
 
 
 @app.route('/admin/users/create', methods=['POST'])
-@admin_required
+@permission_required("manage_users")
 def create_user():
     email = request.form.get('email', '').strip().lower()
     full_name = request.form.get('full_name', '').strip()
     password = request.form.get('password', '')
-    role = request.form.get('role', 'staff')
+    role_id = request.form.get('role_id')
+    if role_id:
+        try: role_id = int(role_id)
+        except: role_id = None
 
     if not email or not full_name or not password:
         flash('Tous les champs sont requis.', 'error')
@@ -622,17 +676,19 @@ def create_user():
     elif User.query.filter_by(email=email).first():
         flash('Cet email est deja utilise.', 'error')
     else:
-        user = User(email=email, full_name=full_name, role=role)
+        user = User(email=email, full_name=full_name)
+        if role_id: user.role_id = role_id
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        flash(f'Compte cree : {full_name} ({role})', 'success')
+        rolename = user.role_name
+        flash(f'Compte cree : {full_name} ({rolename})', 'success')
 
     return redirect(url_for('manage_users'))
 
 
 @app.route('/admin/users/<int:user_id>/edit', methods=['POST'])
-@admin_required
+@permission_required("manage_users")
 def edit_user(user_id):
     user = db.session.get(User, user_id)
     if not user:
@@ -644,7 +700,10 @@ def edit_user(user_id):
         return redirect(url_for('manage_users'))
 
     user.full_name = request.form.get('full_name', user.full_name).strip()
-    user.role = request.form.get('role', user.role)
+    role_id = request.form.get('role_id')
+    if role_id:
+        try: user.role_id = int(role_id)
+        except: pass
 
     new_pw = request.form.get('new_password', '')
     if new_pw and len(new_pw) >= 6:
@@ -660,7 +719,7 @@ def edit_user(user_id):
 
 
 @app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
-@admin_required
+@permission_required("manage_users")
 def delete_user(user_id):
     user = db.session.get(User, user_id)
     if not user:
@@ -680,7 +739,7 @@ def delete_user(user_id):
 # ── Routes: Delete borrow history (admin only, password required) ──
 
 @app.route('/admin/clear-history', methods=['POST'])
-@admin_required
+@permission_required("clear_history")
 def clear_history():
     password = request.form.get('password', '')
     if not current_user.check_password(password):
@@ -691,15 +750,37 @@ def clear_history():
     Borrow.query.filter_by(status='returned').delete()
     db.session.commit()
 
-    log_action('clear_history', f'Historique efface ({count} emprunts termines)')
+    log_action('clear_history', f'Historique global efface ({count} emprunts termines)')
     flash(f'{count} emprunt(s) termines effaces de l\'historique.', 'success')
     return redirect(url_for('dashboard'))
+
+
+@app.route('/equipment/<int:equipment_id>/clear-history', methods=['POST'])
+@permission_required("clear_history")
+def clear_equipment_history(equipment_id):
+    eq = db.session.get(Equipment, equipment_id)
+    if not eq:
+        flash('Materiel introuvable.', 'error')
+        return redirect(url_for('dashboard'))
+
+    password = request.form.get('password', '')
+    if not current_user.check_password(password):
+        flash('Mot de passe administrateur incorrect.', 'error')
+        return redirect(url_for('equipment_detail', equipment_id=equipment_id))
+
+    count = Borrow.query.filter_by(equipment_id=equipment_id, status='returned').count()
+    Borrow.query.filter_by(equipment_id=equipment_id, status='returned').delete()
+    db.session.commit()
+
+    log_action('clear_history', f'Historique efface pour {eq.name} ({count} emprunts)')
+    flash(f'{count} emprunt(s) termines effaces pour {eq.name}.', 'success')
+    return redirect(url_for('equipment_detail', equipment_id=equipment_id))
 
 
 # ── Routes: Activity Logs (admin only) ──────────────────────
 
 @app.route('/admin/logs')
-@admin_required
+@permission_required("view_logs")
 def activity_logs():
     page = request.args.get('page', 1, type=int)
     per_page = 50
@@ -708,6 +789,7 @@ def activity_logs():
     )
     return render_template('activity_logs.html', logs=logs)
 
+@permission_required("manage_categories")
 
 # ── Routes: Categories ──────────────────────────────────────
 
@@ -734,13 +816,30 @@ def init_db():
         if User.query.first():
             return
 
+        # Create default roles
+        admin_role = CustomRole(name='Admin', icon='👑',
+                               description='Toutes les permissions')
+        admin_role.set_permissions([p['key'] for p in ALL_PERMISSIONS])
+
+        staff_role = CustomRole(name='Staff', icon='👷',
+                               description='Emprunts et retours uniquement')
+        staff_role.set_permissions(['borrow_equipment', 'return_equipment'])
+
+        manager_role = CustomRole(name='Manager', icon='🛡️',
+                                 description='Gestion complete sans supprimer l\'historique')
+        manager_role.set_permissions(['manage_users', 'manage_equipment', 'borrow_equipment',
+                                       'return_equipment', 'manage_categories', 'view_logs'])
+
+        db.session.add_all([admin_role, staff_role, manager_role])
+        db.session.flush()
+
         # Admin user
-        admin = User(email='admin@imagine-events.com', full_name='Admin Imagine', role='admin')
+        admin = User(email='admin@imagine-events.com', full_name='Admin Imagine', role_id=admin_role.id)
         admin.set_password('admin123')
         db.session.add(admin)
 
         # Staff user
-        staff = User(email='staff@imagine-events.com', full_name='Équipe Logistique', role='staff')
+        staff = User(email='staff@imagine-events.com', full_name='Equipe Logistique', role_id=staff_role.id)
         staff.set_password('staff123')
         db.session.add(staff)
 

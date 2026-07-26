@@ -176,6 +176,15 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     font-weight: 600;
     box-shadow: inset 3px 0 0 var(--red);
 }
+.nav-item.nav-danger {
+    color: #FCA5A5;
+    border: 1px dashed rgba(252,165,165,0.4);
+    margin-top: 0.5rem;
+}
+.nav-item.nav-danger:hover {
+    background: rgba(220,38,38,0.3);
+    color: #FEE2E2;
+}
 .nav-icon { font-size: 1.1rem; }
 
 .sidebar-footer {

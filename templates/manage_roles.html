@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Gerer les roles{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:1000px">
+    <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
+    <div class="page-header"><h1>🔐 Gerer les roles et permissions</h1><p>Creez des roles personnalises avec les permissions de votre choix.</p></div>
+
+    <!-- Create role -->
+    <div class="form-card" style="margin-bottom:1.5rem">
+        <h3 style="font-size:1.05rem;color:var(--blue-deep);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--gray-100)">➕ Creer un nouveau role</h3>
+        <form method="POST" action="{{ url_for('create_role') }}">
+            <div class="form-row" style="grid-template-columns:1fr 1fr 2fr">
+                <div class="form-group"><label>Icone</label><select name="icon"><option>👑</option><option>👷</option><option>🛡️</option><option>👤</option><option>🔧</option><option>📋</option><option>👀</option><option>💼</option></select></div>
+                <div class="form-group"><label>Nom du role *</label><input type="text" name="name" required placeholder="Ex: Superviseur"></div>
+                <div class="form-group"><label>Description</label><input type="text" name="description" placeholder="Ex: Gerer le depot sans supprimer"></div>
+            </div>
+            <div style="margin:1rem 0"><strong style="font-size:0.9rem;color:var(--gray-700)">📋 Permissions :</strong></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.65rem">
+                {% for p in all_permissions %}
+                <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.6rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
+                    <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:18px;height:18px;margin-top:2px">
+                    <div><span style="font-weight:600;font-size:0.9rem">{{ p.icon }} {{ p.label }}</span><br><small style="color:var(--gray-500)">{{ p.desc }}</small></div>
+                </label>
+                {% endfor %}
+            </div>
+            <div style="display:flex;justify-content:flex-end;padding-top:1rem"><button class="btn btn-accent">✅ Creer le role</button></div>
+        </form>
+    </div>
+
+    <!-- Existing roles -->
+    <div class="detail-section"><h2>📋 Roles existants ({{ roles|length }})</h2>
+        {% for role in roles %}
+        <div style="border:1px solid var(--gray-200);border-radius:12px;padding:1.25rem;margin-bottom:1rem;background:var(--white)">
+            <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <h3 style="font-size:1.1rem;margin-bottom:.25rem">{{ role.icon }} {{ role.name }}</h3>
+                    <p style="color:var(--gray-500);font-size:.85rem">{{ role.description or 'Aucune description' }}</p>
+                    <div style="margin-top:.5rem">
+                        <small style="color:var(--gray-400)">{{ role.users|length }} utilisateur(s) · Créé le {{ role.created_at.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                </div>
+                <div style="display:flex;gap:.5rem">
+                    <button class="btn btn-sm btn-secondary" onclick="openEditRole('{{ role.id }}','{{ role.name | replace("'","\\'") }}','{{ role.icon }}','{{ role.description | replace("'","\\'") }}',{{ role.permissions | tojson }})">✏️ Modifier</button>
+                    <form method="POST" action="{{ url_for('delete_role', role_id=role.id) }}" onsubmit="return confirm('Supprimer le role {{ role.name | replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.75rem">
+                {% for p in role.get_permissions() %}
+                {% set pinfo = all_permissions | selectattr("key","equalto",p) | first %}
+                <span style="background:var(--blue-pale);color:var(--blue);padding:.2rem .6rem;border-radius:100px;font-size:.75rem;font-weight:600">{{ pinfo.icon if pinfo else '⚙️' }} {{ pinfo.label if pinfo else p }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Edit Role Modal -->
+<div class="modal-overlay" id="editRoleModal">
+    <div class="modal" style="max-width:650px">
+        <div class="modal-header"><h2>✏️ Modifier le role</h2><button class="modal-close" onclick="closeModal('editRoleModal')">✕</button></div>
+        <form id="editRoleForm" method="POST">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label>Icone</label><select name="icon" id="editIcon"><option>👑</option><option>👷</option><option>🛡️</option><option>👤</option><option>🔧</option><option>📋</option><option>👀</option><option>💼</option></select></div>
+                    <div class="form-group" style="flex:2"><label>Nom *</label><input type="text" name="name" id="editName" required></div>
+                </div>
+                <div class="form-group"><label>Description</label><input type="text" name="description" id="editDesc"></div>
+                <div style="margin:1rem 0"><strong style="font-size:0.9rem">📋 Permissions :</strong></div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0.5rem" id="editPerms">
+                    {% for p in all_permissions %}
+                    <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.5rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
+                        <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:16px;height:16px;margin-top:2px">
+                        <div><span style="font-weight:600;font-size:.85rem">{{ p.icon }} {{ p.label }}</span></div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editRoleModal')">Annuler</button><button class="btn btn-accent">💾 Enregistrer</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditRole(id,name,icon,desc,perms){
+    document.getElementById('editName').value=name;
+    document.getElementById('editIcon').value=icon;
+    document.getElementById('editDesc').value=desc||'';
+    document.getElementById('editRoleForm').action='/admin/roles/'+id+'/edit';
+    document.querySelectorAll('#editPerms input[type=checkbox]').forEach(cb=>{cb.checked=perms.includes(cb.value)});
+    document.getElementById('editRoleModal').classList.add('open');
+}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.getElementById('editRoleModal').addEventListener('click',function(e){if(e.target===this)closeModal('editRoleModal')});
+</script>
+{% endblock %}

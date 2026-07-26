@@ -11,7 +11,6 @@
 </head>
 <body>
     {% if current_user.is_authenticated %}
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon">✦</div>
@@ -22,31 +21,36 @@
         </div>
         <nav class="sidebar-nav">
             <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                <span class="nav-icon">📋</span>
-                <span>Tout le matériel</span>
+                <span class="nav-icon">📋</span><span>Tout le materiel</span>
             </a>
+            {% if current_user.has_permission('manage_equipment') %}
             <a href="{{ url_for('add_equipment') }}" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
-                <span class="nav-icon">➕</span>
-                <span>Ajouter du matériel</span>
+                <span class="nav-icon">➕</span><span>Ajouter du materiel</span>
             </a>
-            {% if current_user.role == 'admin' %}
+            {% endif %}
+            {% if current_user.has_permission('manage_users') %}
             <a href="{{ url_for('manage_users') }}" class="nav-item {% if request.endpoint == 'manage_users' %}active{% endif %}">
-                <span class="nav-icon">👥</span>
-                <span>Gerer les utilisateurs</span>
+                <span class="nav-icon">👥</span><span>Gerer les utilisateurs</span>
             </a>
+            {% endif %}
+            {% if current_user.has_permission('manage_roles') %}
+            <a href="{{ url_for('manage_roles') }}" class="nav-item {% if request.endpoint == 'manage_roles' %}active{% endif %}">
+                <span class="nav-icon">🔐</span><span>Gerer les roles</span>
+            </a>
+            {% endif %}
+            {% if current_user.has_permission('view_logs') %}
             <a href="{{ url_for('activity_logs') }}" class="nav-item {% if request.endpoint == 'activity_logs' %}active{% endif %}">
-                <span class="nav-icon">📜</span>
-                <span>Logs d'activite</span>
+                <span class="nav-icon">📜</span><span>Logs d'activite</span>
             </a>
-            <a href="#" class="nav-item" onclick="openClearHistoryModal();return false">
-                <span class="nav-icon">🗑️</span>
-                <span>Effacer l'historique</span>
+            {% endif %}
+            {% if current_user.has_permission('clear_history') %}
+            <a href="#" class="nav-item nav-danger" onclick="openClearHistoryModal();return false" title="⚠️ A utiliser avec precaution">
+                <span class="nav-icon">⚠️</span><span>Effacer l'historique</span>
             </a>
             {% endif %}
             <div style="margin-top:auto;padding:0.5rem 0">
                 <a href="{{ url_for('change_password') }}" class="nav-item" style="font-size:0.85rem">
-                    <span class="nav-icon">🔑</span>
-                    <span>Changer mot de passe</span>
+                    <span class="nav-icon">🔑</span><span>Changer mot de passe</span>
                 </a>
             </div>
         </nav>
@@ -55,14 +59,13 @@
                 <div class="user-avatar">{{ current_user.full_name[0] | upper }}</div>
                 <div>
                     <div class="user-name">{{ current_user.full_name }}</div>
-                    <div class="user-role">{{ current_user.role | upper }}</div>
+                    <div class="user-role">{{ current_user.role_name }}</div>
                 </div>
             </div>
-            <a href="{{ url_for('logout') }}" class="logout-btn" title="Déconnexion">🚪</a>
+            <a href="{{ url_for('logout') }}" class="logout-btn" title="Deconnexion">🚪</a>
         </div>
     </aside>
 
-    <!-- Mobile header -->
     <header class="mobile-header">
         <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
         <div class="brand-icon">✦</div>
@@ -70,20 +73,13 @@
     </header>
     {% endif %}
 
-    <!-- Main content -->
     <main class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}">
-        <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="flash-container">
             {% for category, message in messages %}
             <div class="flash-message flash-{{ category }}" onclick="this.remove()">
-                <span class="flash-icon">
-                    {% if category == 'success' %}✅
-                    {% elif category == 'error' %}❌
-                    {% elif category == 'info' %}ℹ️
-                    {% else %}💬{% endif %}
-                </span>
+                <span class="flash-icon">{% if category == 'success' %}✅{% elif category == 'error' %}❌{% elif category == 'info' %}ℹ️{% else %}💬{% endif %}</span>
                 {{ message }}
             </div>
             {% endfor %}
