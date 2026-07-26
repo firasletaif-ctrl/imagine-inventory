@@ -6,7 +6,7 @@
     <div class="dash-header">
         <div>
             <h1 class="dash-title">Depot Imagine Events</h1>
-            <p class="dash-subtitle">{{ equipment_list | length }} materiel(s) disponible(s)</p>
+            <p class="dash-subtitle">{{ equipment | length }} materiel(s) disponible(s)</p>
         </div>
         <div class="dash-actions">
             <a href="{{ url_for('add_equipment') }}" class="btn btn-accent">
@@ -16,9 +16,9 @@
     </div>
 
     <div class="stats-row">
-        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value">{{ equipment_list | length }}</div><div class="stat-label">Articles au depot</div></div>
+        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value">{{ equipment | length }}</div><div class="stat-label">Articles au depot</div></div>
         <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-value">{{ active_borrows | length }}</div><div class="stat-label">Emprunts actifs</div></div>
-        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">{{ equipment_list | selectattr('available_quantity', 'gt', 0) | list | length }}</div><div class="stat-label">Disponibles</div></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">{{ equipment | selectattr('available_quantity', 'gt', 0) | list | length }}</div><div class="stat-label">Disponibles</div></div>
         <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value">{{ active_borrows | selectattr('status', 'eq', 'late') | list | length }}</div><div class="stat-label">En retard</div></div>
     </div>
 
@@ -50,8 +50,8 @@
     </div>
 
     <div class="equipment-grid">
-        {% for eq in equipment_list %}
-        <div class="equipment-card {% if eq.available_quantity == 0 %}unavailable{% endif %}" onclick="window.location='{{ url_for('equipment_detail', equipment_id=eq.id) }}'">
+        {% for eq in equipment %}
+        <div class="equipment-card {% if eq.available_quantity == 0 %}unavailable{% endif %}" onclick="window.location='{{ url_for('equipment_detail', eid=eq.id) }}'">
             <div class="card-image">
                 {% if eq.primary_image() %}<img src="{{ url_for('uploaded_file', filename=eq.primary_image()) }}" alt="{{ eq.name }}" loading="lazy">
                 {% else %}<div class="card-placeholder"><span class="placeholder-icon">{{ eq.category.icon if eq.category else '📦' }}</span></div>{% endif %}
@@ -138,7 +138,7 @@
         <div class="borrow-row {% if b.status == 'late' %}borrow-late{% endif %}">
             <div class="borrow-info"><strong>{{ b.equipment.name }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event">🎯 {{ b.event_name }}</span>{% endif %}</div>
             <div class="borrow-dates"><span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️ EN RETARD{% endif %}</span></div>
-            <form method="POST" action="{{ url_for('return_equipment', borrow_id=b.id) }}" class="borrow-action"><button class="btn btn-sm btn-success">✅ Retourner</button></form>
+            <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" class="borrow-action"><button class="btn btn-sm btn-success">✅ Retourner</button></form>
         </div>
         {% endfor %}
     </div>
