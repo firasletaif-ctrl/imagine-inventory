@@ -541,6 +541,31 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
+# ── Routes: Change Password ─────────────────────────────────
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        current_pw = request.form.get('current_password', '')
+        new_pw = request.form.get('new_password', '')
+        confirm = request.form.get('confirm_password', '')
+
+        if not current_user.check_password(current_pw):
+            flash('Mot de passe actuel incorrect.', 'error')
+        elif len(new_pw) < 6:
+            flash('Le nouveau mot de passe doit contenir au moins 6 caractères.', 'error')
+        elif new_pw != confirm:
+            flash('Les mots de passe ne correspondent pas.', 'error')
+        else:
+            current_user.set_password(new_pw)
+            db.session.commit()
+            flash('Mot de passe changé avec succès !', 'success')
+            return redirect(url_for('dashboard'))
+
+    return render_template('change_password.html')
+
+
 # ── Routes: Categories ──────────────────────────────────────
 
 @app.route('/categories/add', methods=['POST'])
