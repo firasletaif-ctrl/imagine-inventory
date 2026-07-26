@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Gestion des utilisateurs{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:900px">
+    <div class="breadcrumb">
+        <a href="{{ url_for('dashboard') }}">← Retour au dépôt</a>
+    </div>
+    <div class="page-header">
+        <h1>👥 Gestion des utilisateurs</h1>
+        <p>Créez des comptes et gérez les permissions (Admin seulement)</p>
+    </div>
+
+    <!-- Create user form -->
+    <div class="form-card" style="margin-bottom:1.5rem">
+        <h3 style="font-size:1.05rem;color:var(--blue-deep);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--gray-100)">
+            ➕ Créer un nouveau compte
+        </h3>
+        <form method="POST" action="{{ url_for('create_user') }}">
+            <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+                <div class="form-group">
+                    <label>Nom complet</label>
+                    <input type="text" name="full_name" required placeholder="Prénom Nom">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required placeholder="...@imagine-events.com">
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe</label>
+                    <input type="password" name="password" required placeholder="6+ caractères">
+                </div>
+                <div class="form-group">
+                    <label>Rôle</label>
+                    <select name="role">
+                        <option value="staff">👷 Staff — Équipe</option>
+                        <option value="admin">👑 Admin — Gérant</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;padding-top:.5rem">
+                <button class="btn btn-accent">✅ Créer le compte</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- User list -->
+    <div class="detail-section">
+        <h2>📋 Liste des utilisateurs ({{ users | length }})</h2>
+
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Email</th>
+                        <th>Rôle</th>
+                        <th>Créé le</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td><strong>{{ u.full_name }}</strong></td>
+                        <td><code style="font-size:.8rem">{{ u.email }}</code></td>
+                        <td>
+                            {% if u.role == 'admin' %}
+                            <span class="status-badge s-late">👑 Admin</span>
+                            {% else %}
+                            <span class="status-badge s-active">👷 Staff</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ u.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if u.id != current_user.id %}
+                            <button class="btn btn-sm btn-secondary"
+                                    onclick="openEditUser('{{ u.id }}', '{{ u.full_name | replace("'", "\\'") }}', '{{ u.role }}')">
+                                ✏️ Modifier
+                            </button>
+                            <form method="POST" action="{{ url_for('delete_user', user_id=u.id) }}"
+                                  style="display:inline"
+                                  onsubmit="return confirm('Supprimer {{ u.full_name | replace("'", "\\'") }} ?')">
+                                <button class="btn btn-sm btn-danger">🗑️</button>
+                            </form>
+                            {% else %}
+                            <span style="color:var(--gray-400);font-size:.8rem">Vous</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editUserModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>✏️ Modifier l'utilisateur</h2>
+            <button class="modal-close" onclick="closeModal('editUserModal')">✕</button>
+        </div>
+        <form id="editUserForm" method="POST">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nom complet</label>
+                    <input type="text" name="full_name" id="editFullName" required>
+                </div>
+                <div class="form-group">
+                    <label>Rôle</label>
+                    <select name="role" id="editRole">
+                        <option value="staff">👷 Staff — Équipe</option>
+                        <option value="admin">👑 Admin — Gérant</option>
+                    </select>
+                    <small>
+                        <strong>Staff :</strong> voit le matériel, emprunte, retourne.<br>
+                        <strong>Admin :</strong> tout + gère les utilisateurs.
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label>Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                    <input type="password" name="new_password" placeholder="6+ caractères" minlength="6">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Annuler</button>
+                <button class="btn btn-accent">💾 Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEditUser(id, name, role) {
+    document.getElementById('editFullName').value = name;
+    document.getElementById('editRole').value = role;
+    document.getElementById('editUserForm').action = '/admin/users/' + id + '/edit';
+    document.getElementById('editUserModal').classList.add('open');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+}
+
+document.getElementById('editUserModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal('editUserModal');
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal('editUserModal');
+});
+</script>
+{% endblock %}

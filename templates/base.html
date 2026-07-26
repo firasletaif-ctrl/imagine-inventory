@@ -29,6 +29,12 @@
                 <span class="nav-icon">➕</span>
                 <span>Ajouter du matériel</span>
             </a>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('manage_users') }}" class="nav-item {% if request.endpoint == 'manage_users' %}active{% endif %}">
+                <span class="nav-icon">👥</span>
+                <span>Gérer les utilisateurs</span>
+            </a>
+            {% endif %}
             <div style="margin-top:auto;padding:0.5rem 0">
                 <a href="{{ url_for('change_password') }}" class="nav-item" style="font-size:0.85rem">
                     <span class="nav-icon">🔑</span>

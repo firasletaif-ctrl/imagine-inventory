@@ -566,6 +566,85 @@ def change_password():
     return render_template('change_password.html')
 
 
+# ── Routes: User Management (admin only) ─────────────────────
+
+@app.route('/admin/users')
+@admin_required
+def manage_users():
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('manage_users.html', users=users)
+
+
+@app.route('/admin/users/create', methods=['POST'])
+@admin_required
+def create_user():
+    email = request.form.get('email', '').strip().lower()
+    full_name = request.form.get('full_name', '').strip()
+    password = request.form.get('password', '')
+    role = request.form.get('role', 'staff')
+
+    if not email or not full_name or not password:
+        flash('Tous les champs sont requis.', 'error')
+    elif len(password) < 6:
+        flash('Mot de passe : 6 caracteres minimum.', 'error')
+    elif User.query.filter_by(email=email).first():
+        flash('Cet email est deja utilise.', 'error')
+    else:
+        user = User(email=email, full_name=full_name, role=role)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        flash(f'Compte cree : {full_name} ({role})', 'success')
+
+    return redirect(url_for('manage_users'))
+
+
+@app.route('/admin/users/<int:user_id>/edit', methods=['POST'])
+@admin_required
+def edit_user(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        flash('Utilisateur introuvable.', 'error')
+        return redirect(url_for('manage_users'))
+
+    if user.id == current_user.id:
+        flash('Vous ne pouvez pas modifier votre propre role.', 'error')
+        return redirect(url_for('manage_users'))
+
+    user.full_name = request.form.get('full_name', user.full_name).strip()
+    user.role = request.form.get('role', user.role)
+
+    new_pw = request.form.get('new_password', '')
+    if new_pw and len(new_pw) >= 6:
+        user.set_password(new_pw)
+        flash(f'{user.full_name} mis a jour + mot de passe change.', 'success')
+    elif new_pw:
+        flash('Mot de passe non change (6 caracteres minimum).', 'error')
+    else:
+        flash(f'{user.full_name} mis a jour.', 'success')
+
+    db.session.commit()
+    return redirect(url_for('manage_users'))
+
+
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        flash('Utilisateur introuvable.', 'error')
+    elif user.id == current_user.id:
+        flash('Vous ne pouvez pas supprimer votre propre compte.', 'error')
+    elif Borrow.query.filter_by(user_id=user_id, status='active').first():
+        flash(f'{user.full_name} a des emprunts en cours.', 'error')
+    else:
+        db.session.delete(user)
+        db.session.commit()
+        flash(f'{user.full_name} supprime.', 'info')
+
+    return redirect(url_for('manage_users'))
+
+
 # ── Routes: Categories ──────────────────────────────────────
 
 @app.route('/categories/add', methods=['POST'])
