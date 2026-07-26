@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide — Déployer Imagine Inventory</title>
+<style>
+  body{font-family:'Inter',-apple-system,sans-serif;max-width:900px;margin:0 auto;padding:2rem;background:#F8FAFC;color:#1E293B;line-height:1.7}
+  h1{font-family:'Playfair Display',Georgia,serif;color:#0B1D3A;font-size:2rem;border-bottom:3px solid #C41E3A;padding-bottom:.5rem}
+  h2{color:#13294B;font-size:1.3rem;margin-top:2rem;border-left:4px solid #C41E3A;padding-left:1rem}
+  h3{color:#1A3A6B;font-size:1.1rem;margin-top:1.5rem}
+  .step{background:#FFF;border-radius:12px;padding:1.5rem;margin:1rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1);border:1px solid #E2E8F0}
+  .step-num{display:inline-block;background:#C41E3A;color:#FFF;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;font-weight:700;margin-right:.75rem}
+  .step h3{display:inline;margin:0}
+  .code{background:#0B1D3A;color:#E2E8F0;padding:1rem;border-radius:8px;font-family:monospace;font-size:.9rem;overflow-x:auto;margin:.5rem 0}
+  .highlight{background:#FEF3C7;padding:.2rem .5rem;border-radius:4px;font-family:monospace;font-size:.85rem}
+  .tip{background:#DCFCE7;border-left:4px solid #16A34A;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+  .warn{background:#FDE8EC;border-left:4px solid #C41E3A;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+  .arrow{color:#C41E3A;font-weight:700}
+  ul,ol{margin:.5rem 0}
+  li{margin:.3rem 0}
+  a{color:#1E4D8C;font-weight:600}
+  .badge{display:inline-block;padding:.15rem .6rem;border-radius:100px;font-size:.75rem;font-weight:700}
+  .badge-red{background:#FDE8EC;color:#C41E3A}
+  .badge-green{background:#DCFCE7;color:#16A34A}
+  .badge-blue{background:#E8EFF8;color:#1E4D8C}
+</style>
+</head>
+<body>
+
+<h1>🚀 Déploiement Imagine Inventory — Guide Pas à Pas</h1>
+<p>🇹🇳 <strong>Imagine Events Tunisia</strong> — Digitalisation du dépôt événementiel</p>
+
+<div class="tip">
+  <strong>⏱️ Durée totale :</strong> 10-15 minutes<br>
+  <strong>💰 Coût :</strong> 0 DT (Gratuit — plan Free de Render)<br>
+  <strong>📋 Prérequis :</strong> Un navigateur web et le fichier ZIP du projet
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>PARTIE 1 : RENDER (phase de test gratuite)</h2>
+
+<div class="step">
+  <span class="step-num">1</span><h3>Créer un compte Render</h3>
+  <ol>
+    <li>Allez sur 👉 <a href="https://render.com" target="_blank">render.com</a></li>
+    <li>Cliquez <strong>"Get Started"</strong> (bouton bleu en haut à droite)</li>
+    <li>Inscrivez-vous avec <strong>votre email</strong> ou votre compte GitHub</li>
+    <li>Vérifiez votre email si demandé</li>
+  </ol>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span><h3>Créer la base de données PostgreSQL</h3>
+  <ol>
+    <li>Dans le dashboard, cliquez <strong>"New +"</strong> → <strong>"PostgreSQL"</strong></li>
+    <li>Remplissez :
+      <ul>
+        <li><strong>Name :</strong> <span class="highlight">imagine-events-db</span></li>
+        <li><strong>Region :</strong> Frankfurt (EU) — le plus proche de la Tunisie</li>
+        <li><strong>Plan :</strong> Free</li>
+      </ul>
+    </li>
+    <li>Cliquez <strong>"Create Database"</strong></li>
+  </ol>
+  <div class="warn">
+    ⚠️ <strong>IMPORTANT :</strong> Une fois créée, descendez dans <strong>Connections → Internal Database URL</strong> et <strong>COPIEZ</strong> cette URL. Elle ressemble à :<br>
+    <span class="highlight">postgres://imagine_events_db_user:xxxxx@dpg-xxxxx/imagine_events_db</span><br>
+    Gardez-la précieusement !
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span><h3>Créer le Web Service</h3>
+  <ol>
+    <li>Cliquez <strong>"New +"</strong> → <strong>"Web Service"</strong></li>
+    <li>Choisissez <strong>"Public Git repository"</strong></li>
+    <li>Ou plus simple : cliquez <strong>"Deploy from a Git repository"</strong> puis en bas <strong>"Or deploy from a public repository"</strong></li>
+  </ol>
+</div>
+
+<div class="step">
+  <span class="step-num">4</span><h3>Configurer le Web Service</h3>
+  <p>Remplissez le formulaire comme ceci :</p>
+  <table style="width:100%;border-collapse:collapse">
+    <tr><td style="padding:.5rem;font-weight:700;color:#64748B;width:200px">Name</td><td style="padding:.5rem"><span class="highlight">imagine-inventory</span></td></tr>
+    <tr><td style="padding:.5rem;font-weight:700;color:#64748B">Region</td><td style="padding:.5rem">Frankfurt (EU)</td></tr>
+    <tr><td style="padding:.5rem;font-weight:700;color:#64748B">Branch</td><td style="padding:.5rem">main</td></tr>
+    <tr><td style="padding:.5rem;font-weight:700;color:#64748B">Runtime</td><td style="padding:.5rem">Python 3</td></tr>
+    <tr><td style="padding:.5rem;font-weight:700;color:#64748B">Build Command</td><td style="padding:.5rem"><span class="highlight">pip install -r requirements.txt</span></td></tr>
+    <tr><td style="padding:.5rem;font-weight:700;color:#64748B">Start Command</td><td style="padding:.5rem"><span class="highlight">gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120</span></td></tr>
+    <tr><td style="padding:.5rem;font-weight:700;color:#64748B">Plan</td><td style="padding:.5rem">Free</td></tr>
+  </table>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span><h3>Ajouter les variables d'environnement</h3>
+  <p>Dans la section <strong>"Environment Variables"</strong>, ajoutez :</p>
+  <table style="width:100%;border-collapse:collapse">
+    <tr style="background:#F1F5F9"><td style="padding:.5rem;font-weight:700">Clé</td><td style="padding:.5rem;font-weight:700">Valeur</td></tr>
+    <tr><td style="padding:.5rem"><span class="highlight">DATABASE_URL</span></td><td style="padding:.5rem">← Collez l'URL PostgreSQL de l'étape 2</td></tr>
+    <tr><td style="padding:.5rem"><span class="highlight">SECRET_KEY</span></td><td style="padding:.5rem"><span class="highlight">imagine2026!MonSecretTunisie</span></td></tr>
+  </table>
+</div>
+
+<div class="step">
+  <span class="step-num">6</span><h3>Déployer !</h3>
+  <p>Cliquez <strong>"Create Web Service"</strong> tout en bas.</p>
+  <p>Render va :</p>
+  <ol>
+    <li>📥 Télécharger votre code</li>
+    <li>📦 Installer les dépendances Python</li>
+    <li>🗄️ Connecter la base PostgreSQL</li>
+    <li>🚀 Lancer l'application</li>
+  </ol>
+  <p>⏳ <strong>Patientez 3-5 minutes</strong> le temps du déploiement. Vous verrez "Live" en vert.</p>
+  <p>🌐 Votre site sera accessible à l'URL : <span class="highlight">https://imagine-inventory.onrender.com</span></p>
+</div>
+
+<div class="step">
+  <span class="step-num">7</span><h3>Première connexion</h3>
+  <p>Allez sur votre URL et connectez-vous :</p>
+  <table style="width:100%;border-collapse:collapse">
+    <tr style="background:#F1F5F9"><td style="padding:.5rem;font-weight:700">Rôle</td><td style="padding:.5rem;font-weight:700">Email</td><td style="padding:.5rem;font-weight:700">Mot de passe</td></tr>
+    <tr><td style="padding:.5rem"><span class="badge badge-red">Admin</span></td><td style="padding:.5rem"><span class="highlight">admin@imagine-events.com</span></td><td style="padding:.5rem"><span class="highlight">admin123</span></td></tr>
+    <tr><td style="padding:.5rem"><span class="badge badge-blue">Staff</span></td><td style="padding:.5rem"><span class="highlight">staff@imagine-events.com</span></td><td style="padding:.5rem"><span class="highlight">staff123</span></td></tr>
+  </table>
+  <div class="warn">⚠️ <strong>Changez ces mots de passe</strong> dès la première connexion !</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>PARTIE 2 : DÉPLOIEMENT SUR OVH (votre serveur)</h2>
+
+<div class="tip">
+  <strong>Prérequis OVH :</strong> Un VPS ou serveur dédié avec Ubuntu/Debian, accès SSH root.
+</div>
+
+<div class="step">
+  <span class="step-num">1</span><h3>Se connecter au serveur OVH en SSH</h3>
+  <div class="code">ssh root@votre-ip-ovh</div>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span><h3>Installer les dépendances système</h3>
+  <div class="code">apt update && apt upgrade -y<br>
+apt install -y python3 python3-pip python3-venv nginx postgresql postgresql-contrib supervisor</div>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span><h3>Configurer PostgreSQL</h3>
+  <div class="code">sudo -u postgres psql -c "CREATE USER imagine_user WITH PASSWORD 'VotreMotDePasseFort';"<br>
+sudo -u postgres psql -c "CREATE DATABASE imagine_inventory OWNER imagine_user;"<br>
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE imagine_inventory TO imagine_user;"</div>
+</div>
+
+<div class="step">
+  <span class="step-num">4</span><h3>Déployer l'application</h3>
+  <div class="code">mkdir -p /var/www/imagine-inventory<br>
+cd /var/www/imagine-inventory<br>
+# Uploadez vos fichiers (via SCP, FTP, ou Git)<br>
+python3 -m venv venv<br>
+source venv/bin/activate<br>
+pip install -r requirements.txt<br>
+pip install gunicorn psycopg2-binary</div>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span><h3>Créer le fichier d'environnement</h3>
+  <div class="code">cat > /var/www/imagine-inventory/.env << 'EOF'<br>
+DATABASE_URL=postgresql://imagine_user:VotreMotDePasseFort@localhost:5432/imagine_inventory<br>
+SECRET_KEY=VotreCleSecreteTresLongue<br>
+EOF</div>
+</div>
+
+<div class="step">
+  <span class="step-num">6</span><h3>Configurer Supervisor (pour que l'app tourne en continu)</h3>
+  <div class="code">cat > /etc/supervisor/conf.d/imagine.conf << 'EOF'<br>
+[program:imagine]<br>
+command=/var/www/imagine-inventory/venv/bin/gunicorn app:app --bind 127.0.0.1:8000 --workers 3<br>
+directory=/var/www/imagine-inventory<br>
+user=www-data<br>
+autostart=true<br>
+autorestart=true<br>
+environment=DATABASE_URL="postgresql://imagine_user:VotreMotDePasseFort@localhost:5432/imagine_inventory",SECRET_KEY="VotreCleSecrete"<br>
+EOF<br>
+<br>
+supervisorctl reread<br>
+supervisorctl update<br>
+supervisorctl start imagine</div>
+</div>
+
+<div class="step">
+  <span class="step-num">7</span><h3>Configurer Nginx (serveur web)</h3>
+  <div class="code">cat > /etc/nginx/sites-available/imagine << 'EOF'<br>
+server {<br>
+    listen 80;<br>
+    server_name depot.imagine-events.tn;  # ← votre domaine<br>
+<br>
+    client_max_body_size 16M;<br>
+<br>
+    location / {<br>
+        proxy_pass http://127.0.0.1:8000;<br>
+        proxy_set_header Host $host;<br>
+        proxy_set_header X-Real-IP $remote_addr;<br>
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;<br>
+    }<br>
+<br>
+    location /uploads/ {<br>
+        alias /var/www/imagine-inventory/uploads/;<br>
+    }<br>
+}<br>
+EOF<br>
+<br>
+ln -s /etc/nginx/sites-available/imagine /etc/nginx/sites-enabled/<br>
+nginx -t && systemctl reload nginx</div>
+</div>
+
+<div class="step">
+  <span class="step-num">8</span><h3>Configurer le SSL (HTTPS gratuit)</h3>
+  <div class="code">apt install -y certbot python3-certbot-nginx<br>
+certbot --nginx -d depot.imagine-events.tn</div>
+</div>
+
+<div class="step">
+  <span class="step-num">9</span><h3>Redémarrer et vérifier</h3>
+  <div class="code">supervisorctl restart imagine<br>
+systemctl restart nginx<br>
+# Votre site est en ligne ! 🎉</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>📁 Fichiers à déployer</h2>
+
+<p>Le ZIP <strong>Imagine_Inventory_Deploy.zip</strong> contient tout le nécessaire :</p>
+<ul>
+  <li><span class="highlight">app.py</span> — Application Flask complète</li>
+  <li><span class="highlight">requirements.txt</span> — Dépendances Python</li>
+  <li><span class="highlight">templates/</span> — Pages HTML (7 templates)</li>
+  <li><span class="highlight">static/</span> — CSS + JavaScript</li>
+  <li><span class="highlight">uploads/</span> — Dossier pour les images</li>
+  <li><span class="highlight">render.yaml</span> — Configuration Render (déploiement automatique)</li>
+  <li><span class="highlight">runtime.txt</span> — Version Python pour Render</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>🔄 Flow : Test → Production</h2>
+
+<table style="width:100%;border-collapse:collapse">
+  <tr style="background:#F1F5F9">
+    <td style="padding:1rem;text-align:center;width:33%">
+      <span class="badge badge-green" style="font-size:1rem">1. Render</span><br>
+      <small>Test gratuit<br>Phase de validation</small>
+    </td>
+    <td style="padding:1rem;text-align:center;color:#C41E3A;font-size:2rem">→</td>
+    <td style="padding:1rem;text-align:center;width:33%">
+      <span class="badge badge-red" style="font-size:1rem">2. OVH</span><br>
+      <small>Production<br>Votre serveur au bureau</small>
+    </td>
+  </tr>
+</table>
+
+<hr style="margin:2rem 0;border-color:#E2E8F0">
+
+<p style="text-align:center;color:#64748B">
+  <strong>Imagine Inventory</strong> — Imagine Events Tunisia 🇹🇳<br>
+  <small>Besoin d'aide ? Dites-moi à quelle étape vous êtes bloqué !</small>
+</p>
+
+</body>
+</html>
