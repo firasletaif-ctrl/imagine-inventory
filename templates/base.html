@@ -28,6 +28,25 @@
                 <span class="nav-icon">➕</span><span>Ajouter du materiel</span>
             </a>
             {% endif %}
+            <!-- Schedule -->
+            <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
+                <span class="nav-icon">📅</span><span>Emploi du temps</span>
+            </a>
+            <!-- Export -->
+            {% if current_user.has_permission('manage_equipment') %}
+            <div style="margin:.25rem 0;padding:0 .5rem">
+                <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">📤 Export</div>
+                <a href="{{ url_for('export_excel') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
+                    <span class="nav-icon">📊</span><span>Excel</span>
+                </a>
+                <a href="{{ url_for('export_printer') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem" target="_blank">
+                    <span class="nav-icon">🖨️</span><span>PDF / Imprimer</span>
+                </a>
+            </div>
+            {% endif %}
+            <!-- Admin section -->
+            <div style="margin:.25rem 0;padding:0 .5rem">
+                <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">⚙️ Administration</div>
             {% if current_user.has_permission('manage_users') %}
             <a href="{{ url_for('manage_users') }}" class="nav-item {% if request.endpoint == 'manage_users' %}active{% endif %}">
                 <span class="nav-icon">👥</span><span>Gerer les utilisateurs</span>
@@ -48,7 +67,14 @@
                 <span class="nav-icon">⚠️</span><span>Effacer l'historique</span>
             </a>
             {% endif %}
+            </div>
             <div style="margin-top:auto;padding:0.5rem 0">
+                <a href="{{ url_for('notifications') }}" class="nav-item" style="font-size:0.85rem;position:relative">
+                    <span class="nav-icon">🔔</span><span>Notifications</span>
+                    {% if current_user.unread_notifications > 0 %}
+                    <span style="background:var(--red);color:white;padding:0 .35rem;border-radius:100px;font-size:.65rem;font-weight:700;margin-left:auto">{{ current_user.unread_notifications }}</span>
+                    {% endif %}
+                </a>
                 <a href="{{ url_for('change_password') }}" class="nav-item" style="font-size:0.85rem">
                     <span class="nav-icon">🔑</span><span>Changer mot de passe</span>
                 </a>
@@ -68,7 +94,12 @@
 
     <header class="mobile-header">
         <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-        <div class="brand-icon">✦</div>
+        <a href="{{ url_for('notifications') }}" style="color:white;text-decoration:none;position:relative">🔔
+            {% if current_user.unread_notifications > 0 %}
+            <span style="position:absolute;top:-8px;right:-10px;background:var(--red);color:white;padding:0 .25rem;border-radius:100px;font-size:.6rem;font-weight:700">{{ current_user.unread_notifications }}</span>
+            {% endif %}
+        </a>
+        <div class="brand-icon" style="width:30px;height:30px;font-size:1rem">✦</div>
         <span class="brand-name">IMAGINE</span>
     </header>
     {% endif %}

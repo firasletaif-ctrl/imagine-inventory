@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:800px">
+    <div class="dash-header">
+        <div><h1 class="dash-title">🔔 Notifications</h1><p class="dash-subtitle">{{ notifs|length }} notification(s)</p></div>
+        {% if notifs|selectattr('read','eq',false)|list|length > 0 %}
+        <form method="POST" action="{{ url_for('mark_all_read') }}"><button class="btn btn-secondary">✅ Tout marquer comme lu</button></form>
+        {% endif %}
+    </div>
+
+    {% if notifs %}
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+        {% for n in notifs %}
+        <div style="background:white;border-radius:12px;border:1px solid {% if n.read %}var(--gray-200){% else %}var(--blue){% endif %};padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;{% if not n.read %}border-left:4px solid var(--red);{% endif %}">
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem">
+                    {% if not n.read %}<span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></span>{% endif %}
+                    <strong style="font-size:.95rem;color:var(--gray-900)">{{ n.title }}</strong>
+                    <small style="color:var(--gray-400)">{{ n.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                </div>
+                <p style="color:var(--gray-600);font-size:.9rem;margin:0">{{ n.message }}</p>
+            </div>
+            <div style="display:flex;gap:.5rem;flex-shrink:0">
+                {% if n.link %}<a href="{{ n.link }}" class="btn btn-sm btn-primary">Voir</a>{% endif %}
+                {% if not n.read %}
+                <form method="POST" action="{{ url_for('mark_read',nid=n.id) }}">
+                    <input type="hidden" name="redirect" value="/notifications">
+                    <button class="btn btn-sm btn-secondary">Lu ✓</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:3rem;background:white;border-radius:14px;border:1px solid var(--gray-200)">
+        <div style="font-size:3rem;margin-bottom:.5rem">🔔</div>
+        <h3 style="color:var(--gray-600)">Aucune notification</h3>
+        <p style="color:var(--gray-400)">Vous recevrez des notifications quand un evenement vous est assigne ou quand l'admin valide votre compte.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

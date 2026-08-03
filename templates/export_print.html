@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Inventaire Imagine Events — Impression</title>
+<style>
+  @media print { body{ -webkit-print-color-adjust:exact; print-color-adjust:exact } .no-print{display:none!important} @page{size:A4 landscape;margin:10mm} }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,sans-serif;padding:15mm;color:#1E293B;background:white}
+  .header{text-align:center;margin-bottom:4mm;border-bottom:2px solid #C41E3A;padding-bottom:3mm}
+  .header h1{color:#0B1D3A;font-size:18pt;margin-bottom:2mm}.header h1 span{color:#C41E3A}
+  .header p{color:#64748B;font-size:9pt}
+  table{width:100%;border-collapse:collapse;font-size:8pt;margin-top:4mm}
+  th{background:#0B1D3A;color:white;padding:4mm 3mm;text-align:left;font-weight:bold;font-size:8.5pt}
+  td{padding:3mm 3mm;border-bottom:1px solid #E2E8F0}
+  tr:nth-child(even){background:#F8FAFC}
+  .dispo{background:#DCFCE7}.indispo{background:#FDE8EC}
+  .footer{text-align:center;margin-top:5mm;font-size:7pt;color:#94A3B8;border-top:1px solid #CBD5E1;padding-top:3mm}
+  .no-print{text-align:center;margin:10mm;background:#FEF3C7;padding:8mm;border-radius:5px;font-size:11pt}
+  .no-print button{background:#C41E3A;color:white;border:none;padding:5mm 15mm;font-size:14pt;border-radius:5px;cursor:pointer;font-weight:bold}
+  .no-print button:hover{background:#A01830}
+  .badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:7pt;font-weight:bold}
+  .badge-ok{background:#DCFCE7;color:#16A34A}.badge-no{background:#FDE8EC;color:#C41E3A}
+</style>
+</head>
+<body>
+<div class="no-print">
+  <p>⬇️ <strong>Cliquez sur le bouton ci-dessous pour imprimer ou enregistrer en PDF</strong></p>
+  <button onclick="window.print()">🖨️ Imprimer / Enregistrer PDF</button>
+  <p style="margin-top:5mm;font-size:9pt;color:#92400E">Ou faites CTRL+P puis choisissez "Enregistrer en PDF"</p>
+  <p style="margin-top:3mm"><a href="{{ url_for('dashboard') }}" style="color:#1E4D8C">← Retour au depot</a></p>
+</div>
+
+<div class="header">
+  <h1>IMAGINE<span> EVENTS</span> TUNISIA</h1>
+  <h2 style="color:#0B1D3A;font-size:14pt;margin-bottom:2mm">Inventaire du Dépôt</h2>
+  <p>Exporté le {{ now.strftime('%d/%m/%Y à %H:%M') }} — {{ equipment|length }} articles</p>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Référence</th><th>Matériel</th><th>Catégorie</th><th>État</th><th>Qté</th><th>Dispo</th><th>Emplacement</th>
+  </tr></thead>
+  <tbody>
+    {% for eq in equipment %}
+    <tr class="{{ 'dispo' if eq.available_quantity > 0 else 'indispo' }}">
+      <td><code style="font-size:7pt">{{ eq.reference }}</code></td>
+      <td><strong>{{ eq.name }}</strong></td>
+      <td>{{ eq.category.name if eq.category else '—' }}</td>
+      <td><span class="badge {{ 'badge-ok' if eq.condition=='Excellent' else 'badge-no' }}">{{ eq.condition }}</span></td>
+      <td style="text-align:center">{{ eq.total_quantity }}</td>
+      <td style="text-align:center"><strong style="color:{% if eq.available_quantity>0 %}#16A34A{% else %}#C41E3A{% endif %}">{{ eq.available_quantity }}</strong></td>
+      <td>{{ eq.location }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="footer">
+  <p>Imagine Events Tunisia — Rue du Lac Loch Ness, Les Berges du Lac, Tunis — info@imagine-events.com — +216 71 656 056</p>
+  <p>Page générée automatiquement. Ce document est la propriété d'Imagine Events.</p>
+</div>
+</body>
+</html>

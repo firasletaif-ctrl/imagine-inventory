@@ -1,23 +1,22 @@
-"""
-Imagine Inventory — Gestion de depot evenementiel
-Application Flask pour Imagine Events Tunisia
-"""
-import os, uuid, json
+"""Imagine Inventory v2 — Imagine Events Tunisia
+Gestion de depot + Emploi du temps + Export + Notifications"""
+import os, uuid, json, io
 from datetime import datetime, date, timedelta, timezone
 from functools import wraps
-from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
 from PIL import Image
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
-# Fuseau horaire Tunisie (UTC+1)
+# ── Heure Tunis ──
 TUNISIA_TZ = timezone(timedelta(hours=1))
-def tunisia_now():
-    return datetime.now(TUNISIA_TZ)
+def tunisia_now(): return datetime.now(TUNISIA_TZ)
 
-# ── App config ──
+# ── Config ──
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'imagine-events-tunisia-secret-2026')
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -35,31 +34,28 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter.'
 
-# ── Models ──
+# ═══════════ M O D E L S ═══════════
 class CustomRole(db.Model):
     __tablename__ = 'roles'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
-    icon = db.Column(db.String(10), default='\U0001f464')
-    description = db.Column(db.String(250), default='')
-    permissions = db.Column(db.Text, default='')
-    created_at = db.Column(db.DateTime, default=tunisia_now)
+    id = db.Column(db.Integer, primary_key=True); name = db.Column(db.String(100), unique=True, nullable=False)
+    icon = db.Column(db.String(10), default='👤'); description = db.Column(db.String(250), default='')
+    permissions = db.Column(db.Text, default=''); created_at = db.Column(db.DateTime, default=tunisia_now)
     users = db.relationship('User', backref='role', lazy=True)
     def get_permissions(self):
         try: return json.loads(self.permissions) if self.permissions else []
         except: return []
-    def set_permissions(self, pl): self.permissions = json.dumps(pl)
+    def set_permissions(self, pl): self.permissions = json.dumps(pl) if isinstance(pl, list) else '[]'
     def has_permission(self, p): return p in self.get_permissions()
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    full_name = db.Column(db.String(150), nullable=False)
+    id = db.Column(db.Integer, primary_key=True); email = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False); full_name = db.Column(db.String(150), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=tunisia_now)
     borrows = db.relationship('Borrow', backref='user', lazy=True)
+    event_assignments = db.relationship('EventAssignment', backref='user', lazy=True)
+    notifications = db.relationship('Notification', backref='user', lazy=True, foreign_keys='Notification.user_id')
     def set_password(self, p): self.password_hash = generate_password_hash(p)
     def check_password(self, p): return check_password_hash(self.password_hash, p)
     def has_permission(self, perm):
@@ -69,129 +65,147 @@ class User(UserMixin, db.Model):
     def role_name(self):
         role = db.session.get(CustomRole, self.role_id) if self.role_id else None
         return role.name if role else 'Aucun role'
+    @property
+    def unread_notifications(self):
+        return Notification.query.filter_by(user_id=self.id, read=False).count()
 
 class Category(db.Model):
     __tablename__ = 'categories'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
-    icon = db.Column(db.String(10), default='\U0001f4e6')
+    id = db.Column(db.Integer, primary_key=True); name = db.Column(db.String(100), unique=True, nullable=False)
+    icon = db.Column(db.String(10), default='📦')
     equipment = db.relationship('Equipment', backref='category', lazy=True)
 
 class Equipment(db.Model):
     __tablename__ = 'equipment'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, default='')
-    reference = db.Column(db.String(100), unique=True)
+    id = db.Column(db.Integer, primary_key=True); name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default=''); reference = db.Column(db.String(100), unique=True)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
-    total_quantity = db.Column(db.Integer, default=1)
-    available_quantity = db.Column(db.Integer, default=1)
-    specifications = db.Column(db.Text, default='')
-    condition = db.Column(db.String(50), default='Bon etat')
-    location = db.Column(db.String(100), default='Depot principal')
-    created_at = db.Column(db.DateTime, default=tunisia_now)
+    total_quantity = db.Column(db.Integer, default=1); available_quantity = db.Column(db.Integer, default=1)
+    specifications = db.Column(db.Text, default=''); condition = db.Column(db.String(50), default='Bon etat')
+    location = db.Column(db.String(100), default='Depot principal'); created_at = db.Column(db.DateTime, default=tunisia_now)
     images = db.relationship('EquipmentImage', backref='equipment', lazy=True, cascade='all, delete-orphan')
     borrows = db.relationship('Borrow', backref='equipment', lazy=True)
-    def primary_image(self):
-        return self.images[0].filename if self.images else None
-    def all_images(self):
-        return [img.filename for img in self.images]
+    def primary_image(self): return self.images[0].filename if self.images else None
+    def all_images(self): return [img.filename for img in self.images]
 
 class EquipmentImage(db.Model):
     __tablename__ = 'equipment_images'
-    id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(300), nullable=False)
+    id = db.Column(db.Integer, primary_key=True); filename = db.Column(db.String(300), nullable=False)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=tunisia_now)
 
 class Borrow(db.Model):
     __tablename__ = 'borrows'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
-    quantity = db.Column(db.Integer, default=1)
-    borrow_date = db.Column(db.DateTime, default=tunisia_now)
-    expected_return_date = db.Column(db.Date, nullable=False)
-    actual_return_date = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(50), default='active')
-    notes = db.Column(db.Text, default='')
+    quantity = db.Column(db.Integer, default=1); borrow_date = db.Column(db.DateTime, default=tunisia_now)
+    expected_return_date = db.Column(db.Date, nullable=False); actual_return_date = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(50), default='active'); notes = db.Column(db.Text, default='')
     event_name = db.Column(db.String(200), default='')
 
 class ActivityLog(db.Model):
     __tablename__ = 'activity_logs'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    action = db.Column(db.String(50), nullable=False)
-    description = db.Column(db.Text, default='')
-    equipment_name = db.Column(db.String(200), default='')
-    quantity = db.Column(db.Integer, default=0)
+    id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    action = db.Column(db.String(50), nullable=False); description = db.Column(db.Text, default='')
+    equipment_name = db.Column(db.String(200), default=''); quantity = db.Column(db.Integer, default=0)
     timestamp = db.Column(db.DateTime, default=tunisia_now)
 
-# ── Login manager ──
+# ── NEW: Events (emploi du temps) ──
+class Event(db.Model):
+    __tablename__ = 'events'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default='')
+    event_date = db.Column(db.Date, nullable=False)
+    start_time = db.Column(db.String(10), default='08:00')  # HH:MM
+    end_time = db.Column(db.String(10), default='17:00')
+    location = db.Column(db.String(200), default='')
+    status = db.Column(db.String(50), default='upcoming')  # upcoming / ongoing / completed / cancelled
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    assignments = db.relationship('EventAssignment', backref='event', lazy=True, cascade='all, delete-orphan')
+
+class EventAssignment(db.Model):
+    __tablename__ = 'event_assignments'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    role = db.Column(db.String(100), default='Staff')  # Staff, Responsable, Technicien, etc.
+    notes = db.Column(db.Text, default='')
+
+# ── NEW: Notifications ──
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, default='')
+    link = db.Column(db.String(300), default='')
+    read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+
+# ═══════════ H E L P E R S ═══════════
 @login_manager.user_loader
 def load_user(uid): return db.session.get(User, int(uid))
 
 @app.template_filter('get_user')
 def get_user_filter(uid): return db.session.get(User, int(uid)) if uid else None
 
-# ── Helpers ──
 def allowed_file(fn): return '.' in fn and fn.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_uploaded_image(file):
-    """Enregistre une image, retourne le nom du fichier ou None."""
-    if not file or not file.filename:
-        return None
-    if not allowed_file(file.filename):
-        return None
-    file.seek(0, 2)
-    if file.tell() == 0:
-        return None
-    file.seek(0)
-    ext = file.filename.rsplit('.', 1)[1].lower()
-    uname = f"{uuid.uuid4().hex}.{ext}"
+    if not file or not file.filename: return None
+    if not allowed_file(file.filename): return None
+    file.seek(0,2); size = file.tell(); file.seek(0)
+    if size == 0: return None
+    ext = file.filename.rsplit('.',1)[1].lower(); uname = f"{uuid.uuid4().hex}.{ext}"
     fpath = os.path.join(app.config['UPLOAD_FOLDER'], uname)
     try:
-        file.save(fpath)
-        img = Image.open(fpath)
-        img.thumbnail((1200, 1200))
-        if img.mode in ('RGBA', 'P'):
-            img = img.convert('RGB')
-        jpg_name = f"{uuid.uuid4().hex}.jpg"
-        jpg_path = os.path.join(app.config['UPLOAD_FOLDER'], jpg_name)
-        img.save(jpg_path, 'JPEG', optimize=True, quality=85)
+        file.save(fpath); img = Image.open(fpath); img.thumbnail((1200,1200))
+        if img.mode in ('RGBA','P'): img = img.convert('RGB')
+        jname = f"{uuid.uuid4().hex}.jpg"; jpath = os.path.join(app.config['UPLOAD_FOLDER'], jname)
+        img.save(jpath, 'JPEG', optimize=True, quality=85)
         if ext != 'jpg':
             try: os.remove(fpath)
             except: pass
-        return jpg_name
-    except Exception:
-        if os.path.exists(fpath):
-            return uname
+        return jname
+    except:
+        if os.path.exists(fpath): return uname
         return None
 
 def update_availability(eq_id):
     eq = db.session.get(Equipment, eq_id)
     if eq:
         qty = db.session.query(db.func.sum(Borrow.quantity)).filter_by(equipment_id=eq_id, status='active').scalar() or 0
-        eq.available_quantity = max(0, eq.total_quantity - qty)
-        db.session.commit()
+        eq.available_quantity = max(0, eq.total_quantity - qty); db.session.commit()
 
 def log_action(action, description='', equipment_name='', quantity=0):
     log = ActivityLog(user_id=current_user.id, action=action, description=description, equipment_name=equipment_name, quantity=quantity)
     db.session.add(log); db.session.commit()
 
-# ── Permissions ──
+def notify_user(uid, title, message, link=''):
+    n = Notification(user_id=uid, title=title, message=message, link=link)
+    db.session.add(n); db.session.commit()
+
+def notify_admins(title, message, link=''):
+    admin_role = CustomRole.query.filter_by(name='Admin').first()
+    if admin_role:
+        admins = User.query.filter_by(role_id=admin_role.id).all()
+        for a in admins:
+            notify_user(a.id, title, message, link)
+
 ALL_PERMISSIONS = [
-    {"key":"manage_users","label":"Gerer les utilisateurs","desc":"Creer, modifier, supprimer des comptes","icon":"\U0001f465"},
-    {"key":"manage_roles","label":"Gerer les roles","desc":"Creer et modifier les roles et permissions","icon":"\U0001f510"},
-    {"key":"manage_equipment","label":"Gerer le materiel","desc":"Ajouter, modifier, supprimer du materiel","icon":"\U0001f4e6"},
-    {"key":"borrow_equipment","label":"Emprunter","desc":"Emprunter du materiel","icon":"\U0001f4e4"},
-    {"key":"return_equipment","label":"Retourner","desc":"Marquer un emprunt comme retourne","icon":"\u2705"},
-    {"key":"manage_categories","label":"Gerer les categories","desc":"Ajouter des categories de materiel","icon":"\U0001f4c2"},
-    {"key":"view_logs","label":"Voir les logs","desc":"Consulter l'historique d'activite","icon":"\U0001f4dc"},
-    {"key":"clear_history","label":"Effacer l'historique","desc":"Supprimer l'historique des emprunts","icon":"\U0001f5d1\ufe0f"},
+    {"key":"manage_users","label":"Gerer les utilisateurs","desc":"Creer, modifier, supprimer des comptes","icon":"👥"},
+    {"key":"manage_roles","label":"Gerer les roles","desc":"Creer et modifier les roles et permissions","icon":"🔐"},
+    {"key":"manage_equipment","label":"Gerer le materiel","desc":"Ajouter, modifier, supprimer du materiel","icon":"📦"},
+    {"key":"borrow_equipment","label":"Emprunter","desc":"Emprunter du materiel","icon":"📤"},
+    {"key":"return_equipment","label":"Retourner","desc":"Marquer un emprunt comme retourne","icon":"✅"},
+    {"key":"manage_categories","label":"Gerer les categories","desc":"Ajouter des categories de materiel","icon":"📂"},
+    {"key":"view_logs","label":"Voir les logs","desc":"Consulter l'historique d'activite","icon":"📜"},
+    {"key":"clear_history","label":"Effacer l'historique","desc":"Supprimer l'historique des emprunts","icon":"🗑️"},
+    {"key":"manage_schedule","label":"Gerer le planning","desc":"Creer et gerer l'emploi du temps","icon":"📅"},
 ]
 
-# ── Decorator ──
 def permission_required(perm):
     def decorator(f):
         @wraps(f)
@@ -205,7 +219,6 @@ def permission_required(perm):
     return decorator
 
 # ═══════════ R O U T E S ═══════════
-
 @app.route('/')
 def index():
     return redirect(url_for('dashboard') if current_user.is_authenticated else url_for('login'))
@@ -214,13 +227,11 @@ def index():
 def login():
     if current_user.is_authenticated: return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        email = request.form.get('email','').strip().lower()
-        pw = request.form.get('password','')
+        email = request.form.get('email','').strip().lower(); pw = request.form.get('password','')
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(pw):
             login_user(user, remember=True)
-            log = ActivityLog(user_id=user.id, action='login', description=f'Connexion de {user.full_name}')
-            db.session.add(log); db.session.commit()
+            db.session.add(ActivityLog(user_id=user.id, action='login', description=f'Connexion de {user.full_name}')); db.session.commit()
             flash(f'Bienvenue {user.full_name} !', 'success')
             return redirect(request.args.get('next') or url_for('dashboard'))
         flash('Email ou mot de passe incorrect.', 'error')
@@ -230,8 +241,7 @@ def login():
 def register():
     if current_user.is_authenticated: return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        email = request.form.get('email','').strip().lower()
-        name = request.form.get('full_name','').strip()
+        email = request.form.get('email','').strip().lower(); name = request.form.get('full_name','').strip()
         pw = request.form.get('password','')
         if not email or not name or not pw: flash('Tous les champs requis.','error')
         elif request.form.get('confirm_password') != pw: flash('Mots de passe differents.','error')
@@ -239,15 +249,14 @@ def register():
         elif User.query.filter_by(email=email).first(): flash('Email deja utilise.','error')
         else:
             u = User(email=email, full_name=name); u.set_password(pw)
-            # Premier inscrit = admin, les suivants = staff
-            if User.query.count() == 0:
-                u.role_id = 1  # Admin
+            if User.query.count() == 0: u.role_id = 1
             else:
                 pending = CustomRole.query.filter_by(name='En attente').first()
-                if pending:
-                    u.role_id = pending.id
+                if pending: u.role_id = pending.id
             db.session.add(u); db.session.commit()
-            flash('Compte cree ! Connectez-vous.','success')
+            # Notify admins
+            notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', '/admin/users')
+            flash('Compte cree ! En attente de validation par l\'admin.','success')
             return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -262,25 +271,19 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    search = request.args.get('search','').strip()
-    cat_filter = request.args.get('category','')
+    search = request.args.get('search','').strip(); cat_filter = request.args.get('category','')
     q = Equipment.query
-    if search:
-        q = q.filter(db.or_(Equipment.name.ilike(f'%{search}%'),Equipment.description.ilike(f'%{search}%'),Equipment.reference.ilike(f'%{search}%'),Equipment.specifications.ilike(f'%{search}%'),Equipment.location.ilike(f'%{search}%')))
+    if search: q = q.filter(db.or_(Equipment.name.ilike(f'%{search}%'),Equipment.description.ilike(f'%{search}%'),Equipment.reference.ilike(f'%{search}%'),Equipment.specifications.ilike(f'%{search}%'),Equipment.location.ilike(f'%{search}%')))
     if cat_filter: q = q.filter_by(category_id=int(cat_filter))
-    eqs = q.order_by(Equipment.name).all()
-    cats = Category.query.order_by(Category.name).all()
+    eqs = q.order_by(Equipment.name).all(); cats = Category.query.order_by(Category.name).all()
     ab = Borrow.query.filter(Borrow.status.in_(['active','late'])).order_by(Borrow.expected_return_date).all()
     today = date.today()
     for b in ab:
         if b.status == 'active' and b.expected_return_date < today: b.status = 'late'
     db.session.commit()
     eq_json = json.dumps([{'id':e.id,'name':e.name,'available_quantity':e.available_quantity} for e in Equipment.query.all()])
-    allc = Equipment.query.count()
-    avc = Equipment.query.filter(Equipment.available_quantity>0).count()
-    lc = Borrow.query.filter_by(status='late').count()
     is_pending = not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
-    return render_template('dashboard.html', equipment=eqs, is_pending=is_pending, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=allc, available_count=avc, late_count=lc, equipment_json=eq_json, today=today)
+    return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=Equipment.query.count(), available_count=Equipment.query.filter(Equipment.available_quantity>0).count(), late_count=Borrow.query.filter_by(status='late').count(), equipment_json=eq_json, today=today, is_pending=is_pending)
 
 @app.route('/equipment/<int:eid>')
 @login_required
@@ -295,15 +298,13 @@ def equipment_detail(eid):
 def borrow_equipment(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
-    qty = int(request.form.get('quantity',1))
-    rd = request.form.get('return_date','')
+    qty = int(request.form.get('quantity',1)); rd = request.form.get('return_date','')
     try: return_date = datetime.strptime(rd,'%Y-%m-%d').date()
     except: flash('Date invalide.','error'); return redirect(url_for('dashboard'))
     if return_date < date.today(): flash('Date dans le passe.','error'); return redirect(url_for('dashboard'))
     if qty < 1 or qty > eq.available_quantity: flash(f'Quantite invalide (max {eq.available_quantity}).','error'); return redirect(url_for('dashboard'))
     b = Borrow(user_id=current_user.id, equipment_id=eid, quantity=qty, expected_return_date=return_date, event_name=request.form.get('event_name','').strip(), notes=request.form.get('notes','').strip())
-    db.session.add(b); db.session.commit()
-    update_availability(eid)
+    db.session.add(b); db.session.commit(); update_availability(eid)
     log_action('borrow', f'Emprunt de {qty}x {eq.name}', eq.name, qty)
     flash(f'{qty} x {eq.name} emprunte(s). Retour le {return_date.strftime("%d/%m/%Y")}.','success')
     return redirect(url_for('dashboard'))
@@ -312,21 +313,13 @@ def borrow_equipment(eid):
 @permission_required('return_equipment')
 def return_equipment(bid):
     b = db.session.get(Borrow, bid)
-    if not b or b.status not in ('active','late'):
-        flash('Emprunt introuvable ou deja retourne.', 'error')
-        return redirect(url_for('dashboard'))
-
-    # Seul l'emprunteur ou un admin peut retourner
+    if not b or b.status not in ('active','late'): flash('Emprunt introuvable ou deja retourne.','error'); return redirect(url_for('dashboard'))
     is_admin = current_user.has_permission('manage_users')
-    if b.user_id != current_user.id and not is_admin:
-        flash('Vous ne pouvez retourner que vos propres emprunts. Seul un admin peut retourner pour quelqu\'un d\'autre.', 'error')
-        return redirect(url_for('dashboard'))
-
-    b.status = 'returned'; b.actual_return_date = tunisia_now()
-    db.session.commit(); update_availability(b.equipment_id)
+    if b.user_id != current_user.id and not is_admin: flash('Vous ne pouvez retourner que vos propres emprunts.','error'); return redirect(url_for('dashboard'))
+    b.status = 'returned'; b.actual_return_date = tunisia_now(); db.session.commit(); update_availability(b.equipment_id)
     who = current_user.full_name if b.user_id == current_user.id else f'{current_user.full_name} (admin) pour {b.user.full_name}'
     log_action('return', f'Retour de {b.quantity}x {b.equipment.name} par {who}', b.equipment.name, b.quantity)
-    flash(f'{b.equipment.name} retourne avec succes.', 'success')
+    flash(f'{b.equipment.name} retourne avec succes.','success')
     return redirect(url_for('dashboard'))
 
 @app.route('/equipment/add', methods=['GET','POST'])
@@ -336,13 +329,7 @@ def add_equipment():
         name = request.form.get('name','').strip()
         if not name: flash('Nom requis.','error'); return redirect(url_for('add_equipment'))
         ref = request.form.get('reference','').strip() or f"IM-{uuid.uuid4().hex[:8].upper()}"
-        eq = Equipment(name=name, description=request.form.get('description','').strip(), reference=ref,
-                        category_id=int(request.form.get('category_id',0)) or None,
-                        total_quantity=int(request.form.get('total_quantity',1)),
-                        available_quantity=int(request.form.get('total_quantity',1)),
-                        specifications=request.form.get('specifications','').strip(),
-                        condition=request.form.get('condition','Bon etat'),
-                        location=request.form.get('location','Depot principal'))
+        eq = Equipment(name=name, description=request.form.get('description','').strip(), reference=ref, category_id=int(request.form.get('category_id',0)) or None, total_quantity=int(request.form.get('total_quantity',1)), available_quantity=int(request.form.get('total_quantity',1)), specifications=request.form.get('specifications','').strip(), condition=request.form.get('condition','Bon etat'), location=request.form.get('location','Depot principal'))
         db.session.add(eq); db.session.flush()
         for f in request.files.getlist('images'):
             sn = save_uploaded_image(f)
@@ -351,8 +338,7 @@ def add_equipment():
         log_action('add_equipment', f'Ajout de {name}', name)
         flash(f'"{name}" ajoute au depot !','success')
         return redirect(url_for('equipment_detail', eid=eq.id))
-    cats = Category.query.order_by(Category.name).all()
-    return render_template('add_equipment.html', categories=cats)
+    return render_template('add_equipment.html', categories=Category.query.order_by(Category.name).all())
 
 @app.route('/equipment/<int:eid>/edit', methods=['GET','POST'])
 @permission_required('manage_equipment')
@@ -360,24 +346,20 @@ def edit_equipment(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
     if request.method == 'POST':
-        eq.name = request.form.get('name','').strip()
-        eq.description = request.form.get('description','').strip()
+        eq.name = request.form.get('name','').strip(); eq.description = request.form.get('description','').strip()
         ref = request.form.get('reference','').strip()
         if ref and ref != eq.reference: eq.reference = ref
         cid = request.form.get('category_id'); eq.category_id = int(cid) if cid else None
         old = eq.total_quantity; eq.total_quantity = int(request.form.get('total_quantity',eq.total_quantity))
         eq.available_quantity = max(0, eq.available_quantity + (eq.total_quantity - old))
-        eq.specifications = request.form.get('specifications','').strip()
-        eq.condition = request.form.get('condition','Bon etat')
-        eq.location = request.form.get('location','Depot principal')
+        eq.specifications = request.form.get('specifications','').strip(); eq.condition = request.form.get('condition','Bon etat'); eq.location = request.form.get('location','Depot principal')
         for f in request.files.getlist('images'):
             sn = save_uploaded_image(f)
             if sn: db.session.add(EquipmentImage(filename=sn, equipment_id=eq.id))
         db.session.commit()
         flash(f'"{eq.name}" mis a jour.','success')
         return redirect(url_for('equipment_detail', eid=eq.id))
-    cats = Category.query.order_by(Category.name).all()
-    return render_template('edit_equipment.html', eq=eq, categories=cats)
+    return render_template('edit_equipment.html', eq=eq, categories=Category.query.order_by(Category.name).all())
 
 @app.route('/equipment/<int:eid>/delete-image/<int:iid>', methods=['POST'])
 @login_required
@@ -398,41 +380,36 @@ def delete_equipment(eid):
             fp = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
             if os.path.exists(fp): os.remove(fp)
         db.session.delete(eq); db.session.commit()
-        log_action('delete_equipment', f'Suppression de {eq.name}', eq.name)
         flash(f'"{eq.name}" supprime.','info')
     return redirect(url_for('dashboard'))
 
 @app.route('/uploads/<fn>')
 @login_required
-def uploaded_file(fn):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], fn)
+def uploaded_file(fn): return send_from_directory(app.config['UPLOAD_FOLDER'], fn)
 
 @app.route('/change-password', methods=['GET','POST'])
 @login_required
 def change_password():
     if request.method == 'POST':
-        cp = request.form.get('current_password','')
-        np = request.form.get('new_password','')
+        cp = request.form.get('current_password',''); np = request.form.get('new_password','')
         if not current_user.check_password(cp): flash('Mot de passe actuel incorrect.','error')
         elif len(np) < 6: flash('6 caracteres minimum.','error')
         elif np != request.form.get('confirm_password',''): flash('Mots de passe differents.','error')
         else: current_user.set_password(np); db.session.commit(); flash('Mot de passe change !','success'); return redirect(url_for('dashboard'))
     return render_template('change_password.html')
 
+# ═══════ A D M I N   U S E R S ═══════
 @app.route('/admin/users')
 @permission_required('manage_users')
 def manage_users():
     users = User.query.order_by(User.created_at.desc()).all()
-    all_roles = CustomRole.query.order_by(CustomRole.name).all()
-    return render_template('manage_users.html', users=users, all_roles=all_roles)
+    return render_template('manage_users.html', users=users, all_roles=CustomRole.query.order_by(CustomRole.name).all())
 
 @app.route('/admin/users/create', methods=['POST'])
 @permission_required('manage_users')
 def create_user():
-    email = request.form.get('email','').strip().lower()
-    name = request.form.get('full_name','').strip()
-    pw = request.form.get('password','')
-    rid = request.form.get('role_id')
+    email = request.form.get('email','').strip().lower(); name = request.form.get('full_name','').strip()
+    pw = request.form.get('password',''); rid = request.form.get('role_id')
     try: rid = int(rid) if rid else None
     except: rid = None
     if not email or not name or not pw: flash('Tous les champs requis.','error')
@@ -442,6 +419,7 @@ def create_user():
         u = User(email=email, full_name=name); u.set_password(pw)
         if rid: u.role_id = rid
         db.session.add(u); db.session.commit()
+        notify_user(u.id, 'Compte active', f'Votre compte a ete cree par {current_user.full_name}. Bienvenue !', '/dashboard')
         flash(f'Compte cree : {name} ({u.role_name})','success')
     return redirect(url_for('manage_users'))
 
@@ -451,8 +429,7 @@ def edit_user(uid):
     u = db.session.get(User, uid)
     if not u: flash('Introuvable.','error'); return redirect(url_for('manage_users'))
     if u.id == current_user.id: flash('Vous ne pouvez pas modifier votre propre role.','error'); return redirect(url_for('manage_users'))
-    u.full_name = request.form.get('full_name',u.full_name).strip()
-    rid = request.form.get('role_id')
+    u.full_name = request.form.get('full_name',u.full_name).strip(); rid = request.form.get('role_id')
     try: u.role_id = int(rid) if rid else None
     except: pass
     np = request.form.get('new_password','')
@@ -468,8 +445,7 @@ def delete_user(uid):
     u = db.session.get(User, uid)
     if not u: flash('Introuvable.','error')
     elif u.id == current_user.id: flash('Impossible de se supprimer.','error')
-    elif Borrow.query.filter_by(user_id=uid).filter(Borrow.status.in_(['active','late'])).first():
-        flash(f'{u.full_name} a des emprunts en cours ou en retard.','error')
+    elif Borrow.query.filter_by(user_id=uid).filter(Borrow.status.in_(['active','late'])).first(): flash(f'{u.full_name} a des emprunts en cours.','error')
     else:
         ActivityLog.query.filter_by(user_id=uid).delete()
         Borrow.query.filter_by(user_id=uid).update({Borrow.user_id: None})
@@ -477,11 +453,11 @@ def delete_user(uid):
         flash(f'{u.full_name} supprime.','info')
     return redirect(url_for('manage_users'))
 
+# ═══════ R O L E S ═══════
 @app.route('/admin/roles')
 @permission_required('manage_roles')
 def manage_roles():
-    roles = CustomRole.query.order_by(CustomRole.name).all()
-    return render_template('manage_roles.html', roles=roles, all_permissions=ALL_PERMISSIONS)
+    return render_template('manage_roles.html', roles=CustomRole.query.order_by(CustomRole.name).all(), all_permissions=ALL_PERMISSIONS)
 
 @app.route('/admin/roles/create', methods=['POST'])
 @permission_required('manage_roles')
@@ -490,9 +466,8 @@ def create_role():
     if not name: flash('Nom requis.','error')
     elif CustomRole.query.filter_by(name=name).first(): flash('Ce role existe deja.','error')
     else:
-        r = CustomRole(name=name, icon=request.form.get('icon','\U0001f464'), description=request.form.get('description','').strip())
-        r.set_permissions(request.form.getlist('permissions'))
-        db.session.add(r); db.session.commit()
+        r = CustomRole(name=name, icon=request.form.get('icon','👤'), description=request.form.get('description','').strip())
+        r.set_permissions(request.form.getlist('permissions')); db.session.add(r); db.session.commit()
         flash(f'Role "{name}" cree.','success')
     return redirect(url_for('manage_roles'))
 
@@ -501,11 +476,9 @@ def create_role():
 def edit_role(rid):
     r = db.session.get(CustomRole, rid)
     if not r: flash('Role introuvable.','error'); return redirect(url_for('manage_roles'))
-    r.name = request.form.get('name',r.name).strip()
-    r.icon = request.form.get('icon',r.icon)
+    r.name = request.form.get('name',r.name).strip(); r.icon = request.form.get('icon',r.icon)
     r.description = request.form.get('description','').strip()
-    r.set_permissions(request.form.getlist('permissions'))
-    db.session.commit()
+    r.set_permissions(request.form.getlist('permissions')); db.session.commit()
     flash(f'Role "{r.name}" mis a jour.','success')
     return redirect(url_for('manage_roles'))
 
@@ -521,8 +494,7 @@ def delete_role(rid):
 @app.route('/admin/clear-history', methods=['POST'])
 @permission_required('clear_history')
 def clear_history():
-    pw = request.form.get('password','')
-    if not current_user.check_password(pw): flash('Mot de passe incorrect.','error'); return redirect(url_for('dashboard'))
+    if not current_user.check_password(request.form.get('password','')): flash('Mot de passe incorrect.','error'); return redirect(url_for('dashboard'))
     c = Borrow.query.filter_by(status='returned').count()
     Borrow.query.filter_by(status='returned').delete(); db.session.commit()
     log_action('clear_history', f'Historique global efface ({c} emprunts)')
@@ -534,11 +506,9 @@ def clear_history():
 def clear_equipment_history(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
-    pw = request.form.get('password','')
-    if not current_user.check_password(pw): flash('Mot de passe incorrect.','error'); return redirect(url_for('equipment_detail', eid=eid))
+    if not current_user.check_password(request.form.get('password','')): flash('Mot de passe incorrect.','error'); return redirect(url_for('equipment_detail', eid=eid))
     c = Borrow.query.filter_by(equipment_id=eid, status='returned').count()
     Borrow.query.filter_by(equipment_id=eid, status='returned').delete(); db.session.commit()
-    log_action('clear_history', f'Historique efface pour {eq.name} ({c} emprunts)')
     flash(f'{c} emprunt(s) effaces pour {eq.name}.','success')
     return redirect(url_for('equipment_detail', eid=eid))
 
@@ -552,45 +522,176 @@ def activity_logs():
 @app.route('/categories/add', methods=['POST'])
 @permission_required('manage_categories')
 def add_category():
-    name = request.form.get('name','').strip()
-    icon = request.form.get('icon','\U0001f4e6')
+    name = request.form.get('name','').strip(); icon = request.form.get('icon','📦')
     if name and not Category.query.filter_by(name=name).first():
         db.session.add(Category(name=name, icon=icon)); db.session.commit()
-        log_action('add_category', f'Ajout de la categorie {name}')
         flash(f'Categorie "{name}" ajoutee.','success')
     return redirect(url_for('dashboard'))
-
 
 @app.route('/categories/<int:cid>/delete', methods=['POST'])
 @permission_required('manage_categories')
 def delete_category(cid):
     cat = db.session.get(Category, cid)
     if not cat: flash('Categorie introuvable.','error')
-    elif Equipment.query.filter_by(category_id=cid).first(): flash(f'Des materiels utilisent la categorie {cat.name}. Reassignez-les d\'abord.','error')
-    else:
-        db.session.delete(cat); db.session.commit()
-        log_action('delete_category', f'Suppression de la categorie {cat.name}')
-        flash(f'Categorie "{cat.name}" supprimee.','info')
+    elif Equipment.query.filter_by(category_id=cid).first(): flash(f'Des materiels utilisent la categorie {cat.name}.','error')
+    else: db.session.delete(cat); db.session.commit(); flash(f'Categorie "{cat.name}" supprimee.','info')
     return redirect(url_for('dashboard'))
 
-# ── Init DB ──
+# ═══════════ N E W :  E M P L O I   D U   T E M P S ═══════════
+@app.route('/schedule')
+@login_required
+def schedule():
+    """Main calendar/schedule view"""
+    upcoming = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    past = Event.query.filter(Event.event_date < date.today()).order_by(Event.event_date.desc()).limit(20).all()
+    return render_template('schedule.html', upcoming=upcoming, past=past, today=date.today(), all_users=User.query.order_by(User.full_name).all())
+
+@app.route('/schedule/create', methods=['POST'])
+@permission_required('manage_schedule')
+def create_event():
+    title = request.form.get('title','').strip()
+    if not title: flash('Titre requis.','error'); return redirect(url_for('schedule'))
+    try: ed = datetime.strptime(request.form.get('event_date',''),'%Y-%m-%d').date()
+    except: flash('Date invalide.','error'); return redirect(url_for('schedule'))
+    st = request.form.get('start_time','08:00'); et = request.form.get('end_time','17:00')
+    evt = Event(title=title, description=request.form.get('description','').strip(), event_date=ed, start_time=st, end_time=et, location=request.form.get('location','').strip(), created_by=current_user.id)
+    db.session.add(evt); db.session.flush()
+    # Assign users
+    user_ids = request.form.getlist('assigned_users')
+    for uid in user_ids:
+        db.session.add(EventAssignment(event_id=evt.id, user_id=int(uid), role='Staff'))
+    db.session.commit()
+    # Notify assigned users
+    for uid in user_ids:
+        u = db.session.get(User, uid)
+        if u:
+            notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" le {ed.strftime("%d/%m/%Y")} ({st}-{et})', '/schedule')
+    flash(f'Evenement "{title}" cree.','success')
+    return redirect(url_for('schedule'))
+
+@app.route('/schedule/<int:evid>/edit', methods=['POST'])
+@permission_required('manage_schedule')
+def edit_event(evid):
+    evt = db.session.get(Event, evid)
+    if not evt: flash('Introuvable.','error'); return redirect(url_for('schedule'))
+    evt.title = request.form.get('title','').strip(); evt.description = request.form.get('description','').strip()
+    try: evt.event_date = datetime.strptime(request.form.get('event_date',''),'%Y-%m-%d').date()
+    except: pass
+    evt.start_time = request.form.get('start_time','08:00'); evt.end_time = request.form.get('end_time','17:00')
+    evt.location = request.form.get('location','').strip(); evt.status = request.form.get('status',evt.status)
+    # Update assignments
+    EventAssignment.query.filter_by(event_id=evid).delete()
+    for uid in request.form.getlist('assigned_users'):
+        db.session.add(EventAssignment(event_id=evid, user_id=int(uid)))
+    db.session.commit(); flash(f'Evenement modifie.','success')
+    return redirect(url_for('schedule'))
+
+@app.route('/schedule/<int:evid>/delete', methods=['POST'])
+@permission_required('manage_schedule')
+def delete_event(evid):
+    evt = db.session.get(Event, evid)
+    if evt: db.session.delete(evt); db.session.commit(); flash(f'Evenement "{evt.title}" supprime.','info')
+    return redirect(url_for('schedule'))
+
+@app.route('/schedule/<int:evid>/assign', methods=['POST'])
+@permission_required('manage_schedule')
+def assign_one_user(evid):
+    """Quick assign one user from schedule page"""
+    uid = request.form.get('user_id'); role = request.form.get('role','Staff')
+    if uid and not EventAssignment.query.filter_by(event_id=evid, user_id=int(uid)).first():
+        db.session.add(EventAssignment(event_id=evid, user_id=int(uid), role=role)); db.session.commit()
+    return redirect(url_for('schedule'))
+
+@app.route('/schedule/<int:evid>/unassign/<int:uid>', methods=['POST'])
+@permission_required('manage_schedule')
+def unassign_user(evid, uid):
+    ea = EventAssignment.query.filter_by(event_id=evid, user_id=uid).first()
+    if ea: db.session.delete(ea); db.session.commit()
+    return redirect(url_for('schedule'))
+
+# ═══════════ N E W :  N O T I F I C A T I O N S ═══════════
+@app.route('/notifications')
+@login_required
+def notifications():
+    notifs = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(100).all()
+    return render_template('notifications.html', notifs=notifs)
+
+@app.route('/notifications/read/<int:nid>', methods=['POST'])
+@login_required
+def mark_read(nid):
+    n = Notification.query.filter_by(id=nid, user_id=current_user.id).first()
+    if n: n.read = True; db.session.commit()
+    return redirect(request.form.get('redirect','/notifications'))
+
+@app.route('/notifications/read-all', methods=['POST'])
+@login_required
+def mark_all_read():
+    Notification.query.filter_by(user_id=current_user.id, read=False).update({Notification.read: True})
+    db.session.commit(); flash('Toutes les notifications lues.','success')
+    return redirect(url_for('notifications'))
+
+# ═══════════ N E W :  E X P O R T S ═══════════
+@app.route('/export/excel')
+@permission_required('manage_equipment')
+def export_excel():
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Inventaire Imagine Events"
+    # Styles
+    header_font = Font(name='Arial', bold=True, size=11, color='FFFFFF')
+    header_fill = PatternFill(start_color='0B1D3A', end_color='0B1D3A', fill_type='solid')
+    header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    cell_font = Font(name='Arial', size=10)
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    green_fill = PatternFill(start_color='DCFCE7', end_color='DCFCE7', fill_type='solid')
+    red_fill = PatternFill(start_color='FDE8EC', end_color='FDE8EC', fill_type='solid')
+    # Title
+    ws.merge_cells('A1:I1'); ws['A1'] = 'IMAGINE EVENTS TUNISIA - Inventaire du Depot'
+    ws['A1'].font = Font(name='Arial', bold=True, size=14, color='0B1D3A'); ws['A1'].alignment = Alignment(horizontal='center')
+    ws.merge_cells('A2:I2'); ws['A2'] = f'Exporte le {date.today().strftime("%d/%m/%Y")}'
+    ws['A2'].font = Font(name='Arial', size=9, color='64748B'); ws['A2'].alignment = Alignment(horizontal='center')
+    ws.append([])  # blank row
+    # Headers
+    headers = ['Reference', 'Nom', 'Categorie', 'Description', 'Qté Totale', 'Qté Dispo', 'État', 'Emplacement', 'Spécifications']
+    for c, h in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=c, value=h)
+        cell.font = header_font; cell.fill = header_fill; cell.alignment = header_alignment; cell.border = thin_border
+    # Data
+    for r, eq in enumerate(Equipment.query.order_by(Equipment.name).all(), 5):
+        cat_name = eq.category.name if eq.category else ''
+        data = [eq.reference, eq.name, cat_name, eq.description, eq.total_quantity, eq.available_quantity, eq.condition, eq.location, eq.specifications.replace('\n',' | ')[:200]]
+        for c, val in enumerate(data, 1):
+            cell = ws.cell(row=r, column=c, value=val)
+            cell.font = cell_font; cell.border = thin_border
+            if c in (5,6): cell.alignment = Alignment(horizontal='center')
+        # Color rows
+        fill = green_fill if eq.available_quantity > 0 else red_fill
+        for c in range(1, 10): ws.cell(row=r, column=c).fill = fill
+    # Column widths
+    widths = [15, 28, 18, 30, 12, 12, 14, 18, 35]
+    for i, w in enumerate(widths, 1): ws.column_dimensions[get_column_letter(i)].width = w
+    output = io.BytesIO()
+    wb.save(output); output.seek(0)
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'inventaire_imagine_{date.today().strftime("%Y%m%d")}.xlsx')
+
+@app.route('/export/pdf')
+@permission_required('manage_equipment')
+def export_printer():
+    """Page optimisee pour impression (CTRL+P -> PDF)"""
+    return render_template('export_print.html', equipment=Equipment.query.order_by(Equipment.name).all(), now=tunisia_now())
+
+# ═══════ I N I T   D B ═══════
 def init_db():
     with app.app_context():
         db.create_all()
         if User.query.first(): return
-        ar = CustomRole(name='Admin', icon='\U0001f451', description='Toutes les permissions')
-        ar.set_permissions([p['key'] for p in ALL_PERMISSIONS])
-        sr = CustomRole(name='Staff', icon='\U0001f477', description='Emprunts et retours')
-        sr.set_permissions(['borrow_equipment','return_equipment'])
-        pr = CustomRole(name='En attente', icon='⏳', description='Nouveau compte en attente de validation')
-        pr.set_permissions([])
-        mr = CustomRole(name='Manager', icon='\U0001f6e1\ufe0f', description='Gestion complete sans effacer historique')
-        mr.set_permissions(['manage_users','manage_equipment','borrow_equipment','return_equipment','manage_categories','view_logs'])
+        ar = CustomRole(name='Admin', icon='👑', description='Toutes les permissions'); ar.set_permissions([p['key'] for p in ALL_PERMISSIONS])
+        sr = CustomRole(name='Staff', icon='👷', description='Emprunts et retours'); sr.set_permissions(['borrow_equipment','return_equipment'])
+        mr = CustomRole(name='Manager', icon='🛡️', description='Gestion complete sans effacer historique'); mr.set_permissions(['manage_users','manage_equipment','borrow_equipment','return_equipment','manage_categories','view_logs','manage_schedule'])
+        pr = CustomRole(name='En attente', icon='⏳', description='Nouveau compte en attente'); pr.set_permissions([])
         db.session.add_all([ar,sr,mr,pr]); db.session.flush()
         a = User(email='admin@imagine-events.com', full_name='Admin Imagine', role_id=ar.id); a.set_password('admin123')
         s = User(email='staff@imagine-events.com', full_name='Equipe Logistique', role_id=sr.id); s.set_password('staff123')
         db.session.add_all([a,s])
-        cats = [Category(name=nm, icon=ic) for nm,ic in [('Ecrans & Affichage','\U0001f4fa'),('Sonorisation','\U0001f3a4'),('Eclairage','\U0001f4a1'),('Scenes & Structures','\U0001f3ad'),('Mobilier','\U0001f6cb\ufe0f'),('Cablage & Connectique','\U0001f50c')]]
+        cats = [Category(name=nm, icon=ic) for nm,ic in [('Ecrans & Affichage','📺'),('Sonorisation','🎤'),('Eclairage','💡'),('Scenes & Structures','🎭'),('Mobilier','🛋️'),('Cablage & Connectique','🔌')]]
         db.session.add_all(cats); db.session.commit()
         eqs = [
             Equipment(name='Ecran LED 43"',description='Ecran LED haute definition 43 pouces.',reference='IM-LED43-001',category_id=1,total_quantity=10,available_quantity=10,specifications='Taille: 43"\nResolution: Full HD\nLuminosite: 350 cd/m2\nConnectique: HDMI, VGA',condition='Excellent',location='Allee A - Etagere 1'),
@@ -606,7 +707,6 @@ def init_db():
         print("OK - admin@imagine-events.com / admin123")
 
 init_db()
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
