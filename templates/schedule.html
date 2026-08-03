@@ -63,7 +63,14 @@
 
     {% if past %}
     <div>
-        <h2 style="color:var(--blue-deep);margin-bottom:1rem">📋 Evenements passes</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <h2 style="color:var(--blue-deep);margin:0">📋 Evenements passes</h2>
+            {% if current_user.has_permission('manage_schedule') %}
+            <form method="POST" action="{{ url_for('clear_past_events') }}" onsubmit="return confirm('Supprimer TOUS les evenements passes ? Cette action est irreversible.')">
+                <button class="btn btn-sm btn-danger">🗑️ Effacer tous les evenements passes</button>
+            </form>
+            {% endif %}
+        </div>
         <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden">
             <table class="history-table"><thead><tr><th>Date</th><th>Titre</th><th>Equipe</th><th>Statut</th></tr></thead>
                 <tbody>{% for evt in past %}<tr>

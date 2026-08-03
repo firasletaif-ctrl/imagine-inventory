@@ -593,6 +593,18 @@ def delete_event(evid):
     if evt: db.session.delete(evt); db.session.commit(); flash(f'Evenement "{evt.title}" supprime.','info')
     return redirect(url_for('schedule'))
 
+
+@app.route('/schedule/clear-past', methods=['POST'])
+@permission_required('manage_schedule')
+def clear_past_events():
+    count = Event.query.filter(Event.event_date < date.today()).count()
+    past_ids = [e.id for e in Event.query.filter(Event.event_date < date.today()).all()]
+    EventAssignment.query.filter(EventAssignment.event_id.in_(past_ids)).delete(synchronize_session='fetch')
+    Event.query.filter(Event.event_date < date.today()).delete()
+    db.session.commit()
+    flash(f'{count} evenement(s) passes supprime(s).','success')
+    return redirect(url_for('schedule'))
+
 @app.route('/schedule/<int:evid>/assign', methods=['POST'])
 @permission_required('manage_schedule')
 def assign_one_user(evid):
