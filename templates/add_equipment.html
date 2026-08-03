@@ -82,15 +82,14 @@ Connectique: HDMI, DisplayPort"></textarea>
 
         <div class="form-card">
             <h2>🖼️ Photos</h2>
-            <div class="upload-zone" id="uploadZone">
+            <div class="upload-zone" id="uploadZone" ondrop="return false;" ondragover="return false;">
                 <div class="upload-icon">📸</div>
-                <p>Glissez-déposez des images ici ou cliquez pour parcourir</p>
+                <p>Glissez-déposez des images ici</p>
                 <small>PNG, JPG, WEBP — Max 16 Mo par fichier</small>
-                <input type="file" id="images" name="images" accept="image/*"
-                       multiple style="display:none" onchange="previewImages(event)">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('images').click()" style="font-size:1rem;padding:.8rem 1.5rem">
+                <label for="images" class="btn btn-secondary" style="font-size:1rem;padding:.8rem 1.5rem;cursor:pointer;margin-top:1rem">
                     📸📁 Photo ou galerie
-                </button>
+                </label>
+                <input type="file" id="images" name="images" accept="image/*" multiple onchange="previewImages(event)" style="position:absolute;width:0.1px;height:0.1px;opacity:0;overflow:hidden;z-index:-1">
             </div>
             <div class="image-previews" id="imagePreviews"></div>
         </div>
@@ -108,36 +107,36 @@ Connectique: HDMI, DisplayPort"></textarea>
 {% block scripts %}
 <script>
 function previewImages(event) {
-    const container = document.getElementById('imagePreviews');
+    var container = document.getElementById('imagePreviews');
     container.innerHTML = '';
-    for (const file of event.target.files) {
-        const reader = new FileReader();
+    Array.from(event.target.files).forEach(function(file) {
+        var reader = new FileReader();
         reader.onload = function(e) {
-            const div = document.createElement('div');
+            var div = document.createElement('div');
             div.className = 'preview-item';
-            div.innerHTML = '<img src="' + e.target.result + '" alt="Aperçu">' +
-                           '<span class="preview-name">' + file.name + '</span>';
+            div.innerHTML = '<img src="' + e.target.result + '" alt="Aperçu"><span class="preview-name">' + file.name + '</span>';
             container.appendChild(div);
         };
         reader.readAsDataURL(file);
-    }
+    });
 }
 
 // Drag & drop
-const zone = document.getElementById('uploadZone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', e => {
+var zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', function(e) { zone.classList.remove('drag-over'); });
+zone.addEventListener('drop', function(e) {
     e.preventDefault();
     zone.classList.remove('drag-over');
-    const input = document.getElementById('images');
-    const dt = new DataTransfer();
-    for (const file of e.dataTransfer.files) {
-        if (file.type.startsWith('image/')) dt.items.add(file);
-    }
+    var input = document.getElementById('images');
+    var dt = new DataTransfer();
+    Array.from(e.dataTransfer.files).forEach(function(f) {
+        if (f.type.startsWith('image/')) dt.items.add(f);
+    });
     input.files = dt.files;
-    previewImages({ target: input });
+    // Manually trigger change event
+    var evt = new Event('change', { bubbles: true });
+    input.dispatchEvent(evt);
 });
-zone.addEventListener('click', () => document.getElementById('images').click());
 </script>
 {% endblock %}
