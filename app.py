@@ -468,8 +468,13 @@ def delete_user(uid):
     u = db.session.get(User, uid)
     if not u: flash('Introuvable.','error')
     elif u.id == current_user.id: flash('Impossible de se supprimer.','error')
-    elif Borrow.query.filter_by(user_id=uid, status='active').first(): flash(f'{u.full_name} a des emprunts en cours.','error')
-    else: db.session.delete(u); db.session.commit(); flash(f'{u.full_name} supprime.','info')
+    elif Borrow.query.filter_by(user_id=uid).filter(Borrow.status.in_(['active','late'])).first():
+        flash(f'{u.full_name} a des emprunts en cours ou en retard.','error')
+    else:
+        ActivityLog.query.filter_by(user_id=uid).delete()
+        Borrow.query.filter_by(user_id=uid).update({Borrow.user_id: None})
+        db.session.delete(u); db.session.commit()
+        flash(f'{u.full_name} supprime.','info')
     return redirect(url_for('manage_users'))
 
 @app.route('/admin/roles')
