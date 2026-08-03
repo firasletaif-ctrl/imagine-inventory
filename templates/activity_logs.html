@@ -22,10 +22,12 @@
             <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ ACTION_LABELS.get(a, a) }}</option>
             {% endfor %}
         </select>
-        <div class="search-wrapper">
-            <span class="search-icon-s">👤</span>
-            <input class="search-input" name="user" placeholder="Filtrer par utilisateur..." value="{{ user_filter }}">
-        </div>
+        <select name="user" style="min-width:200px;border-radius:var(--radius-lg)" onchange="this.form.submit()">
+            <option value="">👤 Tous les utilisateurs</option>
+            {% for u in all_users %}
+            <option value="{{ u.full_name }}" {% if user_filter == u.full_name %}selected{% endif %}>{{ u.full_name }} ({{ u.role_name }})</option>
+            {% endfor %}
+        </select>
         <button class="btn btn-primary" type="submit">🔍 Filtrer</button>
         {% if action_filter or user_filter %}
         <a href="{{ url_for('activity_logs') }}" class="btn btn-secondary">✕ Reinitialiser</a>
