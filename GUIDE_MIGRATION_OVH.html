@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide Migration OVH — Imagine Inventory</title>
+<style>
+  body{font-family:'Inter',-apple-system,sans-serif;max-width:900px;margin:0 auto;padding:2rem;background:#F8FAFC;color:#1E293B;line-height:1.7}
+  h1{font-family:'Playfair Display',Georgia,serif;color:#0B1D3A;font-size:2rem;border-bottom:3px solid #C41E3A;padding-bottom:.5rem}
+  h2{color:#13294B;font-size:1.3rem;margin-top:2rem;border-left:4px solid #C41E3A;padding-left:1rem}
+  .step{background:#FFF;border-radius:12px;padding:1.5rem;margin:1rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1);border:1px solid #E2E8F0}
+  .step-num{display:inline-block;background:#C41E3A;color:#FFF;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;font-weight:700;margin-right:.75rem}
+  .step h3{display:inline;margin:0;font-size:1.15rem}
+  .code{background:#0B1D3A;color:#E2E8F0;padding:1rem;border-radius:8px;font-family:monospace;font-size:.85rem;overflow-x:auto;margin:.5rem 0;white-space:pre-wrap}
+  .code span.cmd{color:#60A5FA}
+  .code span.file{color:#FBBF24}
+  .code span.comment{color:#6B7280}
+  .highlight{background:#FEF3C7;padding:.2rem .5rem;border-radius:4px;font-family:monospace;font-size:.85rem}
+  .tip{background:#DCFCE7;border-left:4px solid #16A34A;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+  .warn{background:#FDE8EC;border-left:4px solid #C41E3A;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+  table{width:100%;border-collapse:collapse;margin:.5rem 0}
+  th{background:#F1F5F9;padding:.5rem;text-align:left;font-weight:600}
+  td{padding:.5rem;border-bottom:1px solid #E2E8F0}
+  .badge{display:inline-block;padding:.15rem .6rem;border-radius:100px;font-size:.75rem;font-weight:700}
+  .badge-red{background:#FDE8EC;color:#C41E3A}
+  .badge-green{background:#DCFCE7;color:#16A34A}
+  .badge-blue{background:#E8EFF8;color:#1E4D8C}
+</style>
+</head>
+<body>
+
+<h1>🚀 Migration Imagine Inventory — Render → OVH</h1>
+<p>🇹🇳 <strong>Imagine Events Tunisia</strong> · Guide complet pas à pas</p>
+
+<!-- ══════════════ SOMMAIRE ══════════════ -->
+<div class="step">
+  <h3>📋 Sommaire</h3>
+  <ol>
+    <li><a href="#s1">Se connecter au serveur OVH</a></li>
+    <li><a href="#s2">Installer les dépendances système</a></li>
+    <li><a href="#s3">Configurer PostgreSQL</a></li>
+    <li><a href="#s4">Déployer le code de l'application</a></li>
+    <li><a href="#s5">Configurer Supervisor (processus permanent)</a></li>
+    <li><a href="#s6">Configurer Nginx (serveur web)</a></li>
+    <li><a href="#s7">Configurer HTTPS (SSL gratuit)</a></li>
+    <li><a href="#s8">Migrer les données existantes</a></li>
+    <li><a href="#s9">Vérifier et tester</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════ AVANT DE COMMENCER ══════════════ -->
+<div class="tip">
+  <strong>🛒 Ce dont vous avez besoin :</strong><br>
+  ✅ Un serveur OVH (VPS ou dédié) avec <strong>Ubuntu 22.04 ou 24.04</strong><br>
+  ✅ Un nom de domaine pointant vers le serveur (ex: <span class="highlight">depot.imagine-events.tn</span>)<br>
+  ✅ Accès SSH root au serveur<br>
+  ✅ Le fichier <span class="highlight">Imagine_Inventory_Deploy.zip</span>
+</div>
+
+<!-- ══════════════ ÉTAPE 1 ══════════════ -->
+<h2 id="s1">Étape 1 — Se connecter au serveur OVH</h2>
+<div class="step">
+  <span class="step-num">1</span><h3>Connexion SSH</h3>
+  <p>Depuis votre PC Windows, utilisez <strong>PowerShell</strong> ou téléchargez <strong>PuTTY</strong> :</p>
+  <div class="code"><span class="cmd">ssh</span> root@<span class="file">IP_DE_VOTRE_SERVEUR</span></div>
+  <p>👉 L'IP se trouve dans votre espace client OVH → rubrique "Serveur"</p>
+  <p>👉 Le mot de passe root a été envoyé par email OVH à l'installation du serveur.</p>
+</div>
+
+<!-- ══════════════ ÉTAPE 2 ══════════════ -->
+<h2 id="s2">Étape 2 — Installer les dépendances</h2>
+<div class="step">
+  <span class="step-num">2</span><h3>Tout installer d'un coup</h3>
+  <p>Copiez-collez ce bloc entier dans le terminal :</p>
+  <div class="code"><span class="cmd">apt update && apt upgrade -y
+
+apt install -y python3 python3-pip python3-venv python3-dev \\
+    postgresql postgresql-contrib \\
+    nginx supervisor \\
+    git build-essential libpq-dev</span></div>
+  <p>⏱️ ~3 minutes</p>
+</div>
+
+<!-- ══════════════ ÉTAPE 3 ══════════════ -->
+<h2 id="s3">Étape 3 — Configurer PostgreSQL</h2>
+<div class="step">
+  <span class="step-num">3</span><h3>Créer la base de données</h3>
+  <div class="code"><span class="comment"># Passer en utilisateur postgres</span>
+<span class="cmd">sudo -u postgres psql</span></div>
+  <p>Puis dans la console <span class="highlight">psql</span>, tapez ces 4 commandes une par une :</p>
+  <div class="code"><span class="cmd">CREATE USER</span> imagine_user <span class="cmd">WITH PASSWORD</span> <span class="file">'Imagine2026!Secured'</span>;
+<span class="cmd">CREATE DATABASE</span> imagine_inventory <span class="cmd">OWNER</span> imagine_user;
+<span class="cmd">GRANT ALL PRIVILEGES ON DATABASE</span> imagine_inventory <span class="cmd">TO</span> imagine_user;
+<span class="cmd">\q</span></div>
+  <p>👉 Remplacez <span class="highlight">Imagine2026!Secured</span> par votre propre mot de passe fort.</p>
+  <p>👉 <span class="highlight">\q</span> pour quitter.</p>
+</div>
+
+<!-- ══════════════ ÉTAPE 4 ══════════════ -->
+<h2 id="s4">Étape 4 — Déployer le code</h2>
+<div class="step">
+  <span class="step-num">4</span><h3>Créer le dossier et déployer</h3>
+
+  <p><strong>Méthode A : Via GitHub (recommandée)</strong></p>
+  <div class="code"><span class="comment"># Cloner votre repo GitHub</span>
+<span class="cmd">mkdir -p /var/www</span>
+<span class="cmd">cd /var/www</span>
+<span class="cmd">git clone https://github.com/firasletaif-ctrl/imagine-inventory.git</span>
+<span class="cmd">cd imagine-inventory</span></div>
+
+  <p><strong>Méthode B : Upload manuel</strong></p>
+  <div class="code"><span class="comment"># Sur votre PC, avec PowerShell :</span>
+<span class="cmd">scp</span> Imagine_Inventory_Deploy.zip root@<span class="file">IP_SERVEUR</span>:/var/www/
+
+<span class="comment"># Puis sur le serveur :</span>
+<span class="cmd">cd /var/www && unzip Imagine_Inventory_Deploy.zip</span>
+<span class="cmd">mv imagine-deploy imagine-inventory && cd imagine-inventory</span></div>
+
+  <p> </p>
+  <p><strong>Installer les dépendances Python :</strong></p>
+  <div class="code"><span class="cmd">python3 -m venv venv</span>
+<span class="cmd">source venv/bin/activate</span>
+<span class="cmd">pip install -r requirements.txt</span>
+<span class="cmd">pip install gunicorn psycopg2-binary</span></div>
+
+  <p><strong>Créer le fichier d'environnement :</strong></p>
+  <div class="code"><span class="cmd">cat > .env << 'EOF'</span>
+<span class="file">DATABASE_URL=postgresql://imagine_user:Imagine2026!Secured@localhost:5432/imagine_inventory
+SECRET_KEY=VotreCleTresLongueEtSecrete123!</span>
+<span class="cmd">EOF</span></div>
+
+  <p><strong>Créer le dossier uploads :</strong></p>
+  <div class="code"><span class="cmd">mkdir -p uploads && chmod 755 uploads</span></div>
+</div>
+
+<!-- ══════════════ ÉTAPE 5 ══════════════ -->
+<h2 id="s5">Étape 5 — Supervisor (garder l'app en vie)</h2>
+<div class="step">
+  <span class="step-num">5</span><h3>Créer le fichier de configuration</h3>
+  <div class="code"><span class="cmd">cat > /etc/supervisor/conf.d/imagine.conf << 'EOF'</span>
+[program:imagine]
+command=/var/www/imagine-inventory/venv/bin/gunicorn app:app --bind 127.0.0.1:8000 --workers 3 --timeout 120
+directory=/var/www/imagine-inventory
+user=www-data
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/imagine.log
+stderr_logfile=/var/log/imagine-error.log
+environment=DATABASE_URL="postgresql://imagine_user:Imagine2026!Secured@localhost:5432/imagine_inventory",SECRET_KEY="VotreCleTresLongueEtSecrete123!"
+<span class="cmd">EOF</span></div>
+
+  <p>Puis :</p>
+  <div class="code"><span class="cmd">supervisorctl reread</span>
+<span class="cmd">supervisorctl update</span>
+<span class="cmd">supervisorctl start imagine</span>
+<span class="cmd">supervisorctl status imagine</span>  <span class="comment"># Doit dire RUNNING</span></div>
+</div>
+
+<!-- ══════════════ ÉTAPE 6 ══════════════ -->
+<h2 id="s6">Étape 6 — Nginx (serveur web)</h2>
+<div class="step">
+  <span class="step-num">6</span><h3>Créer la configuration du site</h3>
+  <div class="code"><span class="cmd">cat > /etc/nginx/sites-available/imagine << 'EOF'</span>
+server {
+    listen 80;
+    server_name <span class="file">depot.imagine-events.tn</span>;  # ← VOTRE DOMAINE
+
+    client_max_body_size 16M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /uploads/ {
+        alias /var/www/imagine-inventory/uploads/;
+    }
+}
+<span class="cmd">EOF</span></div>
+
+  <p>Activer le site :</p>
+  <div class="code"><span class="cmd">ln -s /etc/nginx/sites-available/imagine /etc/nginx/sites-enabled/</span>
+<span class="cmd">rm -f /etc/nginx/sites-enabled/default</span>  <span class="comment"># Optionnel : désactiver le site par défaut</span>
+<span class="cmd">nginx -t</span>  <span class="comment"># Vérifier la syntaxe</span>
+<span class="cmd">systemctl reload nginx</span></div>
+
+  <div class="tip">Votre site est maintenant accessible sur <strong>http://depot.imagine-events.tn</strong> 🎉</div>
+</div>
+
+<!-- ══════════════ ÉTAPE 7 ══════════════ -->
+<h2 id="s7">Étape 7 — HTTPS gratuit (SSL)</h2>
+<div class="step">
+  <span class="step-num">7</span><h3>Certificat SSL avec Let's Encrypt</h3>
+  <div class="code"><span class="cmd">apt install -y certbot python3-certbot-nginx</span>
+<span class="cmd">certbot --nginx -d depot.imagine-events.tn</span></div>
+  <p>👉 Entrez votre email → Acceptez les conditions → Choisissez "Redirect" (option 2)</p>
+  <div class="tip">✅ Votre site est maintenant en <strong>HTTPS</strong> ! Le certificat se renouvelle automatiquement.</div>
+</div>
+
+<!-- ══════════════ ÉTAPE 8 ══════════════ -->
+<h2 id="s8">Étape 8 — Migrer les données de Render</h2>
+<div class="step">
+  <span class="step-num">8</span><h3>Option 1 : Recommencer à zéro (recommandé si peu de données)</h3>
+  <p>La base se réinitialise automatiquement au premier démarrage avec :</p>
+  <table>
+    <tr><td>👑 Admin</td><td><span class="highlight">admin@imagine-events.com</span></td><td><span class="highlight">admin123</span></td></tr>
+    <tr><td>👷 Staff</td><td><span class="highlight">staff@imagine-events.com</span></td><td><span class="highlight">staff123</span></td></tr>
+  </table>
+  <p>+ 8 matériels de test.</p>
+
+  <p style="margin-top:1rem"><strong>Option 2 : Exporter depuis Render</strong></p>
+  <p>Sur votre Web Service Render → onglet <strong>Shell</strong> :</p>
+  <div class="code"><span class="cmd">pg_dump</span> <span class="file">$DATABASE_URL</span> > backup.sql</div>
+  <p>Puis téléchargez <span class="highlight">backup.sql</span> et importez sur OVH :</p>
+  <div class="code"><span class="cmd">psql postgresql://imagine_user:Imagine2026!Secured@localhost:5432/imagine_inventory < backup.sql</span></div>
+</div>
+
+<!-- ══════════════ ÉTAPE 9 ══════════════ -->
+<h2 id="s9">Étape 9 — Vérifier</h2>
+<div class="step">
+  <span class="step-num">9</span><h3>Tests finaux</h3>
+  <div class="code"><span class="comment"># Vérifier que Supervisor fait tourner l'app</span>
+<span class="cmd">supervisorctl status imagine</span>
+<span class="comment"># → imagine    RUNNING   pid 12345, uptime 0:05:00</span>
+
+<span class="comment"># Vérifier Nginx</span>
+<span class="cmd">systemctl status nginx</span>
+<span class="comment"># → Active: active (running)</span>
+
+<span class="comment"># Vérifier que le site répond</span>
+<span class="cmd">curl -I https://depot.imagine-events.tn</span>
+<span class="comment"># → HTTP/2 200</span></div>
+
+  <p>Puis ouvrez <strong>https://depot.imagine-events.tn</strong> dans votre navigateur !</p>
+</div>
+
+<!-- ══════════════ MAINTENANCE ══════════════ -->
+<h2>🔧 Commandes utiles pour la maintenance</h2>
+<div class="step">
+  <table>
+    <tr><td><strong>Redémarrer l'app</strong></td><td><span class="highlight">supervisorctl restart imagine</span></td></tr>
+    <tr><td><strong>Voir les logs de l'app</strong></td><td><span class="highlight">tail -f /var/log/imagine.log</span></td></tr>
+    <tr><td><strong>Voir les erreurs</strong></td><td><span class="highlight">tail -f /var/log/imagine-error.log</span></td></tr>
+    <tr><td><strong>Redémarrer Nginx</strong></td><td><span class="highlight">systemctl reload nginx</span></td></tr>
+    <tr><td><strong>Mettre à jour le code</strong></td><td><span class="highlight">cd /var/www/imagine-inventory && git pull && supervisorctl restart imagine</span></td></tr>
+    <tr><td><strong>Sauvegarder la base</strong></td><td><span class="highlight">pg_dump postgresql://imagine_user:mdp@localhost:5432/imagine_inventory > backup.sql</span></td></tr>
+  </table>
+</div>
+
+<hr style="margin:2rem 0;border-color:#E2E8F0">
+
+<p style="text-align:center;color:#64748B">
+  <strong>Imagine Inventory</strong> — Imagine Events Tunisia 🇹🇳<br>
+  <small>Migration Render → OVH · Guide complet</small>
+</p>
+
+</body>
+</html>

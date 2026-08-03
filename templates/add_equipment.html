@@ -87,9 +87,9 @@ Connectique: HDMI, DisplayPort"></textarea>
                 <p>Glissez-déposez des images ici ou cliquez pour parcourir</p>
                 <small>PNG, JPG, WEBP — Max 16 Mo par fichier</small>
                 <input type="file" id="images" name="images" accept="image/*"
-                       multiple style="display:none" onchange="previewImages(event)">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('images').click()">
-                    📁 Choisir des fichiers
+                       multiple capture="environment" style="display:none" onchange="previewImages(event)">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('images').click()" style="font-size:1rem;padding:.8rem 1.5rem">
+                    📸📁 Photo ou fichier
                 </button>
             </div>
             <div class="image-previews" id="imagePreviews"></div>

@@ -3,6 +3,12 @@
 
 {% block content %}
 <div class="dashboard">
+    {% if is_pending %}
+    <div style="background:#FEF3C7;border:2px solid #D97706;border-radius:14px;padding:1.5rem;text-align:center;margin-bottom:1.5rem">
+        <h2 style="font-size:1.3rem;color:#92400E;margin:0 0 .5rem">⏳ Compte en attente de validation</h2>
+        <p style="color:#B45309;margin:0">Votre compte a ete cree. Un administrateur doit vous assigner un role.<br>Vous ne pouvez rien faire pour le moment.</p>
+    </div>
+    {% endif %}
     <div class="dash-header">
         <div>
             <h1 class="dash-title">Depot Imagine Events</h1>

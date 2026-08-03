@@ -239,7 +239,13 @@ def register():
         elif User.query.filter_by(email=email).first(): flash('Email deja utilise.','error')
         else:
             u = User(email=email, full_name=name); u.set_password(pw)
-            if User.query.count() == 0: u.role_id = 1
+            # Premier inscrit = admin, les suivants = staff
+            if User.query.count() == 0:
+                u.role_id = 1  # Admin
+            else:
+                pending = CustomRole.query.filter_by(name='En attente').first()
+                if pending:
+                    u.role_id = pending.id
             db.session.add(u); db.session.commit()
             flash('Compte cree ! Connectez-vous.','success')
             return redirect(url_for('login'))
@@ -273,7 +279,8 @@ def dashboard():
     allc = Equipment.query.count()
     avc = Equipment.query.filter(Equipment.available_quantity>0).count()
     lc = Borrow.query.filter_by(status='late').count()
-    return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=allc, available_count=avc, late_count=lc, equipment_json=eq_json, today=today)
+    is_pending = not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
+    return render_template('dashboard.html', equipment=eqs, is_pending=is_pending, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=allc, available_count=avc, late_count=lc, equipment_json=eq_json, today=today)
 
 @app.route('/equipment/<int:eid>')
 @login_required
@@ -570,9 +577,11 @@ def init_db():
         ar.set_permissions([p['key'] for p in ALL_PERMISSIONS])
         sr = CustomRole(name='Staff', icon='\U0001f477', description='Emprunts et retours')
         sr.set_permissions(['borrow_equipment','return_equipment'])
+        pr = CustomRole(name='En attente', icon='⏳', description='Nouveau compte en attente de validation')
+        pr.set_permissions([])
         mr = CustomRole(name='Manager', icon='\U0001f6e1\ufe0f', description='Gestion complete sans effacer historique')
         mr.set_permissions(['manage_users','manage_equipment','borrow_equipment','return_equipment','manage_categories','view_logs'])
-        db.session.add_all([ar,sr,mr]); db.session.flush()
+        db.session.add_all([ar,sr,mr,pr]); db.session.flush()
         a = User(email='admin@imagine-events.com', full_name='Admin Imagine', role_id=ar.id); a.set_password('admin123')
         s = User(email='staff@imagine-events.com', full_name='Equipe Logistique', role_id=sr.id); s.set_password('staff123')
         db.session.add_all([a,s])
