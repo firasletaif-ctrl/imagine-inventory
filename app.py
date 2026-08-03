@@ -642,6 +642,25 @@ def mark_all_read():
     db.session.commit(); flash('Toutes les notifications lues.','success')
     return redirect(url_for('notifications'))
 
+
+@app.route('/notifications/delete/<int:nid>', methods=['POST'])
+@login_required
+def delete_notification(nid):
+    n = Notification.query.filter_by(id=nid, user_id=current_user.id).first()
+    if n: db.session.delete(n); db.session.commit()
+    return redirect(url_for('notifications'))
+
+
+@app.route('/notifications/clear-all', methods=['POST'])
+@login_required
+def clear_all_notifications():
+    count = Notification.query.filter_by(user_id=current_user.id).count()
+    Notification.query.filter_by(user_id=current_user.id).delete()
+    db.session.commit()
+    flash(f'{count} notification(s) supprimees.','success')
+    return redirect(url_for('notifications'))
+
+
 # ═══════════ N E W :  E X P O R T S ═══════════
 @app.route('/export/excel')
 @permission_required('manage_equipment')

@@ -5,9 +5,14 @@
 <div class="form-page" style="max-width:800px">
     <div class="dash-header">
         <div><h1 class="dash-title">🔔 Notifications</h1><p class="dash-subtitle">{{ notifs|length }} notification(s)</p></div>
-        {% if notifs|selectattr('read','eq',false)|list|length > 0 %}
-        <form method="POST" action="{{ url_for('mark_all_read') }}"><button class="btn btn-secondary">✅ Tout marquer comme lu</button></form>
-        {% endif %}
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            {% if notifs|selectattr('read','eq',false)|list|length > 0 %}
+            <form method="POST" action="{{ url_for('mark_all_read') }}"><button class="btn btn-sm btn-secondary">✅ Tout marquer lu</button></form>
+            {% endif %}
+            {% if notifs|length > 0 %}
+            <form method="POST" action="{{ url_for('clear_all_notifications') }}" onsubmit="return confirm('Supprimer TOUTES vos notifications ?')"><button class="btn btn-sm btn-danger">🗑️ Tout effacer</button></form>
+            {% endif %}
+        </div>
     </div>
 
     {% if notifs %}
@@ -22,14 +27,17 @@
                 </div>
                 <p style="color:var(--gray-600);font-size:.9rem;margin:0">{{ n.message }}</p>
             </div>
-            <div style="display:flex;gap:.5rem;flex-shrink:0">
+            <div style="display:flex;gap:.5rem;flex-shrink:0;align-items:center">
                 {% if n.link %}<a href="{{ n.link }}" class="btn btn-sm btn-primary">Voir</a>{% endif %}
                 {% if not n.read %}
-                <form method="POST" action="{{ url_for('mark_read',nid=n.id) }}">
+                <form method="POST" action="{{ url_for('mark_read',nid=n.id) }}" style="display:inline">
                     <input type="hidden" name="redirect" value="/notifications">
                     <button class="btn btn-sm btn-secondary">Lu ✓</button>
                 </form>
                 {% endif %}
+                <form method="POST" action="{{ url_for('delete_notification',nid=n.id) }}" onsubmit="return confirm('Supprimer cette notification ?')" style="display:inline">
+                    <button class="btn btn-sm btn-danger" title="Supprimer">🗑️</button>
+                </form>
             </div>
         </div>
         {% endfor %}

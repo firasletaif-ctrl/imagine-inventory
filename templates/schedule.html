@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Emploi du temps{% endblock %}
 
+{% block head %}
+<style>
+.hotel-search-wrap{position:relative}
+.hotel-dropdown{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--gray-300);border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;z-index:50;display:none;box-shadow:0 10px 25px rgba(0,0,0,.15)}
+.hotel-dropdown.show{display:block}
+.hotel-option{padding:.6rem .85rem;cursor:pointer;font-size:.9rem;border-bottom:1px solid var(--gray-100);transition:background .15s}
+.hotel-option:hover{background:var(--blue-pale);color:var(--blue)}
+.hotel-option.custom{border-top:2px solid var(--gray-300);font-style:italic;color:var(--gray-500)}
+.hotel-option.custom:hover{background:var(--gray-100);color:var(--gray-700)}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="form-page" style="max-width:1200px">
     {% if current_user.has_permission('manage_schedule') %}
@@ -36,16 +48,14 @@
                         {% if evt.assignments %}
                         <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem">
                             {% for asg in evt.assignments %}
-                            <span style="background:var(--blue-pale);color:var(--blue);padding:.2rem .6rem;border-radius:100px;font-size:.8rem;font-weight:500">
-                                {{ asg.user.full_name }}
-                            </span>
+                            <span style="background:var(--blue-pale);color:var(--blue);padding:.2rem .6rem;border-radius:100px;font-size:.8rem;font-weight:500">{{ asg.user.full_name }}</span>
                             {% endfor %}
                         </div>
                         {% else %}<span style="color:var(--gray-400);font-size:.85rem">Aucun</span>{% endif %}
                     </div>
                     {% if current_user.has_permission('manage_schedule') %}
                     <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-                        <button class="btn btn-sm btn-secondary" onclick="openEditEvent({{ evt.id }},'{{ evt.title|replace("'","\\'") }}','{{ evt.description|replace("'","\\'")|replace("\n","\\n") }}','{{ evt.event_date }}','{{ evt.start_time }}','{{ evt.end_time }}','{{ evt.location|replace("'","\\'") }}','{{ evt.status }}',{{ evt.assignments|map(attribute='user_id')|list|tojson }})">✏️ Modifier</button>
+                        <button class="btn btn-sm btn-secondary edit-event-btn" data-event='{{ {"id":evt.id,"title":evt.title,"description":evt.description or "","date":evt.event_date|string,"start":evt.start_time,"end":evt.end_time,"location":evt.location or "","status":evt.status,"users":evt.assignments|map(attribute="user_id")|list}|tojson|safe }}'>✏️ Modifier</button>
                         <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
                     </div>
                     {% endif %}
@@ -74,17 +84,11 @@
         <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden">
             <table class="history-table"><thead><tr><th>Date</th><th>Titre</th><th>Equipe</th><th>Statut</th><th>Action</th></tr></thead>
                 <tbody>{% for evt in past %}<tr>
-                    <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td>
-                    <td><strong>{{ evt.title }}</strong></td>
-                    <td>{{ evt.assignments|map(attribute='user.full_name')|join(', ') or '—' }}</td>
-                    <td>{{ evt.status }}</td>
-                    <td>
-                        {% if current_user.has_permission('manage_schedule') %}
-                        <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline">
-                            <button class="btn btn-sm btn-danger">🗑️</button>
-                        </form>
-                        {% endif %}
-                    </td>
+                    <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td><td><strong>{{ evt.title }}</strong></td>
+                    <td>{{ evt.assignments|map(attribute='user.full_name')|join(', ') or '—' }}</td><td>{{ evt.status }}</td>
+                    <td>{% if current_user.has_permission('manage_schedule') %}
+                        <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                    {% endif %}</td>
                 </tr>{% endfor %}</tbody>
             </table>
         </div>
@@ -105,7 +109,15 @@
                     <div class="form-group"><label>Heure debut</label><input type="time" name="start_time" value="08:00"></div>
                     <div class="form-group"><label>Heure fin</label><input type="time" name="end_time" value="17:00"></div>
                 </div>
-                <div class="form-group"><label>Lieu</label><input type="text" name="location" placeholder="Ex: Hotel Laico Tunis"></div>
+                <div class="form-group">
+                    <label>Lieu</label>
+                    <div class="hotel-search-wrap">
+                        <input type="text" id="locSearch" placeholder="Rechercher un hotel ou taper un lieu..." autocomplete="off"
+                               oninput="filterHotels(this.value)" onfocus="filterHotels(this.value)">
+                        <input type="hidden" name="location" id="locHidden">
+                        <div class="hotel-dropdown" id="hotelDropdown"></div>
+                    </div>
+                </div>
                 <div class="form-group"><label>Description</label><textarea name="description" rows="3" placeholder="Details de l'evenement..."></textarea></div>
                 <div class="form-group"><label>Equipe assignee</label>
                     <div style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;padding:.5rem">
@@ -135,7 +147,15 @@
                     <div class="form-group"><label>Heure fin</label><input type="time" name="end_time" id="eeEnd"></div>
                 </div>
                 <div class="form-group"><label>Statut</label><select name="status" id="eeStatus"><option value="upcoming">A venir</option><option value="ongoing">En cours</option><option value="completed">Termine</option><option value="cancelled">Annule</option></select></div>
-                <div class="form-group"><label>Lieu</label><input type="text" name="location" id="eeLoc"></div>
+                <div class="form-group">
+                    <label>Lieu</label>
+                    <div class="hotel-search-wrap">
+                        <input type="text" id="eeLocSearch" placeholder="Rechercher un hotel ou taper un lieu..." autocomplete="off"
+                               oninput="filterHotelsEdit(this.value)" onfocus="filterHotelsEdit(this.value)">
+                        <input type="hidden" name="location" id="eeLocHidden">
+                        <div class="hotel-dropdown" id="eeHotelDropdown"></div>
+                    </div>
+                </div>
                 <div class="form-group"><label>Description</label><textarea name="description" id="eeDesc" rows="3"></textarea></div>
                 <div class="form-group"><label>Equipe assignee</label>
                     <div style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:8px;padding:.5rem" id="eeUsers">
@@ -156,21 +176,126 @@
 
 {% block scripts %}
 <script>
+// ── Hotels de Tunisie ──
+var HOTELS = [
+    "Hotel Laico Tunis","Hotel Africa Tunis","Hotel El Mouradi Gammarth","Hotel El Mouradi Port El Kantaoui",
+    "Hotel El Mouradi Hammamet","Hotel El Mouradi Sousse","Hotel El Mouradi Djerba","Hotel El Mouradi Mahdia",
+    "Hotel Ramada Plaza Tunis","Hotel Golden Tulip Carthage","Hotel Novotel Tunis","Hotel Ibis Tunis",
+    "Hotel Sheraton Tunis","Hotel Concorde Les Berges du Lac","Hotel Belvedere Fourati Tunis",
+    "Hotel Acropole Tunis","Hotel Carlton Tunis","Hotel Le Palace Gammarth","Hotel The Residence Tunis",
+    "Hotel Four Seasons Tunis","Hotel Movenpick Gammarth","Hotel Hasdrubal Thalassa Yasmine Hammamet",
+    "Hotel Hasdrubal Prestige Djerba","Hotel Hasdrubal Port El Kantaoui","Hotel Medina Belisaire Hammamet",
+    "Hotel Royal Azur Hammamet","Hotel Sentido Phenicia Hammamet","Hotel Iberostar Averroes Hammamet",
+    "Hotel Vincci Nozha Beach Hammamet","Hotel Dar Khayam Hammamet","Hotel Diar Lemdina Hammamet",
+    "Hotel Steigenberger Kantaoui Bay Sousse","Hotel Marhaba Palace Sousse","Hotel Tej Marhaba Sousse",
+    "Hotel Riu Imperial Marhaba Sousse","Hotel Movenpick Sousse","Hotel Sousse Palace",
+    "Hotel Cesar Thalasso Djerba","Hotel Djerba Plaza","Hotel Radisson Blu Djerba",
+    "Hotel Vincci Helios Djerba","Hotel Iliade Aqua Park Djerba","Hotel Ulysse Palace Djerba",
+    "Hotel Caribbean World Borj Cedria","Hotel Palais Bayram Tunis","Hotel Dar El Marsa Tunis",
+    "Hotel Laico Sfax","Hotel Les Oliviers Sfax","Hotel Sangho Tataouine",
+    "Hotel Ksar Ghilane","Hotel Campement Zmela","Hotel Diar Abou Habibi Tozeur",
+    "Hotel Palm Beach Tozeur","Hotel Ras El Ain Tozeur","Hotel Anantara Tozeur",
+    "Hotel Dar Hi Nefta","Hotel Monastir Center","Hotel Skanes Serail Monastir",
+    "Hotel Delphin El Habib Monastir","Hotel Regency Monastir","Hotel Marina Cap Monastir",
+    "Hotel C Club Tabarka","Hotel Les Mimosas Tabarka","Hotel Dar Ismail Tabarka",
+    "Hotel Le Corail Suites Tunis","Hotel Tunis Grand Hotel","Hotel Majestic Tunis",
+    "Hotel Le Pacha Tunis","Hotel El Hana International Tunis","Hotel Salammbo Tunis",
+    "Hotel Golf Royal Tunis","Hotel Campanile Tunis","Hotel Business Hotel Tunis"
+];
+
+function selectHotel(which, value) {
+    if (which === 'create') {
+        document.getElementById('locSearch').value = value;
+        document.getElementById('locHidden').value = value;
+        document.getElementById('hotelDropdown').classList.remove('show');
+    } else {
+        document.getElementById('eeLocSearch').value = value;
+        document.getElementById('eeLocHidden').value = value;
+        document.getElementById('eeHotelDropdown').classList.remove('show');
+    }
+}
+
+function filterHotels(query) {
+    var dd = document.getElementById('hotelDropdown');
+    var results = [];
+    if (query.trim()) {
+        var q = query.toLowerCase().trim();
+        results = HOTELS.filter(function(h) { return h.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+        if (results.length === 0 || results[0].toLowerCase() !== q) {
+            results.push('__CUSTOM__');
+        }
+    } else {
+        results = HOTELS.slice(0, 8);
+        results.push('__CUSTOM__');
+    }
+    var html = '';
+    results.forEach(function(h) {
+        if (h === '__CUSTOM__') {
+            html += '<div class="hotel-option custom" onclick="selectHotel(\'create\',document.getElementById(\'locSearch\').value.trim())">✏️ Utiliser "' + query.trim() + '" (lieu personnalise)</div>';
+        } else {
+            html += '<div class="hotel-option" onclick="selectHotel(\'create\',\'' + h.replace(/'/g,"\\'") + '\')">🏨 ' + h + '</div>';
+        }
+    });
+    dd.innerHTML = html;
+    dd.classList.add('show');
+}
+
+function filterHotelsEdit(query) {
+    var dd = document.getElementById('eeHotelDropdown');
+    var results = [];
+    if (query.trim()) {
+        var q = query.toLowerCase().trim();
+        results = HOTELS.filter(function(h) { return h.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+        if (results.length === 0 || results[0].toLowerCase() !== q) {
+            results.push('__CUSTOM__');
+        }
+    } else {
+        results = HOTELS.slice(0, 8);
+        results.push('__CUSTOM__');
+    }
+    var html = '';
+    results.forEach(function(h) {
+        if (h === '__CUSTOM__') {
+            html += '<div class="hotel-option custom" onclick="selectHotel(\'edit\',document.getElementById(\'eeLocSearch\').value.trim())">✏️ Utiliser "' + query.trim() + '" (lieu personnalise)</div>';
+        } else {
+            html += '<div class="hotel-option" onclick="selectHotel(\'edit\',\'' + h.replace(/'/g,"\\'") + '\')">🏨 ' + h + '</div>';
+        }
+    });
+    dd.innerHTML = html;
+    dd.classList.add('show');
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+    var d1 = document.getElementById('hotelDropdown');
+    var d2 = document.getElementById('eeHotelDropdown');
+    var s1 = document.getElementById('locSearch');
+    var s2 = document.getElementById('eeLocSearch');
+    if (d1 && s1 && !s1.contains(e.target) && !d1.contains(e.target)) d1.classList.remove('show');
+    if (d2 && s2 && !s2.contains(e.target) && !d2.contains(e.target)) d2.classList.remove('show');
+});
+
+// ── Modals ──
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 document.querySelectorAll('.modal-overlay').forEach(function(m){m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')})});
 
-function openEditEvent(id,title,desc,date,start,end,loc,status,assigned){
-    document.getElementById('eeTitle').value=title;
-    document.getElementById('eeDesc').value=desc||'';
-    document.getElementById('eeDate').value=date;
-    document.getElementById('eeStart').value=start||'08:00';
-    document.getElementById('eeEnd').value=end||'17:00';
-    document.getElementById('eeLoc').value=loc||'';
-    document.getElementById('eeStatus').value=status||'upcoming';
-    document.querySelectorAll('#eeUsers input[type=checkbox]').forEach(function(cb){cb.checked=assigned.includes(parseInt(cb.value))});
-    document.getElementById('editEventForm').action='/schedule/'+id+'/edit';
-    openModal('editEventModal');
-}
+// Edit event buttons use data-event attribute
+document.querySelectorAll('.edit-event-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var d = JSON.parse(this.dataset.event);
+        document.getElementById('eeTitle').value = d.title;
+        document.getElementById('eeDesc').value = d.description || '';
+        document.getElementById('eeDate').value = d.date;
+        document.getElementById('eeStart').value = d.start || '08:00';
+        document.getElementById('eeEnd').value = d.end || '17:00';
+        document.getElementById('eeLocSearch').value = d.location || '';
+        document.getElementById('eeLocHidden').value = d.location || '';
+        document.getElementById('eeStatus').value = d.status || 'upcoming';
+        document.querySelectorAll('#eeUsers input[type=checkbox]').forEach(function(cb){cb.checked = d.users.includes(parseInt(cb.value))});
+        document.getElementById('editEventForm').action = '/schedule/' + d.id + '/edit';
+        openModal('editEventModal');
+    });
+});
 </script>
 {% endblock %}
