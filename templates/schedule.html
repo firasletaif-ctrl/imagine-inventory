@@ -72,12 +72,19 @@
             {% endif %}
         </div>
         <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden">
-            <table class="history-table"><thead><tr><th>Date</th><th>Titre</th><th>Equipe</th><th>Statut</th></tr></thead>
+            <table class="history-table"><thead><tr><th>Date</th><th>Titre</th><th>Equipe</th><th>Statut</th><th>Action</th></tr></thead>
                 <tbody>{% for evt in past %}<tr>
                     <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td>
                     <td><strong>{{ evt.title }}</strong></td>
                     <td>{{ evt.assignments|map(attribute='user.full_name')|join(', ') or '—' }}</td>
                     <td>{{ evt.status }}</td>
+                    <td>
+                        {% if current_user.has_permission('manage_schedule') %}
+                        <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline">
+                            <button class="btn btn-sm btn-danger">🗑️</button>
+                        </form>
+                        {% endif %}
+                    </td>
                 </tr>{% endfor %}</tbody>
             </table>
         </div>
