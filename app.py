@@ -180,7 +180,9 @@ def update_availability(eq_id):
         eq.available_quantity = max(0, eq.total_quantity - qty); db.session.commit()
 
 def log_action(action, description='', equipment_name='', quantity=0):
-    log = ActivityLog(user_id=current_user.id, action=action, description=description, equipment_name=equipment_name, quantity=quantity)
+    """Enregistre une action. Si l'utilisateur n'est pas connecte, user_id = None."""
+    uid = current_user.id if current_user.is_authenticated else None
+    log = ActivityLog(user_id=uid, action=action, description=description, equipment_name=equipment_name, quantity=quantity)
     db.session.add(log); db.session.commit()
 
 def notify_user(uid, title, message, link=''):
@@ -212,6 +214,8 @@ def permission_required(perm):
         @login_required
         def decorated(*args, **kwargs):
             if not current_user.has_permission(perm):
+                try: log_action('permission_denied', f'Tentative d\'acces refuse : {perm}')
+                except: pass
                 flash('Acces refuse. Permission requise : ' + perm, 'error')
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
@@ -234,7 +238,7 @@ def login():
             db.session.add(ActivityLog(user_id=user.id, action='login', description=f'Connexion de {user.full_name}')); db.session.commit()
             flash(f'Bienvenue {user.full_name} !', 'success')
             return redirect(request.args.get('next') or url_for('dashboard'))
-        flash('Email ou mot de passe incorrect.', 'error')
+        log_action('failed_login', f'Tentative echouee pour {email}'); flash('Email ou mot de passe incorrect.', 'error')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET','POST'])
@@ -256,7 +260,7 @@ def register():
             db.session.add(u); db.session.commit()
             # Notify admins
             notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', '/admin/users')
-            flash('Compte cree ! En attente de validation par l\'admin.','success')
+            log_action('register', f'Nouveau compte cree par {name} ({email})'); flash('Compte cree ! En attente de validation par l\'admin.','success')
             return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -357,6 +361,7 @@ def edit_equipment(eid):
             sn = save_uploaded_image(f)
             if sn: db.session.add(EquipmentImage(filename=sn, equipment_id=eq.id))
         db.session.commit()
+        log_action('edit_equipment', f'Modification de {eq.name}', eq.name)
         flash(f'"{eq.name}" mis a jour.','success')
         return redirect(url_for('equipment_detail', eid=eq.id))
     return render_template('edit_equipment.html', eq=eq, categories=Category.query.order_by(Category.name).all())
@@ -380,6 +385,7 @@ def delete_equipment(eid):
             fp = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
             if os.path.exists(fp): os.remove(fp)
         db.session.delete(eq); db.session.commit()
+        log_action('delete_equipment', f'Suppression de {eq.name}', eq.name)
         flash(f'"{eq.name}" supprime.','info')
     return redirect(url_for('dashboard'))
 
@@ -395,7 +401,7 @@ def change_password():
         if not current_user.check_password(cp): flash('Mot de passe actuel incorrect.','error')
         elif len(np) < 6: flash('6 caracteres minimum.','error')
         elif np != request.form.get('confirm_password',''): flash('Mots de passe differents.','error')
-        else: current_user.set_password(np); db.session.commit(); flash('Mot de passe change !','success'); return redirect(url_for('dashboard'))
+        else: current_user.set_password(np); db.session.commit(); log_action('change_password', f'{current_user.full_name} a change son mot de passe'); flash('Mot de passe change !','success'); return redirect(url_for('dashboard'))
     return render_template('change_password.html')
 
 # ═══════ A D M I N   U S E R S ═══════
@@ -420,7 +426,7 @@ def create_user():
         if rid: u.role_id = rid
         db.session.add(u); db.session.commit()
         notify_user(u.id, 'Compte active', f'Votre compte a ete cree par {current_user.full_name}. Bienvenue !', '/dashboard')
-        flash(f'Compte cree : {name} ({u.role_name})','success')
+        log_action('create_user', f'Compte cree par admin : {name} ({u.role_name})'); flash(f'Compte cree : {name} ({u.role_name})','success')
     return redirect(url_for('manage_users'))
 
 @app.route('/admin/users/<int:uid>/edit', methods=['POST'])
@@ -435,7 +441,7 @@ def edit_user(uid):
     np = request.form.get('new_password','')
     if np and len(np) >= 6: u.set_password(np); flash(f'{u.full_name} mis a jour + mdp change.','success')
     elif np: flash('Mdp non change (6 car. min).','error')
-    else: flash(f'{u.full_name} mis a jour.','success')
+    else: log_action('edit_user', f'Modification du compte de {u.full_name}'); flash(f'{u.full_name} mis a jour.','success')
     db.session.commit()
     return redirect(url_for('manage_users'))
 
@@ -454,7 +460,7 @@ def delete_user(uid):
         Borrow.query.filter_by(user_id=uid).update({Borrow.user_id: None})
         Event.query.filter_by(created_by=uid).update({Event.created_by: None})
         db.session.delete(u); db.session.commit()
-        flash(f'{u.full_name} supprime.','info')
+        log_action('delete_user', f'Suppression du compte de {u.full_name}'); flash(f'{u.full_name} supprime.','info')
     return redirect(url_for('manage_users'))
 
 # ═══════ R O L E S ═══════
@@ -472,7 +478,7 @@ def create_role():
     else:
         r = CustomRole(name=name, icon=request.form.get('icon','👤'), description=request.form.get('description','').strip())
         r.set_permissions(request.form.getlist('permissions')); db.session.add(r); db.session.commit()
-        flash(f'Role "{name}" cree.','success')
+        log_action('create_role', f'Role "{name}" cree'); flash(f'Role "{name}" cree.','success')
     return redirect(url_for('manage_roles'))
 
 @app.route('/admin/roles/<int:rid>/edit', methods=['POST'])
@@ -483,7 +489,7 @@ def edit_role(rid):
     r.name = request.form.get('name',r.name).strip(); r.icon = request.form.get('icon',r.icon)
     r.description = request.form.get('description','').strip()
     r.set_permissions(request.form.getlist('permissions')); db.session.commit()
-    flash(f'Role "{r.name}" mis a jour.','success')
+    log_action('edit_role', f'Role "{r.name}" modifie'); flash(f'Role "{r.name}" mis a jour.','success')
     return redirect(url_for('manage_roles'))
 
 @app.route('/admin/roles/<int:rid>/delete', methods=['POST'])
@@ -492,7 +498,7 @@ def delete_role(rid):
     r = db.session.get(CustomRole, rid)
     if not r: flash('Role introuvable.','error')
     elif User.query.filter_by(role_id=rid).first(): flash('Des utilisateurs utilisent ce role.','error')
-    else: db.session.delete(r); db.session.commit(); flash(f'Role "{r.name}" supprime.','info')
+    else: db.session.delete(r); db.session.commit(); log_action('delete_role', f'Role "{r.name}" supprime'); flash(f'Role "{r.name}" supprime.','info')
     return redirect(url_for('manage_roles'))
 
 @app.route('/admin/clear-history', methods=['POST'])
@@ -513,15 +519,42 @@ def clear_equipment_history(eid):
     if not current_user.check_password(request.form.get('password','')): flash('Mot de passe incorrect.','error'); return redirect(url_for('equipment_detail', eid=eid))
     c = Borrow.query.filter_by(equipment_id=eid, status='returned').count()
     Borrow.query.filter_by(equipment_id=eid, status='returned').delete(); db.session.commit()
-    flash(f'{c} emprunt(s) effaces pour {eq.name}.','success')
+    log_action('clear_history', f'Historique efface pour {eq.name} ({c} emprunts)'); flash(f'{c} emprunt(s) effaces pour {eq.name}.','success')
     return redirect(url_for('equipment_detail', eid=eid))
 
 @app.route('/admin/logs')
 @permission_required('view_logs')
 def activity_logs():
     page = request.args.get('page',1,type=int)
-    logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).paginate(page=page, per_page=50, error_out=False)
-    return render_template('activity_logs.html', logs=logs)
+    action_filter = request.args.get('action','').strip()
+    user_filter = request.args.get('user','').strip()
+    q = ActivityLog.query
+    if action_filter: q = q.filter_by(action=action_filter)
+    if user_filter:
+        # Search by user name
+        matching_users = User.query.filter(User.full_name.ilike(f'%{user_filter}%')).all()
+        uids = [u.id for u in matching_users]
+        if uids: q = q.filter(ActivityLog.user_id.in_(uids))
+        else: q = q.filter(ActivityLog.user_id == -1)  # no results
+    logs = q.order_by(ActivityLog.timestamp.desc()).paginate(page=page, per_page=50, error_out=False)
+    # Stats
+    total_today = ActivityLog.query.filter(db.func.date(ActivityLog.timestamp) == db.func.date(tunisia_now())).count()
+    total_week = ActivityLog.query.filter(ActivityLog.timestamp >= tunisia_now() - timedelta(days=7)).count()
+    all_actions = [r[0] for r in db.session.query(ActivityLog.action).distinct().order_by(ActivityLog.action).all()]
+    ACTION_LABELS = {
+        'login':'🔑 Connexion','logout':'🚪 Deconnexion','failed_login':'⚠️ Echec connexion',
+        'register':'📝 Inscription','borrow':'📤 Emprunt','return':'✅ Retour',
+        'add_equipment':'➕ Ajout materiel','edit_equipment':'✏️ Modif materiel',
+        'delete_equipment':'🗑️ Suppr materiel','add_category':'📂 Categorie ajoutee',
+        'delete_category':'❌ Categorie supprimee','create_user':'👤 Compte cree',
+        'edit_user':'✏️ Compte modifie','delete_user':'❌ Compte supprime',
+        'create_role':'🔐 Role cree','edit_role':'✏️ Role modifie','delete_role':'❌ Role supprime',
+        'change_password':'🔑 Mdp change','create_event':'📅 Evenement cree',
+        'edit_event':'✏️ Evenement modifie','delete_event':'🗑️ Evenement supprime',
+        'clear_past_events':'🧹 Evenements passes effaces','clear_history':'🧹 Effacement historique',
+        'export_excel':'📊 Export Excel','permission_denied':'🚫 Acces refuse',
+    }
+    return render_template('activity_logs.html', logs=logs, action_filter=action_filter, user_filter=user_filter, total_today=total_today, total_week=total_week, all_actions=all_actions, ACTION_LABELS=ACTION_LABELS)
 
 @app.route('/categories/add', methods=['POST'])
 @permission_required('manage_categories')
@@ -529,7 +562,7 @@ def add_category():
     name = request.form.get('name','').strip(); icon = request.form.get('icon','📦')
     if name and not Category.query.filter_by(name=name).first():
         db.session.add(Category(name=name, icon=icon)); db.session.commit()
-        flash(f'Categorie "{name}" ajoutee.','success')
+        log_action('add_category', f'Categorie "{name}" ajoutee'); flash(f'Categorie "{name}" ajoutee.','success')
     return redirect(url_for('dashboard'))
 
 @app.route('/categories/<int:cid>/delete', methods=['POST'])
@@ -538,7 +571,7 @@ def delete_category(cid):
     cat = db.session.get(Category, cid)
     if not cat: flash('Categorie introuvable.','error')
     elif Equipment.query.filter_by(category_id=cid).first(): flash(f'Des materiels utilisent la categorie {cat.name}.','error')
-    else: db.session.delete(cat); db.session.commit(); flash(f'Categorie "{cat.name}" supprimee.','info')
+    else: db.session.delete(cat); db.session.commit(); log_action('delete_category', f'Categorie "{cat.name}" supprimee'); flash(f'Categorie "{cat.name}" supprimee.','info')
     return redirect(url_for('dashboard'))
 
 # ═══════════ N E W :  E M P L O I   D U   T E M P S ═══════════
@@ -570,7 +603,7 @@ def create_event():
         u = db.session.get(User, uid)
         if u:
             notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" le {ed.strftime("%d/%m/%Y")} ({st}-{et})', '/schedule')
-    flash(f'Evenement "{title}" cree.','success')
+    log_action('create_event', f'Evenement "{title}" cree le {ed.strftime("%d/%m/%Y")}'); flash(f'Evenement "{title}" cree.','success')
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/edit', methods=['POST'])
@@ -587,14 +620,14 @@ def edit_event(evid):
     EventAssignment.query.filter_by(event_id=evid).delete()
     for uid in request.form.getlist('assigned_users'):
         db.session.add(EventAssignment(event_id=evid, user_id=int(uid)))
-    db.session.commit(); flash(f'Evenement modifie.','success')
+    db.session.commit(); log_action('edit_event', f'Evenement "{evt.title}" modifie'); flash(f'Evenement modifie.','success')
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/delete', methods=['POST'])
 @permission_required('manage_schedule')
 def delete_event(evid):
     evt = db.session.get(Event, evid)
-    if evt: db.session.delete(evt); db.session.commit(); flash(f'Evenement "{evt.title}" supprime.','info')
+    if evt: db.session.delete(evt); db.session.commit(); log_action('delete_event', f'Evenement "{evt.title}" supprime'); flash(f'Evenement "{evt.title}" supprime.','info')
     return redirect(url_for('schedule'))
 
 
@@ -606,7 +639,7 @@ def clear_past_events():
     EventAssignment.query.filter(EventAssignment.event_id.in_(past_ids)).delete(synchronize_session='fetch')
     Event.query.filter(Event.event_date < date.today()).delete()
     db.session.commit()
-    flash(f'{count} evenement(s) passes supprime(s).','success')
+    log_action('clear_past_events', f'{count} evenements passes supprimes'); flash(f'{count} evenement(s) passes supprime(s).','success')
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/assign', methods=['POST'])
@@ -669,6 +702,7 @@ def clear_all_notifications():
 @app.route('/export/excel')
 @permission_required('manage_equipment')
 def export_excel():
+    log_action('export_excel', 'Export Excel de l\'inventaire')
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Inventaire Imagine Events"
     # Styles
     header_font = Font(name='Arial', bold=True, size=11, color='FFFFFF')

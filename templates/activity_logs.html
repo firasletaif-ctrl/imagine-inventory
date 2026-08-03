@@ -4,7 +4,33 @@
 {% block content %}
 <div class="form-page" style="max-width:1100px">
     <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
-    <div class="page-header"><h1>📜 Logs d'activite</h1><p>Qui a fait quoi, a quelle heure — Historique complet</p></div>
+    <div class="page-header"><h1>📜 Logs d'activite</h1><p>Suivi complet de toutes les actions — Imagine Events</p></div>
+
+    <!-- Stats -->
+    <div class="stats-row" style="margin-bottom:1.25rem">
+        <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value">{{ logs.total }}</div><div class="stat-label">Total actions</div></div>
+        <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value">{{ total_today }}</div><div class="stat-label">Aujourd'hui</div></div>
+        <div class="stat-card"><div class="stat-icon">📆</div><div class="stat-value">{{ total_week }}</div><div class="stat-label">7 derniers jours</div></div>
+        <div class="stat-card"><div class="stat-icon">🔍</div><div class="stat-value">{{ logs.items|length }}</div><div class="stat-label">Cette page</div></div>
+    </div>
+
+    <!-- Filters -->
+    <form class="search-form" method="GET" style="margin-bottom:1rem">
+        <select name="action" style="min-width:180px;border-radius:var(--radius-lg)" onchange="this.form.submit()">
+            <option value="">📂 Toutes les actions</option>
+            {% for a in all_actions %}
+            <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ ACTION_LABELS.get(a, a) }}</option>
+            {% endfor %}
+        </select>
+        <div class="search-wrapper">
+            <span class="search-icon-s">👤</span>
+            <input class="search-input" name="user" placeholder="Filtrer par utilisateur..." value="{{ user_filter }}">
+        </div>
+        <button class="btn btn-primary" type="submit">🔍 Filtrer</button>
+        {% if action_filter or user_filter %}
+        <a href="{{ url_for('activity_logs') }}" class="btn btn-secondary">✕ Reinitialiser</a>
+        {% endif %}
+    </form>
 
     <div class="detail-section">
         <div class="history-table-wrapper">
@@ -14,20 +40,37 @@
                     {% for log in logs.items %}
                     {% set u = log.user_id | get_user %}
                     <tr>
-                        <td style="white-space:nowrap"><strong>{{ log.timestamp.strftime('%d/%m/%Y') }}</strong><br><small style="color:var(--gray-500)">🕐 {{ log.timestamp.strftime('%H:%M:%S') }}</small></td>
+                        <td style="white-space:nowrap">
+                            <strong>{{ log.timestamp.strftime('%d/%m/%Y') }}</strong><br>
+                            <small style="color:var(--gray-500)">🕐 {{ log.timestamp.strftime('%H:%M:%S') }}</small>
+                        </td>
                         <td>{{ u.full_name if u else '—' }}</td>
                         <td>
                             {% if log.action == 'login' %}<span class="status-badge s-active">🔑 Connexion</span>
                             {% elif log.action == 'logout' %}<span class="status-badge" style="background:#F1F5F9;color:#64748B">🚪 Deconnexion</span>
+                            {% elif log.action == 'failed_login' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">⚠️ Echec connexion</span>
+                            {% elif log.action == 'register' %}<span class="status-badge" style="background:#EDE9FE;color:#7C3AED">📝 Inscription</span>
                             {% elif log.action == 'borrow' %}<span class="status-badge s-late">📤 Emprunt</span>
                             {% elif log.action == 'return' %}<span class="status-badge s-ok">✅ Retour</span>
                             {% elif log.action == 'add_equipment' %}<span class="status-badge" style="background:#DCFCE7;color:#16A34A">➕ Ajout materiel</span>
-                            {% elif log.action == 'delete_equipment' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🗑️ Suppression materiel</span>
-                            {% elif log.action == 'add_category' %}<span class="status-badge" style="background:#DBEAFE;color:#1E40AF">📂 Categorie ajoutee</span>
+                            {% elif log.action == 'edit_equipment' %}<span class="status-badge" style="background:#DBEAFE;color:#1E40AF">✏️ Modif materiel</span>
+                            {% elif log.action == 'delete_equipment' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🗑️ Suppr materiel</span>
+                            {% elif log.action == 'add_category' %}<span class="status-badge" style="background:#DCFCE7;color:#16A34A">📂 Categorie ajoutee</span>
                             {% elif log.action == 'delete_category' %}<span class="status-badge" style="background:#FEE2E2;color:#991B1B">❌ Categorie supprimee</span>
-                            {% elif log.action == 'clear_history' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🧹 Effacement historique</span>
                             {% elif log.action == 'create_user' %}<span class="status-badge" style="background:#EDE9FE;color:#7C3AED">👤 Compte cree</span>
+                            {% elif log.action == 'edit_user' %}<span class="status-badge" style="background:#DBEAFE;color:#1E40AF">✏️ Compte modifie</span>
                             {% elif log.action == 'delete_user' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">❌ Compte supprime</span>
+                            {% elif log.action == 'create_role' %}<span class="status-badge" style="background:#DCFCE7;color:#16A34A">🔐 Role cree</span>
+                            {% elif log.action == 'edit_role' %}<span class="status-badge" style="background:#DBEAFE;color:#1E40AF">✏️ Role modifie</span>
+                            {% elif log.action == 'delete_role' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">❌ Role supprime</span>
+                            {% elif log.action == 'change_password' %}<span class="status-badge" style="background:#FEF3C7;color:#92400E">🔑 Mdp change</span>
+                            {% elif log.action == 'create_event' %}<span class="status-badge" style="background:#DCFCE7;color:#16A34A">📅 Evenement cree</span>
+                            {% elif log.action == 'edit_event' %}<span class="status-badge" style="background:#DBEAFE;color:#1E40AF">✏️ Evenement modifie</span>
+                            {% elif log.action == 'delete_event' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🗑️ Evenement supprime</span>
+                            {% elif log.action == 'clear_past_events' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🧹 Evenements passes effaces</span>
+                            {% elif log.action == 'clear_history' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🧹 Effacement historique</span>
+                            {% elif log.action == 'export_excel' %}<span class="status-badge" style="background:#DCFCE7;color:#16A34A">📊 Export Excel</span>
+                            {% elif log.action == 'permission_denied' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🚫 Acces refuse</span>
                             {% else %}<span class="status-badge">{{ log.action }}</span>
                             {% endif %}
                         </td>
@@ -39,9 +82,9 @@
         </div>
         {% if logs.pages > 1 %}
         <div style="display:flex;justify-content:center;gap:.5rem;margin-top:1rem">
-            {% if logs.has_prev %}<a href="{{ url_for('activity_logs', page=logs.prev_num) }}" class="btn btn-sm btn-secondary">← Precedent</a>{% endif %}
+            {% if logs.has_prev %}<a href="{{ url_for('activity_logs', page=logs.prev_num, action=action_filter, user=user_filter) }}" class="btn btn-sm btn-secondary">← Precedent</a>{% endif %}
             <span style="padding:.45rem 1rem;font-weight:600;color:var(--gray-600)">Page {{ logs.page }} / {{ logs.pages }}</span>
-            {% if logs.has_next %}<a href="{{ url_for('activity_logs', page=logs.next_num) }}" class="btn btn-sm btn-secondary">Suivant →</a>{% endif %}
+            {% if logs.has_next %}<a href="{{ url_for('activity_logs', page=logs.next_num, action=action_filter, user=user_filter) }}" class="btn btn-sm btn-secondary">Suivant →</a>{% endif %}
         </div>
         {% endif %}
     </div>
