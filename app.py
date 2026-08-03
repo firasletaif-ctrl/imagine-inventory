@@ -4,7 +4,7 @@ import os, uuid, json, io
 from datetime import datetime, date, timedelta, timezone
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
 from PIL import Image
@@ -447,8 +447,12 @@ def delete_user(uid):
     elif u.id == current_user.id: flash('Impossible de se supprimer.','error')
     elif Borrow.query.filter_by(user_id=uid).filter(Borrow.status.in_(['active','late'])).first(): flash(f'{u.full_name} a des emprunts en cours.','error')
     else:
+        # Nettoyer toutes les tables qui referencent cet utilisateur
         ActivityLog.query.filter_by(user_id=uid).delete()
+        Notification.query.filter_by(user_id=uid).delete()
+        EventAssignment.query.filter_by(user_id=uid).delete()
         Borrow.query.filter_by(user_id=uid).update({Borrow.user_id: None})
+        Event.query.filter_by(created_by=uid).update({Event.created_by: None})
         db.session.delete(u); db.session.commit()
         flash(f'{u.full_name} supprime.','info')
     return redirect(url_for('manage_users'))
