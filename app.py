@@ -554,7 +554,7 @@ def activity_logs():
         'clear_past_events':'🧹 Evenements passes effaces','clear_history':'🧹 Effacement historique',
         'export_excel':'📊 Export Excel','permission_denied':'🚫 Acces refuse',
     }
-    return render_template('activity_logs.html', logs=logs, action_filter=action_filter, user_filter=user_filter, total_today=total_today, total_week=total_week, all_actions=all_actions, ACTION_LABELS=ACTION_LABELS)
+    return render_template('activity_logs.html', logs=logs, action_filter=action_filter, user_filter=user_filter, total_today=total_today, total_week=total_week, all_actions=all_actions, ACTION_LABELS=ACTION_LABELS, all_users=User.query.order_by(User.full_name).all())
 
 @app.route('/categories/add', methods=['POST'])
 @permission_required('manage_categories')
