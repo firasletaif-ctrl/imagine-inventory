@@ -6,6 +6,14 @@
     <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
     <div class="page-header"><h1>📜 Logs d'activite</h1><p>Suivi complet de toutes les actions — Imagine Events</p></div>
 
+    {% if current_user.has_permission('clear_history') %}
+    <div style="text-align:right;margin-bottom:1rem">
+        <form method="POST" action="{{ url_for('clear_logs') }}" onsubmit="return confirm('Supprimer TOUS les logs d\'activite ? Cette action est irreversible.')">
+            <button class="btn btn-danger" style="border:2px solid var(--red);background:var(--red-pale);color:var(--red);font-weight:700">⚠️ Effacer tous les logs</button>
+        </form>
+    </div>
+    {% endif %}
+
     <!-- Stats -->
     <div class="stats-row" style="margin-bottom:1.25rem">
         <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value">{{ logs.total }}</div><div class="stat-label">Total actions</div></div>

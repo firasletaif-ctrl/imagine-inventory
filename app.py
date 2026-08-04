@@ -501,6 +501,18 @@ def delete_role(rid):
     else: db.session.delete(r); db.session.commit(); log_action('delete_role', f'Role "{r.name}" supprime'); flash(f'Role "{r.name}" supprime.','info')
     return redirect(url_for('manage_roles'))
 
+@app.route('/admin/logs/clear', methods=['POST'])
+@permission_required('clear_history')
+def clear_logs():
+    count = ActivityLog.query.count()
+    ActivityLog.query.delete()
+    db.session.commit()
+    db.session.add(ActivityLog(user_id=current_user.id, action='clear_history', description=f'Logs effaces ({count} entrees)'))
+    db.session.commit()
+    flash(f'{count} logs d\'activite effaces.','success')
+    return redirect(url_for('activity_logs'))
+
+
 @app.route('/admin/clear-history', methods=['POST'])
 @permission_required('clear_history')
 def clear_history():
