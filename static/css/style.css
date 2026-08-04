@@ -1138,8 +1138,9 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
 .footer-name{font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:white;letter-spacing:2px;display:block}
 .footer-sub{font-size:.7rem;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase}
 .footer-info{display:flex;flex-wrap:wrap;gap:1.5rem;font-size:.8rem;color:rgba(255,255,255,.65)}
-.footer-info span{white-space:nowrap}
+.footer-info span{white-space:normal;word-break:break-word}
 .footer-copy{font-size:.7rem;color:rgba(255,255,255,.3);margin-top:.75rem;text-align:center}
+@media(max-width:768px){.footer-content{padding:1rem 1.25rem}.footer-info{gap:.5rem;font-size:.72rem}.footer-info span{display:block;margin-bottom:.2rem}.footer-name{font-size:.95rem}.footer-copy{font-size:.65rem}}
     .form-row { grid-template-columns: 1fr; }
     .flex-2 { grid-column: span 1; }
     .detail-meta-grid { grid-template-columns: 1fr; }
