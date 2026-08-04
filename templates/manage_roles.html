@@ -6,7 +6,6 @@
     <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
     <div class="page-header"><h1>🔐 Gerer les roles et permissions</h1><p>Creez des roles personnalises avec les permissions de votre choix.</p></div>
 
-    <!-- Create role -->
     <div class="form-card" style="margin-bottom:1.5rem">
         <h3 style="font-size:1.05rem;color:var(--blue-deep);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--gray-100)">➕ Creer un nouveau role</h3>
         <form method="POST" action="{{ url_for('create_role') }}">
@@ -28,7 +27,6 @@
         </form>
     </div>
 
-    <!-- Existing roles -->
     <div class="detail-section"><h2>📋 Roles existants ({{ roles|length }})</h2>
         {% for role in roles %}
         <div style="border:1px solid var(--gray-200);border-radius:12px;padding:1.25rem;margin-bottom:1rem;background:var(--white)">
@@ -41,7 +39,7 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:.5rem">
-                    <button class="btn btn-sm btn-secondary" onclick="openEditRole('{{ role.id }}','{{ role.name | replace("'","\\'") }}','{{ role.icon }}','{{ role.description | replace("'","\\'") }}',{{ role.get_permissions() | tojson }})">✏️ Modifier</button>
+                    <button class="btn btn-sm btn-secondary edit-role-btn" data-role='{"id":{{ role.id }},"name":{{ role.name | tojson }},"icon":{{ role.icon | tojson }},"desc":{{ (role.description or '') | tojson }},"perms":{{ role.get_permissions() | tojson }}}'>✏️ Modifier</button>
                     <form method="POST" action="{{ url_for('delete_role',rid=role.id) }}" onsubmit="return confirm('Supprimer le role {{ role.name | replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
                 </div>
             </div>
@@ -85,15 +83,23 @@
 
 {% block scripts %}
 <script>
-function openEditRole(id,name,icon,desc,perms){
-    document.getElementById('editName').value=name;
-    document.getElementById('editIcon').value=icon;
-    document.getElementById('editDesc').value=desc||'';
-    document.getElementById('editRoleForm').action='/admin/roles/'+id+'/edit';
-    document.querySelectorAll('#editPerms input[type=checkbox]').forEach(cb=>{cb.checked=perms.includes(cb.value)});
-    document.getElementById('editRoleModal').classList.add('open');
-}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 document.getElementById('editRoleModal').addEventListener('click',function(e){if(e.target===this)closeModal('editRoleModal')});
+
+// Edit role buttons
+document.querySelectorAll('.edit-role-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var d = JSON.parse(this.dataset.role);
+        document.getElementById('editName').value = d.name;
+        document.getElementById('editIcon').value = d.icon;
+        document.getElementById('editDesc').value = d.desc || '';
+        document.getElementById('editRoleForm').action = '/admin/roles/' + d.id + '/edit';
+        var perms = Array.isArray(d.perms) ? d.perms : [];
+        document.querySelectorAll('#editPerms input[type=checkbox]').forEach(function(cb){
+            cb.checked = perms.indexOf(cb.value) >= 0;
+        });
+        document.getElementById('editRoleModal').classList.add('open');
+    });
+});
 </script>
 {% endblock %}
