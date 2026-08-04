@@ -20,10 +20,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon">✦</div>
-            <div class="brand-text">
-                <span class="brand-name">IMAGINE</span>
-                <span class="brand-sub">Inventory</span>
-            </div>
+            <div class="brand-text"><span class="brand-name">IMAGINE</span><span class="brand-sub">Inventory</span></div>
         </div>
         <nav class="sidebar-nav">
             <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
@@ -38,55 +35,32 @@
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>
             {% if current_user.has_permission('manage_equipment') %}
-            <div style="margin:.25rem 0;padding:0 .5rem">
-                <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">📤 Export / Sauvegarde</div>
-                <a href="{{ url_for('export_excel') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
-                    <span class="nav-icon">📊</span><span>Excel</span>
-                </a>
-                <a href="{{ url_for('export_printer') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem" target="_blank">
-                    <span class="nav-icon">🖨️</span><span>PDF / Imprimer</span>
-                </a>
-                <a href="{{ url_for('export_photos_zip') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
-                    <span class="nav-icon">📸</span><span>Photos (ZIP)</span>
-                </a>
-                <a href="{{ url_for('restore_photos') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
-                    <span class="nav-icon">📥</span><span>Restaurer photos</span>
-                </a>
-            </div>
+            <a href="{{ url_for('export_excel') }}" class="nav-item" style="font-size:.85rem;padding:.45rem 1rem">
+                <span class="nav-icon">📊</span><span>Export Excel</span>
+            </a>
+            <a href="{{ url_for('export_printer') }}" class="nav-item" style="font-size:.85rem;padding:.45rem 1rem" target="_blank">
+                <span class="nav-icon">🖨️</span><span>Imprimer / PDF</span>
+            </a>
             {% endif %}
             {% if current_user.has_permission('manage_users') %}
-            <div style="margin:.25rem 0;padding:0 .5rem">
-                <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">⚙️ Administration</div>
-                <a href="{{ url_for('manage_users') }}" class="nav-item {% if request.endpoint == 'manage_users' %}active{% endif %}">
-                    <span class="nav-icon">👥</span><span>Gerer les utilisateurs</span>
-                </a>
-                {% if current_user.has_permission('manage_roles') %}
-                <a href="{{ url_for('manage_roles') }}" class="nav-item {% if request.endpoint == 'manage_roles' %}active{% endif %}">
-                    <span class="nav-icon">🔐</span><span>Gerer les roles</span>
-                </a>
-                {% endif %}
-                {% if current_user.has_permission('view_logs') %}
-                <a href="{{ url_for('activity_logs') }}" class="nav-item {% if request.endpoint == 'activity_logs' %}active{% endif %}">
-                    <span class="nav-icon">📜</span><span>Logs d'activite</span>
-                </a>
-                {% endif %}
-                {% if current_user.has_permission('clear_history') %}
-                <a href="#" class="nav-item nav-danger" onclick="openClearHistoryModal();return false" title="⚠️ A utiliser avec precaution">
-                    <span class="nav-icon">⚠️</span><span>Effacer l'historique</span>
-                </a>
-                {% endif %}
-            </div>
+            <a href="{{ url_for('manage_users') }}" class="nav-item {% if request.endpoint == 'manage_users' %}active{% endif %}">
+                <span class="nav-icon">👥</span><span>Gerer les utilisateurs</span>
+            </a>
             {% endif %}
-            {% if current_user.has_permission('manage_users') %}
-            <div style="margin:.25rem 0;padding:0 .5rem">
-                <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">🔄 Migration DB</div>
-                <a href="{{ url_for('reset_all_tables') }}" class="nav-item nav-danger" style="font-size:.8rem;padding:.5rem 1rem">
-                    <span class="nav-icon">🗑️</span><span>Reset tables</span>
-                </a>
-                <a href="{{ url_for('import_csv') }}" class="nav-item" style="font-size:.8rem;padding:.5rem 1rem">
-                    <span class="nav-icon">📥</span><span>Importer CSV</span>
-                </a>
-            </div>
+            {% if current_user.has_permission('manage_roles') %}
+            <a href="{{ url_for('manage_roles') }}" class="nav-item {% if request.endpoint == 'manage_roles' %}active{% endif %}">
+                <span class="nav-icon">🔐</span><span>Gerer les roles</span>
+            </a>
+            {% endif %}
+            {% if current_user.has_permission('view_logs') %}
+            <a href="{{ url_for('activity_logs') }}" class="nav-item {% if request.endpoint == 'activity_logs' %}active{% endif %}">
+                <span class="nav-icon">📜</span><span>Logs d'activite</span>
+            </a>
+            {% endif %}
+            {% if current_user.has_permission('clear_history') %}
+            <a href="#" class="nav-item nav-danger" onclick="openClearHistoryModal();return false" title="⚠️ A utiliser avec precaution">
+                <span class="nav-icon">⚠️</span><span>Effacer l'historique</span>
+            </a>
             {% endif %}
             <div style="margin-top:auto;padding:0.5rem 0">
                 <a href="{{ url_for('notifications') }}" class="nav-item" style="font-size:0.85rem;position:relative">
@@ -98,6 +72,11 @@
                 <a href="{{ url_for('change_password') }}" class="nav-item" style="font-size:0.85rem">
                     <span class="nav-icon">🔑</span><span>Changer mot de passe</span>
                 </a>
+                {% if current_user.has_permission('manage_users') %}
+                <a href="{{ url_for('import_csv') }}" class="nav-item" style="font-size:0.75rem;padding:.35rem 1rem;opacity:.6" title="Outils de migration">
+                    <span class="nav-icon">🔄</span><span>Sauvegarde / Migration</span>
+                </a>
+                {% endif %}
             </div>
         </nav>
         <div class="sidebar-footer">
@@ -156,9 +135,7 @@
                     <span>📱 +216 22 902 824</span>
                     <span>✉️ info@imagine-events.com</span>
                 </div>
-                <div class="footer-copy">
-                    © 2026 Imagine Events Tunisia · Tous droits reserves
-                </div>
+                <div class="footer-copy">© 2026 Imagine Events Tunisia · Tous droits reserves</div>
             </div>
         </footer>
         {% endif %}
@@ -171,27 +148,17 @@
             navigator.serviceWorker.register("{{ url_for('static', filename='js/service-worker.js') }}");
         });
     }
-
     function toggleMenu(){
         var s = document.getElementById('sidebar');
         var open = !s.classList.contains('open');
         s.classList.toggle('open');
-        if(open){
-            document.body.classList.add('sb-open');
-            document.body.style.top = '-' + window.scrollY + 'px';
-        } else {
-            var scrollY = document.body.style.top;
-            document.body.classList.remove('sb-open');
-            document.body.style.top = '';
-            if(scrollY) window.scrollTo(0, parseInt(scrollY || '0') * -1);
-        }
+        if(open){document.body.classList.add('sb-open');document.body.style.top='-'+window.scrollY+'px'}
+        else{var sy=document.body.style.top;document.body.classList.remove('sb-open');document.body.style.top='';if(sy)window.scrollTo(0,parseInt(sy||'0')*-1)}
     }
-    document.addEventListener('click', function(e) {
-        var sb = document.getElementById('sidebar');
-        if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.classList.contains('menu-toggle')) {
-            sb.classList.remove('open');
-            document.body.classList.remove('sb-open');
-            document.body.style.top = '';
+    document.addEventListener('click',function(e){
+        var sb=document.getElementById('sidebar');
+        if(sb&&sb.classList.contains('open')&&!sb.contains(e.target)&&!e.target.classList.contains('menu-toggle')){
+            sb.classList.remove('open');document.body.classList.remove('sb-open');document.body.style.top='';
         }
     });
     </script>

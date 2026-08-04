@@ -38,14 +38,12 @@
     </div>
 
     <div class="form-card" style="margin-top:1rem">
-        <h3>📋 Actions de migration (dans l'ordre)</h3>
-        <table style="font-size:.85rem">
-            <tr><td>1.</td><td>📸 <a href="{{ url_for('export_photos_zip') }}">Exporter les photos (ZIP)</a></td></tr>
-            <tr><td>2.</td><td>Beekeeper → Export CSV (10 tables)</td></tr>
-            <tr><td>3.</td><td>Render → Nouvelle base → Changer DATABASE_URL</td></tr>
-            <tr><td>4.</td><td>🔄 <a href="{{ url_for('reset_all_tables') }}">Reset DB (vider toutes les tables)</a></td></tr>
-            <tr><td>5.</td><td>📥 <strong>Importer CSV</strong> (cette page, 10 fois)</td></tr>
-            <tr><td>6.</td><td>📥 <a href="{{ url_for('restore_photos') }}">Restaurer les photos (ZIP)</a></td></tr>
+        <h3>📋 Tous les outils de migration</h3>
+        <table style="font-size:.85rem;width:100%">
+            <tr><td style="padding:.3rem">📸</td><td><a href="{{ url_for('export_photos_zip') }}">Exporter les photos (ZIP)</a></td><td style="color:var(--gray-400);font-size:.75rem">Sauvegarde</td></tr>
+            <tr><td style="padding:.3rem">🗑️</td><td><a href="{{ url_for('reset_all_tables') }}">Reset tables (vider la base)</a></td><td style="color:var(--gray-400);font-size:.75rem">Avant import</td></tr>
+            <tr><td style="padding:.3rem">📥</td><td><strong>Importer CSV</strong> (cette page)</td><td style="color:var(--gray-400);font-size:.75rem">10 fichiers</td></tr>
+            <tr><td style="padding:.3rem">📥</td><td><a href="{{ url_for('restore_photos') }}">Restaurer les photos (ZIP)</a></td><td style="color:var(--gray-400);font-size:.75rem">Apres import</td></tr>
         </table>
     </div>
 </div>

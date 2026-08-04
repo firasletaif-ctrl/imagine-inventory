@@ -154,6 +154,9 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
 }
 .nav-item {
     display: flex;
