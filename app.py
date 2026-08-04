@@ -513,6 +513,103 @@ def clear_logs():
     return redirect(url_for('activity_logs'))
 
 
+@app.route('/admin/import-csv', methods=['GET','POST'])
+@permission_required('manage_users')
+def import_csv():
+    if request.method == 'POST':
+        pw = request.form.get('password','')
+        if not current_user.check_password(pw):
+            flash('Mot de passe incorrect.','error')
+            return redirect(url_for('import_csv'))
+        table = request.form.get('table','')
+        csv_file = request.files.get('csvfile')
+        if not csv_file or not table:
+            flash('Selectionnez une table et un fichier CSV.','error')
+            return redirect(url_for('import_csv'))
+        
+        # Read CSV
+        import io, csv as csv_module
+        stream = io.StringIO(csv_file.read().decode('utf-8-sig'))
+        reader = csv_module.DictReader(stream)
+        rows = list(reader)
+        if not rows:
+            flash('Fichier CSV vide.','error')
+            return redirect(url_for('import_csv'))
+        
+        model_map = {
+            'roles': CustomRole,
+            'users': User,
+            'categories': Category,
+            'equipment': Equipment,
+            'equipment_images': EquipmentImage,
+            'borrows': Borrow,
+            'events': Event,
+            'event_assignments': EventAssignment,
+            'activity_logs': ActivityLog,
+            'notifications': Notification,
+        }
+        
+        model = model_map.get(table)
+        if not model:
+            flash('Table inconnue.','error')
+            return redirect(url_for('import_csv'))
+        
+        # Detect columns and import
+        cols = list(rows[0].keys())
+        count = 0
+        for row in rows:
+            try:
+                # Check if record already exists
+                existing = None
+                if 'id' in cols and row.get('id','').strip():
+                    existing = db.session.get(model, int(row['id'].strip()))
+                
+                obj = existing if existing else model()
+                for col in cols:
+                    val = row.get(col, '').strip()
+                    if val == '' or val.lower() == 'none':
+                        val = None
+                        if col == 'id' and existing: continue  # dont overwrite id
+                        setattr(obj, col, val)
+                        continue
+                    # Convert types
+                    if col == 'id' and existing: continue
+                    if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
+                        try: val = int(val)
+                        except: pass
+                    # Handle date/datetime columns
+                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp'):
+                        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
+                            try: val = datetime.strptime(val, fmt); break
+                            except: pass
+                        else:
+                            val = None  # can't parse
+                    if col == 'expected_return_date' and val:
+                        try: val = datetime.strptime(val, '%Y-%m-%d').date()
+                        except:
+                            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+                                try: val = datetime.strptime(val, fmt).date(); break
+                                except: pass
+                            else: val = None
+                    if col == 'permissions' and val and not val.startswith('['):
+                        val = f'["{val}"]'  # ensure JSON format
+                    setattr(obj, col, val)
+                if not existing:
+                    db.session.add(obj)
+                count += 1
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Erreur ligne {count+1}: {str(e)}','error')
+                return redirect(url_for('import_csv'))
+        
+        db.session.commit()
+        flash(f'{count} lignes importees dans {table}.','success')
+        return redirect(url_for('import_csv'))
+    
+    tables = ['roles','users','categories','equipment','equipment_images','borrows','events','event_assignments','activity_logs','notifications']
+    return render_template('import_csv.html', tables=tables)
+
+
 @app.route('/admin/reset-tables', methods=['GET','POST'])
 @permission_required('manage_users')
 def reset_all_tables():
@@ -521,6 +618,9 @@ def reset_all_tables():
         if not current_user.check_password(pw):
             flash('Mot de passe incorrect.','error')
             return redirect(url_for('reset_all_tables'))
+        # Keep current admin
+        aid = current_user.id
+        rid = current_user.role_id
         Notification.query.delete()
         EventAssignment.query.delete()
         Event.query.delete()
@@ -529,10 +629,10 @@ def reset_all_tables():
         EquipmentImage.query.delete()
         Equipment.query.delete()
         Category.query.delete()
-        User.query.delete()
-        CustomRole.query.delete()
+        User.query.filter(User.id != aid).delete()
+        CustomRole.query.filter(CustomRole.id != rid).delete()
         db.session.commit()
-        flash('Toutes les tables videes. Base prete pour migration.','success')
+        flash('Toutes les tables videes (votre compte preserve). Base prete.','success')
         return redirect(url_for('reset_all_tables'))
     return render_template('reset_tables.html')
 

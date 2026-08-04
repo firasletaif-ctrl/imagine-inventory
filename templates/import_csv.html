@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Importer CSV — Migration{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:650px">
+    <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
+    <div class="page-header"><h1>📥 Importer CSV</h1><p>Importe tes fichiers CSV de sauvegarde un par un, dans l'ordre indique.</p></div>
+
+    <div class="form-card">
+        <div style="background:#DCFCE7;padding:1rem;border-radius:8px;margin-bottom:1.5rem;font-size:.85rem">
+            <strong>✅ Ordre d'import obligatoire :</strong>
+            <ol style="margin:.5rem 0 0 1.2rem;padding:0;font-family:monospace">
+                <li>roles</li><li>users</li><li>categories</li><li>equipment</li><li>equipment_images</li>
+                <li>borrows</li><li>events</li><li>event_assignments</li><li>activity_logs</li><li>notifications</li>
+            </ol>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Table</label>
+                <select name="table" required>
+                    <option value="">— Choisis la table —</option>
+                    {% for t in tables %}
+                    <option value="{{ t }}">{{ loop.index }}. {{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fichier CSV</label>
+                <input type="file" name="csvfile" accept=".csv" required>
+            </div>
+            <div class="form-group">
+                <label>Mot de passe administrateur</label>
+                <input type="password" name="password" required placeholder="Confirmation">
+            </div>
+            <button class="btn btn-accent btn-full">📥 Importer</button>
+        </form>
+    </div>
+
+    <div class="form-card" style="margin-top:1rem">
+        <h3>📋 Actions de migration (dans l'ordre)</h3>
+        <table style="font-size:.85rem">
+            <tr><td>1.</td><td>📸 <a href="{{ url_for('export_photos_zip') }}">Exporter les photos (ZIP)</a></td></tr>
+            <tr><td>2.</td><td>Beekeeper → Export CSV (10 tables)</td></tr>
+            <tr><td>3.</td><td>Render → Nouvelle base → Changer DATABASE_URL</td></tr>
+            <tr><td>4.</td><td>🔄 <a href="{{ url_for('reset_all_tables') }}">Reset DB (vider toutes les tables)</a></td></tr>
+            <tr><td>5.</td><td>📥 <strong>Importer CSV</strong> (cette page, 10 fois)</td></tr>
+            <tr><td>6.</td><td>📥 <a href="{{ url_for('restore_photos') }}">Restaurer les photos (ZIP)</a></td></tr>
+        </table>
+    </div>
+</div>
+{% endblock %}
