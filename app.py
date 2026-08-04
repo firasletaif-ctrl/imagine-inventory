@@ -197,20 +197,19 @@ def notify_user(uid, title, message, link=''):
         print(f'[EMAIL ERROR] {type(e).__name__}: {e}')
 
 
-def send_email(to, subject, body, link=''):
-    """Envoi email via Brevo API HTTP"""
+def send_email(to, subject, body_html, body_text=''):
+    """Envoi email via Brevo API HTTP avec template HTML"""
     import urllib.request, json as jmod
     api_key = os.environ.get('SMTP_PASSWORD','')
-    if not api_key:
-        return
+    if not api_key: return
     sender_email = os.environ.get('SMTP_FROM','')
-    if not sender_email:
-        return
+    if not sender_email: return
     data = jmod.dumps({
-        "sender": {"name": "Imagine Inventory", "email": sender_email},
+        "sender": {"name": "Imagine Events Tunisia", "email": sender_email},
         "to": [{"email": to}],
         "subject": f'[Imagine Inventory] {subject}',
-        "textContent": f'{body}'
+        "htmlContent": body_html,
+        "textContent": body_text or subject
     }).encode('utf-8')
     req = urllib.request.Request(
         'https://api.brevo.com/v3/smtp/email',
@@ -220,20 +219,51 @@ def send_email(to, subject, body, link=''):
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            result = jmod.loads(resp.read().decode())
-            print(f'[EMAIL] OK -> {to} (msgId: {result.get("messageId","?")})')
+            print(f'[EMAIL] OK -> {to}')
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()[:200] if e.fp else 'N/A'
         print(f'[EMAIL] HTTP {e.code}: {err_body}')
     except Exception as e:
         print(f'[EMAIL] Error: {e}')
 
+
+def email_template(title, greeting, content, action_link='', action_text=''):
+    """Template HTML pour les emails Imagine Events"""
+    action_btn = f'<a href="{action_link}" style="display:inline-block;background:#C41E3A;color:white;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:bold;margin:15px 0;font-size:14px">{action_text}</a>' if action_link else ''
+    return f'''<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#F8FAFC">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F8FAFC;padding:20px">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08)">
+<tr><td style="background:linear-gradient(135deg,#0B1D3A,#13294B);padding:25px 30px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">\u2726</div>
+    <div style="font-family:Georgia,serif;font-size:20px;font-weight:bold;color:white;letter-spacing:2px">IMAGINE<span style="color:#E63946"> EVENTS</span></div>
+    <div style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;margin-top:4px">TUNISIA · EXCELLENCE EVENEMENTIELLE</div>
+</td></tr>
+<tr><td style="padding:30px">
+    <h2 style="color:#0B1D3A;font-size:18px;margin:0 0 10px">{title}</h2>
+    <p style="color:#64748B;font-size:14px;line-height:1.6;margin:0 0 15px">{greeting}</p>
+    <div style="background:#F1F5F9;border-left:4px solid #C41E3A;padding:15px;border-radius:0 8px 8px 0;margin:15px 0">
+        <p style="color:#334155;font-size:14px;margin:0;line-height:1.6">{content}</p>
+    </div>
+    {action_btn}
+    <p style="color:#94A3B8;font-size:12px;margin-top:20px">Cet email a ete envoye automatiquement par Imagine Inventory.</p>
+</td></tr>
+<tr><td style="background:#0B1D3A;padding:15px 30px;text-align:center">
+    <p style="color:rgba(255,255,255,.5);font-size:11px;margin:0">
+        Rue du Lac Loch Ness, Imm Neo, 3eme etage, 1053 Les Berges du Lac, Tunis<br>
+        +216 71 656 056 | info@imagine-events.com
+    </p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>'''
+
+
 def notify_admins(title, message, link=''):
-    admin_role = CustomRole.query.filter_by(name='Admin').first()
-    if admin_role:
-        admins = User.query.filter_by(role_id=admin_role.id).all()
-        for a in admins:
-            notify_user(a.id, title, message, link)
+    for a in User.query.filter(User.role_id.in_(db.session.query(CustomRole.id).filter_by(name='Admin'))).all():
+        notify_user(a.id, title, message, link)
 
 ALL_PERMISSIONS = [
     {"key":"manage_users","label":"Gerer les utilisateurs","desc":"Creer, modifier, supprimer des comptes","icon":"👥"},
