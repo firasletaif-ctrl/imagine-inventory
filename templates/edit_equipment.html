@@ -12,6 +12,23 @@
         <p>Réf: {{ eq.reference }}</p>
     </div>
 
+    <!-- Images existantes EN DEHORS du formulaire principal -->
+    {% if eq.images %}
+    <div class="form-card" style="margin-bottom:1rem">
+        <h2>🖼️ Images actuelles</h2>
+        <div class="existing-images" style="display:flex;gap:.75rem;flex-wrap:wrap">
+            {% for img in eq.images %}
+            <div class="existing-img" style="position:relative;width:120px;height:120px;border-radius:8px;overflow:visible;border:1px solid var(--gray-200);display:inline-block">
+                <img src="{{ url_for('uploaded_file', fn=img.filename) }}" alt="Image {{ loop.index }}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">
+                <form method="POST" action="{{ url_for('delete_image', eid=eq.id, iid=img.id) }}" onsubmit="return confirm('Supprimer cette image ?')" style="position:absolute;top:-8px;right:-8px;z-index:10;margin:0">
+                    <button type="submit" style="background:var(--red);color:white;width:24px;height:24px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.35);padding:0;line-height:1">×</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <form method="POST" enctype="multipart/form-data" class="equipment-form">
         <div class="form-card">
             <h2>📦 Informations générales</h2>
@@ -69,23 +86,6 @@
                 <small>Format recommandé : <code>Clé: Valeur</code> — une par ligne.</small>
             </div>
         </div>
-
-        {% if eq.images %}
-        <div class="form-card">
-            <h2>🖼️ Images actuelles</h2>
-            <div class="existing-images">
-                {% for img in eq.images %}
-                <div class="existing-img">
-                    <img src="{{ url_for('uploaded_file', fn=img.filename) }}" alt="Image {{ loop.index }}">
-                    <form method="POST" action="{{ url_for('delete_image', eid=eq.id, iid=img.id) }}"
-                          onsubmit="return confirm('Supprimer cette image ?')" style="position:absolute;top:-4px;right:-4px;z-index:10">
-                        <button style="background:var(--red);color:white;width:22px;height:22px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);padding:0;line-height:1">×</button>
-                    </form>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
 
         <div class="form-card">
             <h2>📸 Ajouter des photos</h2>
