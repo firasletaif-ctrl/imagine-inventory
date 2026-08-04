@@ -206,6 +206,7 @@ ALL_PERMISSIONS = [
     {"key":"view_logs","label":"Voir les logs","desc":"Consulter l'historique d'activite","icon":"📜"},
     {"key":"clear_history","label":"Effacer l'historique","desc":"Supprimer l'historique des emprunts","icon":"🗑️"},
     {"key":"manage_schedule","label":"Gerer le planning","desc":"Creer et gerer l'emploi du temps","icon":"📅"},
+    {"key":"manage_database","label":"Gerer la base de donnees","desc":"Reset, import CSV, restauration photos, migration","icon":"🗄️"},
 ]
 
 def permission_required(perm):
@@ -514,7 +515,7 @@ def clear_logs():
 
 
 @app.route('/admin/import-csv', methods=['GET','POST'])
-@permission_required('manage_users')
+@permission_required('manage_database')
 def import_csv():
     if request.method == 'POST':
         pw = request.form.get('password','')
@@ -611,7 +612,7 @@ def import_csv():
 
 
 @app.route('/admin/reset-tables', methods=['GET','POST'])
-@permission_required('manage_users')
+@permission_required('manage_database')
 def reset_all_tables():
     if request.method == 'POST':
         pw = request.form.get('password','')
@@ -836,7 +837,7 @@ def clear_all_notifications():
 
 # ═══════════ N E W :  E X P O R T S ═══════════
 @app.route('/export/photos-zip')
-@permission_required('manage_equipment')
+@permission_required('manage_database')
 def export_photos_zip():
     import zipfile
     buf = io.BytesIO()
@@ -852,7 +853,7 @@ def export_photos_zip():
 
 
 @app.route('/admin/restore-photos', methods=['GET','POST'])
-@permission_required('manage_equipment')
+@permission_required('manage_database')
 def restore_photos():
     if request.method == 'POST':
         zf = request.files.get('zipfile')
