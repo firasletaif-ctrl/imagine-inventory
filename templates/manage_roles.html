@@ -41,7 +41,7 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:.5rem">
-                    <button class="btn btn-sm btn-secondary" onclick="openEditRole('{{ role.id }}','{{ role.name | replace("'","\\'") }}','{{ role.icon }}','{{ role.description | replace("'","\\'") }}',{{ role.permissions | tojson }})">✏️ Modifier</button>
+                    <button class="btn btn-sm btn-secondary" onclick="openEditRole('{{ role.id }}','{{ role.name | replace("'","\\'") }}','{{ role.icon }}','{{ role.description | replace("'","\\'") }}',{{ role.get_permissions() | tojson }})">✏️ Modifier</button>
                     <form method="POST" action="{{ url_for('delete_role',rid=role.id) }}" onsubmit="return confirm('Supprimer le role {{ role.name | replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
                 </div>
             </div>
