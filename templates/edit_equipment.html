@@ -78,8 +78,8 @@
                 <div class="existing-img">
                     <img src="{{ url_for('uploaded_file', fn=img.filename) }}" alt="Image {{ loop.index }}">
                     <form method="POST" action="{{ url_for('delete_image', eid=eq.id, iid=img.id) }}"
-                          onsubmit="return confirm('Supprimer cette image ?')" class="delete-img-form">
-                        <button class="btn btn-sm btn-danger">🗑️</button>
+                          onsubmit="return confirm('Supprimer cette image ?')" style="position:absolute;top:-4px;right:-4px;z-index:10">
+                        <button style="background:var(--red);color:white;width:22px;height:22px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);padding:0;line-height:1">×</button>
                     </form>
                 </div>
                 {% endfor %}
