@@ -188,6 +188,30 @@ def log_action(action, description='', equipment_name='', quantity=0):
 def notify_user(uid, title, message, link=''):
     n = Notification(user_id=uid, title=title, message=message, link=link)
     db.session.add(n); db.session.commit()
+    try:
+        u = db.session.get(User, uid)
+        if u and os.environ.get('SMTP_HOST'):
+            send_email(u.email, title, message)
+    except Exception:
+        pass
+
+
+def send_email(to, subject, body):
+    import smtplib
+    from email.mime.text import MIMEText
+    host = os.environ.get('SMTP_HOST','')
+    port = int(os.environ.get('SMTP_PORT','587'))
+    user = os.environ.get('SMTP_USER','')
+    pw = os.environ.get('SMTP_PASSWORD','')
+    if not host or not pw: return
+    msg = MIMEText(body, 'plain', 'utf-8')
+    msg['Subject'] = f'[Imagine Inventory] {subject}'
+    msg['From'] = os.environ.get('SMTP_FROM', user)
+    msg['To'] = to
+    with smtplib.SMTP(host, port) as s:
+        s.starttls()
+        s.login(user, pw)
+        s.send_message(msg)
 
 def notify_admins(title, message, link=''):
     admin_role = CustomRole.query.filter_by(name='Admin').first()
@@ -435,10 +459,17 @@ def create_user():
 def edit_user(uid):
     u = db.session.get(User, uid)
     if not u: flash('Introuvable.','error'); return redirect(url_for('manage_users'))
-    if u.id == current_user.id: flash('Vous ne pouvez pas modifier votre propre role.','error'); return redirect(url_for('manage_users'))
-    u.full_name = request.form.get('full_name',u.full_name).strip(); rid = request.form.get('role_id')
-    try: u.role_id = int(rid) if rid else None
-    except: pass
+    # Allow editing yourself (just can't change your own role)
+    is_self = (u.id == current_user.id)
+    u.full_name = request.form.get('full_name',u.full_name).strip()
+    new_email = request.form.get('email','').strip().lower()
+    if new_email and new_email != u.email and User.query.filter_by(email=new_email).first():
+        flash('Cet email est deja utilise.','error'); return redirect(url_for('manage_users'))
+    if new_email: u.email = new_email
+    if not is_self:
+        rid = request.form.get('role_id')
+        try: u.role_id = int(rid) if rid else None
+        except: pass
     np = request.form.get('new_password','')
     if np and len(np) >= 6: u.set_password(np); flash(f'{u.full_name} mis a jour + mdp change.','success')
     elif np: flash('Mdp non change (6 car. min).','error')

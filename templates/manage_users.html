@@ -22,14 +22,15 @@
     <div class="detail-section"><h2>📋 Liste des utilisateurs ({{ users|length }})</h2>
         <div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Nom</th><th>Email</th><th>Role</th><th>Cree le</th><th>Actions</th></tr></thead><tbody>
             {% for u in users %}<tr>
-                <td><strong>{{ u.full_name }}</strong></td>
+                <td><strong>{{ u.full_name }}</strong>{% if u.id == current_user.id %} <small style="color:var(--blue);font-weight:400">(vous)</small>{% endif %}</td>
                 <td><code style="font-size:.8rem">{{ u.email }}</code></td>
                 <td><span class="status-badge" style="background:var(--blue-pale);color:var(--blue)">{{ u.role_name }}</span></td>
                 <td>{{ u.created_at.strftime('%d/%m/%Y') }}</td>
-                <td>{% if u.id != current_user.id %}
-                    <button class="btn btn-sm btn-secondary" onclick="openEditUser('{{ u.id }}','{{ u.full_name|replace("'","\\'") }}',{{ u.role_id or 0 }})">✏️</button>
+                <td>
+                    <button class="btn btn-sm btn-secondary edit-user-btn" data-user='{"id":{{ u.id }},"name":{{ u.full_name|tojson }},"email":{{ u.email|tojson }},"role_id":{{ u.role_id or 0 }}}'>✏️</button>
+                    {% if u.id != current_user.id %}
                     <form method="POST" action="{{ url_for('delete_user',uid=u.id) }}" style="display:inline" onsubmit="return confirm('Supprimer {{ u.full_name|replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
-                    {% else %}<span style="color:var(--gray-400);font-size:.8rem">Vous</span>{% endif %}
+                    {% endif %}
                 </td>
             </tr>{% endfor %}
         </tbody></table></div>
@@ -41,7 +42,8 @@
     <form id="editUserForm" method="POST">
         <div class="modal-body">
             <div class="form-group"><label>Nom complet</label><input type="text" name="full_name" id="editFullName" required></div>
-            <div class="form-group"><label>Role</label><select name="role_id" id="editRoleId">{% for r in all_roles %}<option value="{{ r.id }}">{{ r.icon }} {{ r.name }}</option>{% endfor %}</select></div>
+            <div class="form-group"><label>Email</label><input type="email" name="email" id="editEmail" required></div>
+            <div class="form-group" id="editRoleGroup"><label>Role</label><select name="role_id" id="editRoleId">{% for r in all_roles %}<option value="{{ r.id }}">{{ r.icon }} {{ r.name }}</option>{% endfor %}</select></div>
             <div class="form-group"><label>Nouveau mot de passe (laisser vide)</label><input type="password" name="new_password" placeholder="6+ caracteres"></div>
         </div>
         <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Annuler</button><button class="btn btn-accent">💾 Enregistrer</button></div>
@@ -51,13 +53,22 @@
 
 {% block scripts %}
 <script>
-function openEditUser(id,name,roleId){
-    document.getElementById('editFullName').value=name;
-    document.getElementById('editRoleId').value=roleId||'';
-    document.getElementById('editUserForm').action='/admin/users/'+id+'/edit';
-    document.getElementById('editUserModal').classList.add('open');
-}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 document.getElementById('editUserModal').addEventListener('click',function(e){if(e.target===this)closeModal('editUserModal')});
+
+// Edit user buttons using data attributes
+document.querySelectorAll('.edit-user-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var d = JSON.parse(this.dataset.user);
+        document.getElementById('editFullName').value = d.name;
+        document.getElementById('editEmail').value = d.email;
+        document.getElementById('editRoleId').value = d.role_id || '';
+        document.getElementById('editUserForm').action = '/admin/users/' + d.id + '/edit';
+        // If editing self, hide role selector
+        var isSelf = d.id == {{ current_user.id }};
+        document.getElementById('editRoleGroup').style.display = isSelf ? 'none' : '';
+        document.getElementById('editUserModal').classList.add('open');
+    });
+});
 </script>
 {% endblock %}
