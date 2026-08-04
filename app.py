@@ -188,11 +188,12 @@ def log_action(action, description='', equipment_name='', quantity=0):
 def notify_user(uid, title, message, link=''):
     n = Notification(user_id=uid, title=title, message=message, link=link)
     db.session.add(n); db.session.commit()
-    # Envoi email si SMTP configure
+    # Envoi email si cle API configuree
     try:
         u = db.session.get(User, uid)
-        if u and os.environ.get('SMTP_HOST'):
-            send_email(u.email, title, message, link)
+        if u and os.environ.get('SMTP_PASSWORD'):
+            html = email_template(title, f'Bonjour {u.full_name},', message, link, 'Voir dans Imagine Inventory')
+            send_email(u.email, title, html, message)
     except Exception as e:
         print(f'[EMAIL ERROR] {type(e).__name__}: {e}')
 
