@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Restaurer les photos{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:600px">
+    <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
+    <div class="page-header"><h1>📸 Restaurer les photos</h1><p>Importez un fichier ZIP contenant les photos precedemment exportees.</p></div>
+
+    <div class="form-card">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="upload-zone" style="text-align:center;padding:2rem">
+                <div style="font-size:3rem;margin-bottom:.5rem">📸</div>
+                <p style="font-weight:600;margin-bottom:.5rem">Selectionnez le fichier ZIP de photos</p>
+                <small>Sauvegarde precedemment telechargee via "Photos (ZIP)"</small>
+                <div style="margin-top:1rem">
+                    <input type="file" name="zipfile" accept=".zip" required style="padding:.5rem">
+                </div>
+            </div>
+            <div style="margin-top:1rem;background:#FEF3C7;padding:1rem;border-radius:8px;font-size:.85rem">
+                <strong>⚠️ Important :</strong> Cette action copie uniquement les fichiers photos dans le dossier uploads.
+                Apres l'import, vous devez reassocier chaque photo a son materiel dans Beekeeper (table <code>equipment_images</code>).
+            </div>
+            <div class="form-actions" style="margin-top:1rem">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Annuler</a>
+                <button class="btn btn-accent btn-lg">📥 Restaurer les photos</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

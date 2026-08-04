@@ -727,6 +727,38 @@ def export_photos_zip():
     return send_file(buf, mimetype='application/zip', as_attachment=True, download_name=f'photos_imagine_{date.today().strftime("%Y%m%d")}.zip')
 
 
+@app.route('/admin/restore-photos', methods=['GET','POST'])
+@permission_required('manage_equipment')
+def restore_photos():
+    if request.method == 'POST':
+        zf = request.files.get('zipfile')
+        if not zf or not zf.filename.endswith('.zip'):
+            flash('Veuillez selectionner un fichier ZIP valide.','error')
+            return redirect(url_for('restore_photos'))
+        import zipfile, tempfile, shutil
+        count = 0
+        with zipfile.ZipFile(zf) as z:
+            for fn in z.namelist():
+                if fn.endswith('/') or fn == '.gitkeep': continue
+                # Extraire le fichier dans uploads
+                target = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(fn))
+                if os.path.exists(target): continue  # skip duplicates
+                z.extract(fn, app.config['UPLOAD_FOLDER'])
+                # Renommer si extrait dans un sous-dossier
+                extracted = os.path.join(app.config['UPLOAD_FOLDER'], fn)
+                if extracted != target and os.path.exists(extracted):
+                    os.rename(extracted, target)
+                # Nettoyer le dossier parent si vide
+                parent = os.path.dirname(extracted)
+                if parent != app.config['UPLOAD_FOLDER'] and os.path.isdir(parent):
+                    try: os.rmdir(parent)
+                    except: pass
+                count += 1
+        flash(f'{count} photos restaurees dans le dossier uploads. Pensez a les reassocier au materiel dans Beekeeper (table equipment_images).','success')
+        return redirect(url_for('restore_photos'))
+    return render_template('restore_photos.html')
+
+
 @app.route('/export/excel')
 @permission_required('manage_equipment')
 def export_excel():
