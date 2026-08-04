@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}Imagine Inventory{% endblock %} — Imagine Events Tunisia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,11 +28,9 @@
                 <span class="nav-icon">➕</span><span>Ajouter du materiel</span>
             </a>
             {% endif %}
-            <!-- Schedule -->
             <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>
-            <!-- Export -->
             {% if current_user.has_permission('manage_equipment') %}
             <div style="margin:.25rem 0;padding:0 .5rem">
                 <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">📤 Export</div>
@@ -44,7 +42,6 @@
                 </a>
             </div>
             {% endif %}
-            <!-- Admin section -->
             <div style="margin:.25rem 0;padding:0 .5rem">
                 <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">⚙️ Administration</div>
             {% if current_user.has_permission('manage_users') %}
@@ -93,7 +90,7 @@
     </aside>
 
     <header class="mobile-header">
-        <button class="menu-toggle" onclick="var s=document.getElementById('sidebar');s.classList.toggle('open');document.body.style.overflow=s.classList.contains('open')?'hidden':''">☰</button>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <a href="{{ url_for('notifications') }}" style="color:white;text-decoration:none;position:relative">🔔
             {% if current_user.unread_notifications > 0 %}
             <span style="position:absolute;top:-8px;right:-10px;background:var(--red);color:white;padding:0 .25rem;border-radius:100px;font-size:.6rem;font-weight:700">{{ current_user.unread_notifications }}</span>
@@ -146,12 +143,27 @@
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-    // Close sidebar when clicking outside on mobile + unlock body scroll
+    function toggleMenu(){
+        var s = document.getElementById('sidebar');
+        var open = !s.classList.contains('open');
+        s.classList.toggle('open');
+        if(open){
+            document.body.classList.add('sb-open');
+            document.body.style.top = '-' + window.scrollY + 'px';
+        } else {
+            var scrollY = document.body.style.top;
+            document.body.classList.remove('sb-open');
+            document.body.style.top = '';
+            if(scrollY) window.scrollTo(0, parseInt(scrollY || '0') * -1);
+        }
+    }
+    // Close sidebar on outside click
     document.addEventListener('click', function(e) {
         var sb = document.getElementById('sidebar');
         if (sb && sb.classList.contains('open') && !sb.contains(e.target) && !e.target.classList.contains('menu-toggle')) {
             sb.classList.remove('open');
-            document.body.style.overflow = '';
+            document.body.classList.remove('sb-open');
+            document.body.style.top = '';
         }
     });
     </script>
