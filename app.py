@@ -198,34 +198,35 @@ def notify_user(uid, title, message, link=''):
 
 
 def send_email(to, subject, body, link=''):
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    host = os.environ.get('SMTP_HOST','')
-    port = int(os.environ.get('SMTP_PORT','587'))
-    user = os.environ.get('SMTP_USER','')
-    pw = os.environ.get('SMTP_PASSWORD','')
-    if not host or not user or not pw:
-        print('[EMAIL] Config SMTP incomplete')
+    """Envoi email via Brevo API HTTP"""
+    import urllib.request, json as jmod
+    api_key = os.environ.get('SMTP_PASSWORD','')
+    if not api_key:
         return
-    msg = MIMEMultipart()
-    msg['Subject'] = f'[Imagine Inventory] {subject}'
-    msg['From'] = os.environ.get('SMTP_FROM', user)
-    msg['To'] = to
-    body_with_link = f'{body}\n\n-- \nImagine Inventory - Imagine Events Tunisia\n{link if link else ""}'
-    msg.attach(MIMEText(body_with_link, 'plain', 'utf-8'))
+    sender_email = os.environ.get('SMTP_FROM','')
+    if not sender_email:
+        return
+    data = jmod.dumps({
+        "sender": {"name": "Imagine Inventory", "email": sender_email},
+        "to": [{"email": to}],
+        "subject": f'[Imagine Inventory] {subject}',
+        "textContent": f'{body}'
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.brevo.com/v3/smtp/email',
+        data=data,
+        headers={'accept':'application/json','api-key':api_key,'content-type':'application/json'},
+        method='POST'
+    )
     try:
-        with smtplib.SMTP(host, port, timeout=10) as s:
-            s.starttls()
-            s.login(user, pw)
-            s.send_message(msg)
-            print(f'[EMAIL] OK -> {to}')
-    except smtplib.SMTPAuthenticationError:
-        print(f'[EMAIL] Erreur authentification SMTP. Verifie SMTP_USER et SMTP_PASSWORD')
-    except smtplib.SMTPException as e:
-        print(f'[EMAIL] Erreur SMTP: {e}')
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = jmod.loads(resp.read().decode())
+            print(f'[EMAIL] OK -> {to} (msgId: {result.get("messageId","?")})')
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode()[:200] if e.fp else 'N/A'
+        print(f'[EMAIL] HTTP {e.code}: {err_body}')
     except Exception as e:
-        print(f'[EMAIL] Erreur: {type(e).__name__}: {e}')
+        print(f'[EMAIL] Error: {e}')
 
 def notify_admins(title, message, link=''):
     admin_role = CustomRole.query.filter_by(name='Admin').first()
