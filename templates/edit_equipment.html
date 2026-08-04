@@ -116,16 +116,28 @@
 function previewImages(event) {
     var container = document.getElementById('imagePreviews');
     container.innerHTML = '';
-    Array.from(event.target.files).forEach(function(file) {
+    Array.from(event.target.files).forEach(function(file, idx) {
         var reader = new FileReader();
         reader.onload = function(e) {
             var div = document.createElement('div');
             div.className = 'preview-item';
-            div.innerHTML = '<img src="' + e.target.result + '" alt="Aperçu"><span class="preview-name">' + file.name + '</span>';
+            div.style.position = 'relative';
+            div.innerHTML = '<img src="' + e.target.result + '" alt="Aperçu">' +
+                           '<span class="preview-name">' + file.name + '</span>' +
+                           '<span onclick="removePhoto(' + idx + ')" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:10">×</span>';
             container.appendChild(div);
         };
         reader.readAsDataURL(file);
     });
+}
+
+function removePhoto(idx) {
+    var input = document.getElementById('images');
+    var dt = new DataTransfer();
+    Array.from(input.files).forEach(function(f, i) { if (i !== idx) dt.items.add(f); });
+    input.files = dt.files;
+    var evt = new Event('change', { bubbles: true });
+    input.dispatchEvent(evt);
 }
 
 var zone = document.getElementById('uploadZone');
