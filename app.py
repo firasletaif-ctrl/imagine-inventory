@@ -711,6 +711,22 @@ def clear_all_notifications():
 
 
 # ═══════════ N E W :  E X P O R T S ═══════════
+@app.route('/export/photos-zip')
+@permission_required('manage_equipment')
+def export_photos_zip():
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        upload_dir = app.config['UPLOAD_FOLDER']
+        for fn in os.listdir(upload_dir):
+            if fn == '.gitkeep': continue
+            fpath = os.path.join(upload_dir, fn)
+            if os.path.isfile(fpath):
+                zf.write(fpath, fn)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/zip', as_attachment=True, download_name=f'photos_imagine_{date.today().strftime("%Y%m%d")}.zip')
+
+
 @app.route('/export/excel')
 @permission_required('manage_equipment')
 def export_excel():
