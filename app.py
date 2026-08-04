@@ -188,30 +188,44 @@ def log_action(action, description='', equipment_name='', quantity=0):
 def notify_user(uid, title, message, link=''):
     n = Notification(user_id=uid, title=title, message=message, link=link)
     db.session.add(n); db.session.commit()
+    # Envoi email si SMTP configure
     try:
         u = db.session.get(User, uid)
         if u and os.environ.get('SMTP_HOST'):
-            send_email(u.email, title, message)
-    except Exception:
-        pass
+            send_email(u.email, title, message, link)
+    except Exception as e:
+        print(f'[EMAIL ERROR] {type(e).__name__}: {e}')
 
 
-def send_email(to, subject, body):
+def send_email(to, subject, body, link=''):
     import smtplib
     from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
     host = os.environ.get('SMTP_HOST','')
     port = int(os.environ.get('SMTP_PORT','587'))
     user = os.environ.get('SMTP_USER','')
     pw = os.environ.get('SMTP_PASSWORD','')
-    if not host or not pw: return
-    msg = MIMEText(body, 'plain', 'utf-8')
+    if not host or not user or not pw:
+        print('[EMAIL] Config SMTP incomplete')
+        return
+    msg = MIMEMultipart()
     msg['Subject'] = f'[Imagine Inventory] {subject}'
     msg['From'] = os.environ.get('SMTP_FROM', user)
     msg['To'] = to
-    with smtplib.SMTP(host, port) as s:
-        s.starttls()
-        s.login(user, pw)
-        s.send_message(msg)
+    body_with_link = f'{body}\n\n-- \nImagine Inventory - Imagine Events Tunisia\n{link if link else ""}'
+    msg.attach(MIMEText(body_with_link, 'plain', 'utf-8'))
+    try:
+        with smtplib.SMTP(host, port, timeout=10) as s:
+            s.starttls()
+            s.login(user, pw)
+            s.send_message(msg)
+            print(f'[EMAIL] OK -> {to}')
+    except smtplib.SMTPAuthenticationError:
+        print(f'[EMAIL] Erreur authentification SMTP. Verifie SMTP_USER et SMTP_PASSWORD')
+    except smtplib.SMTPException as e:
+        print(f'[EMAIL] Erreur SMTP: {e}')
+    except Exception as e:
+        print(f'[EMAIL] Erreur: {type(e).__name__}: {e}')
 
 def notify_admins(title, message, link=''):
     admin_role = CustomRole.query.filter_by(name='Admin').first()
