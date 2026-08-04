@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Reset Base — Migration{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:550px">
+    <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
+    <div class="page-header"><h1>🗄️ Reset Base de donnees</h1><p>Utilise cette page avant d'importer tes CSV de sauvegarde. Cela vide TOUTES les tables.</p></div>
+
+    <div class="form-card">
+        <div style="background:#FEF3C7;padding:1rem;border-radius:8px;margin-bottom:1.5rem;font-size:.85rem">
+            <strong>📋 Mode d'emploi :</strong>
+            <ol style="margin:.5rem 0 0 1.2rem;padding:0">
+                <li>Clique sur le bouton ci-dessous (vide toutes les tables)</li>
+                <li>Dans <strong>Beekeeper</strong>, importe tes 10 CSV dans cet ordre :<br>
+                    <code>roles → users → categories → equipment → equipment_images → borrows → events → event_assignments → activity_logs → notifications</code></li>
+                <li>Puis 📥 Restaurer photos (ZIP)</li>
+            </ol>
+        </div>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Confirmez votre mot de passe administrateur</label>
+                <input type="password" name="password" required placeholder="Votre mot de passe" autocomplete="current-password">
+            </div>
+            <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin:1rem 0">
+                <strong>⚠️ ATTENTION :</strong> Cette action vide <strong>TOUTES</strong> les tables. Tout sera efface. Assurez-vous d'avoir exporte vos CSV avant !
+            </div>
+            <button class="btn btn-danger btn-full" style="font-size:1.1rem;padding:.9rem">🗑️ Vider toutes les tables</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

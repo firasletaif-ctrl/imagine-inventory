@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Guide Migration Base de Données - Imagine Inventory</title>
+<style>
+  body{font-family:'Inter',-apple-system,sans-serif;max-width:900px;margin:0 auto;padding:2rem;background:#F8FAFC;color:#1E293B;line-height:1.7}
+  h1{font-family:'Playfair Display',Georgia,serif;color:#0B1D3A;font-size:2rem;border-bottom:3px solid #C41E3A;padding-bottom:.5rem}
+  h2{color:#13294B;font-size:1.3rem;margin-top:2rem;border-left:4px solid #C41E3A;padding-left:1rem}
+  .step{background:#FFF;border-radius:12px;padding:1.5rem;margin:1rem 0;box-shadow:0 1px 3px rgba(0,0,0,.1);border:1px solid #E2E8F0}
+  .step-num{display:inline-block;background:#C41E3A;color:#FFF;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;font-weight:700;margin-right:.75rem}
+  .step h3{display:inline;margin:0;font-size:1.15rem}
+  .code{background:#0B1D3A;color:#E2E8F0;padding:1rem;border-radius:8px;font-family:monospace;font-size:.85rem;overflow-x:auto;margin:.5rem 0;white-space:pre-wrap}
+  .tip{background:#DCFCE7;border-left:4px solid #16A34A;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+  .warn{background:#FDE8EC;border-left:4px solid #C41E3A;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+  .warn-amber{background:#FEF3C7;border-left:4px solid #D97706;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+  table{width:100%;border-collapse:collapse;margin:.5rem 0}th{background:#F1F5F9;padding:.5rem;text-align:left;font-weight:600}td{padding:.5rem;border-bottom:1px solid #E2E8F0}
+  .badge{display:inline-block;padding:.15rem .6rem;border-radius:100px;font-size:.75rem;font-weight:700}.badge-red{background:#FDE8EC;color:#C41E3A}.badge-green{background:#DCFCE7;color:#16A34A}.badge-blue{background:#E8EFF8;color:#1E4D8C}
+  img{max-width:100%;border-radius:8px;border:1px solid #E2E8F0;margin:.5rem 0}
+</style>
+</head>
+<body>
+
+<h1>🔄 Guide Migration Base de Données</h1>
+<p>🇹🇳 <strong>Imagine Events Tunisia</strong> — Tous les 80-90 jours</p>
+
+<div class="warn-amber">
+  <strong>⏰ Fréquence :</strong> Tous les 80 jours (la base Render gratuite expire après 90 jours)<br>
+  <strong>⏱️ Durée :</strong> ~20 minutes<br>
+  <strong>🎯 Objectif :</strong> Créer une nouvelle base propre et y remettre toutes les données<br>
+  <strong>⚠️ Calendrier :</strong> Mets un rappel dans ton téléphone tous les 80 jours !
+</div>
+
+
+<!-- ===== PARTIE 1 : SAUVEGARDE ===== -->
+<h2>PARTIE 1 — SAUVEGARDER (15 min)</h2>
+
+<div class="step">
+  <span class="step-num">1</span><h3>Sauvegarder les photos (1 clic)</h3>
+  <ol>
+    <li>Connecte-toi à ton site Imagine Inventory en tant qu'<strong>Admin</strong></li>
+    <li>Dans la sidebar gauche → section <strong>📤 Export</strong></li>
+    <li>Clique sur <strong>📸 Photos (ZIP)</strong></li>
+    <li>Un fichier <code>photos_imagine_XXXXXXXX.zip</code> se télécharge</li>
+    <li><strong>Garde-le sur ton PC</strong> (Bureau ou dossier "Sauvegarde Imagine")</li>
+  </ol>
+  <div class="tip">✅ Toutes les photos sont dans ce fichier ZIP. Ne le perds pas !</div>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span><h3>Ouvrir Beekeeper</h3>
+  <p>Ouvre <strong>Beekeeper Studio</strong> et connecte-toi à ta base de données (External Database URL).</p>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span><h3>Exporter les tables (une par une)</h3>
+  <p>Fais ceci pour <strong>CHAQUE</strong> table ci-dessous :</p>
+  <ol>
+    <li>Clic droit sur la table → <strong>"Export Table"</strong></li>
+    <li>Format : <strong>CSV</strong></li>
+    <li>Nomme le fichier comme la table (ex: <code>users.csv</code>)</li>
+    <li>Sauvegarde dans ton dossier "Sauvegarde Imagine"</li>
+  </ol>
+  <table>
+    <tr><td><strong>roles</strong></td><td>Rôles et permissions</td></tr>
+    <tr><td><strong>users</strong></td><td>Utilisateurs</td></tr>
+    <tr><td><strong>categories</strong></td><td>Catégories de matériel</td></tr>
+    <tr><td><strong>equipment</strong></td><td>Matériel</td></tr>
+    <tr><td><strong>equipment_images</strong></td><td>Noms des photos</td></tr>
+    <tr><td><strong>borrows</strong></td><td>Emprunts</td></tr>
+    <tr><td><strong>events</strong></td><td>Événements</td></tr>
+    <tr><td><strong>event_assignments</strong></td><td>Assignations</td></tr>
+    <tr><td><strong>activity_logs</strong></td><td>Logs d'activité</td></tr>
+    <tr><td><strong>notifications</strong></td><td>Notifications</td></tr>
+  </table>
+  <div class="tip">✅ <strong>10 fichiers CSV</strong> dans ton dossier de sauvegarde. C'est tout ton travail qui est protégé !</div>
+</div>
+
+<!-- ===== PARTIE 2 : NOUVELLE BASE ===== -->
+<h2>PARTIE 2 — CRÉER LA NOUVELLE BASE (3 min)</h2>
+
+<div class="step">
+  <span class="step-num">4</span><h3>Supprimer l'ancienne base</h3>
+  <ol>
+    <li>Va sur <strong>dashboard.render.com</strong></li>
+    <li>Clique sur ta base PostgreSQL (ex: <code>imagine-db-xxx</code>)</li>
+    <li>Tout en bas → section rouge <strong>"Danger Zone"</strong> → <strong>"Delete Database"</strong></li>
+    <li>Confirme en tapant le nom de la base</li>
+  </ol>
+  <div class="warn">⚠️ Ne t'inquiète pas : tes données sont déjà sauvegardées dans les CSV !</div>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span><h3>Créer la nouvelle base</h3>
+  <ol>
+    <li><strong>New +</strong> → <strong>PostgreSQL</strong></li>
+    <li>Name : <code>imagine-db-v5</code> (ou n'importe quel nom)</li>
+    <li>Region : <strong>Frankfurt</strong></li>
+    <li>Plan : <strong>Free</strong></li>
+    <li>Clique <strong>"Create Database"</strong></li>
+    <li>Une fois créée, copie <strong>l'Internal Database URL</strong></li>
+  </ol>
+</div>
+
+<div class="step">
+  <span class="step-num">6</span><h3>Reconnecter le Web Service</h3>
+  <ol>
+    <li>Clique sur ton <strong>Web Service</strong> (imagine-inventory)</li>
+    <li>Onglet <strong>"Environment"</strong></li>
+    <li>Trouve la variable <code>DATABASE_URL</code></li>
+    <li><strong>Remplace</strong> sa valeur par la nouvelle Internal URL (copiée à l'étape 5)</li>
+    <li>Clique <strong>"Save Changes"</strong></li>
+    <li>Render redéploie automatiquement (3-5 min)</li>
+  </ol>
+  <div class="warn-amber">⏳ Attends le déploiement. Quand tu vois 🟢 Live, passe à la partie 3.</div>
+</div>
+
+<!-- ===== PARTIE 3 : RÉIMPORTER ===== -->
+<h2>PARTIE 3 — RÉIMPORTER (10 min)</h2>
+
+<div class="step">
+  <span class="step-num">7</span><h3>Restaurer les photos</h3>
+  <ol>
+    <li>Connecte-toi au site → sidebar → <strong>📥 Restaurer photos</strong></li>
+    <li>Sélectionne le fichier <code>photos_imagine_XXXXXXXX.zip</code> sauvegardé à l'étape 1</li>
+    <li>Clique <strong>"Restaurer les photos"</strong></li>
+  </ol>
+  <div class="tip">✅ Toutes les photos sont de nouveau sur le serveur !</div>
+</div>
+
+<div class="step">
+  <span class="step-num">8</span><h3>Reconnecter Beekeeper à la nouvelle base</h3>
+  <ol>
+    <li>Dans Beekeeper, déconnecte-toi de l'ancienne base</li>
+    <li>Sur Render, dans la nouvelle base → onglet <strong>"Connections"</strong></li>
+    <li>Copie <strong>l'External Database URL</strong></li>
+    <li>Dans Beekeeper : nouvelle connexion → PostgreSQL → onglet "Connection String" → colle l'URL → Connect</li>
+  </ol>
+</div>
+
+<div class="step">
+  <span class="step-num">9</span><h3>Importer les tables dans l'ordre</h3>
+  <p><strong>⚠️ L'ordre est TRÈS IMPORTANT !</strong> Fais-le dans cet ordre exact :</p>
+  <ol>
+    <li><strong>roles</strong> → Clic droit → Import → choisis <code>roles.csv</code></li>
+    <li><strong>users</strong> → Clic droit → Import → choisis <code>users.csv</code></li>
+    <li><strong>categories</strong> → Import <code>categories.csv</code></li>
+    <li><strong>equipment</strong> → Import <code>equipment.csv</code></li>
+    <li><strong>equipment_images</strong> → Import <code>equipment_images.csv</code></li>
+    <li><strong>borrows</strong> → Import <code>borrows.csv</code></li>
+    <li><strong>events</strong> → Import <code>events.csv</code></li>
+    <li><strong>event_assignments</strong> → Import <code>event_assignments.csv</code></li>
+    <li><strong>activity_logs</strong> → Import <code>activity_logs.csv</code></li>
+    <li><strong>notifications</strong> → Import <code>notifications.csv</code></li>
+  </ol>
+  <div class="warn">⚠️ Ne saute jamais l'étape <code>roles</code> et <code>users</code> en premier ! Les autres tables dépendent d'elles.</div>
+</div>
+
+<!-- ===== VÉRIFICATION ===== -->
+<h2>PARTIE 4 — VÉRIFIER (2 min)</h2>
+
+<div class="step">
+  <span class="step-num">10</span><h3>Checklist finale</h3>
+  <table>
+    <tr><td>📋 Le site s'ouvre ?</td><td>Ouvre ton URL → connecte-toi</td></tr>
+    <tr><td>👥 Les utilisateurs sont là ?</td><td>👥 Gérer les utilisateurs → tout le monde est présent</td></tr>
+    <tr><td>📦 Le matériel est là ?</td><td>Dashboard → tous les articles visibles</td></tr>
+    <tr><td>🖼️ Les photos s'affichent ?</td><td>Clique sur un matériel → photos visibles</td></tr>
+    <tr><td>📅 Le planning est OK ?</td><td>📅 Emploi du temps → événements présents</td></tr>
+    <tr><td>📤 Les emprunts sont OK ?</td><td>Dashboard → emprunts en cours visibles</td></tr>
+  </table>
+  <div class="tip">✅ Si tout est vert, la migration est réussie ! 🎉</div>
+</div>
+
+<hr style="margin:2rem 0">
+
+<!-- RÉSUMÉ -->
+<h2>📋 Récapitulatif rapide</h2>
+<div class="step">
+  <table>
+    <tr><td><strong>SAUVEGARDER</strong></td><td>📸 Photos (ZIP) + 9 CSV via Beekeeper</td></tr>
+    <tr><td><strong>CRÉER</strong></td><td>Nouvelle base PostgreSQL sur Render</td></tr>
+    <tr><td><strong>RECONNECTER</strong></td><td>Changer DATABASE_URL dans le Web Service</td></tr>
+    <tr><td><strong>RÉIMPORTER</strong></td><td>📥 Restaurer photos + 9 CSV dans Beekeeper</td></tr>
+    <tr><td><strong>VÉRIFIER</strong></td><td>Tester toutes les pages</td></tr>
+  </table>
+</div>
+
+<div class="warn-amber">
+  <strong>📱 Conseil :</strong> Mets un rappel dans ton téléphone : <strong>"Sauvegarde base Imagine Inventory"</strong> — à répéter tous les 80 jours !
+</div>
+
+<p style="text-align:center;color:#64748B;margin-top:2rem">
+  <strong>Imagine Inventory</strong> — Imagine Events Tunisia 🇹🇳
+</p>
+
+</body>
+</html>

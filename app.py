@@ -513,6 +513,30 @@ def clear_logs():
     return redirect(url_for('activity_logs'))
 
 
+@app.route('/admin/reset-tables', methods=['GET','POST'])
+@permission_required('manage_users')
+def reset_all_tables():
+    if request.method == 'POST':
+        pw = request.form.get('password','')
+        if not current_user.check_password(pw):
+            flash('Mot de passe incorrect.','error')
+            return redirect(url_for('reset_all_tables'))
+        Notification.query.delete()
+        EventAssignment.query.delete()
+        Event.query.delete()
+        ActivityLog.query.delete()
+        Borrow.query.delete()
+        EquipmentImage.query.delete()
+        Equipment.query.delete()
+        Category.query.delete()
+        User.query.delete()
+        CustomRole.query.delete()
+        db.session.commit()
+        flash('Toutes les tables videes. Base prete pour migration.','success')
+        return redirect(url_for('reset_all_tables'))
+    return render_template('reset_tables.html')
+
+
 @app.route('/admin/clear-history', methods=['POST'])
 @permission_required('clear_history')
 def clear_history():

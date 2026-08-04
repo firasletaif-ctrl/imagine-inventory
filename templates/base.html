@@ -52,6 +52,9 @@
                 <a href="{{ url_for('restore_photos') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
                     <span class="nav-icon">📥</span><span>Restaurer photos</span>
                 </a>
+                <a href="{{ url_for('reset_all_tables') }}" class="nav-item nav-danger" style="font-size:.8rem;padding:.5rem 1rem">
+                    <span class="nav-icon">🔄</span><span>Reset DB (Migration)</span>
+                </a>
             </div>
             {% endif %}
             <div style="margin:.25rem 0;padding:0 .5rem">
