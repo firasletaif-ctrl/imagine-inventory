@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Imagine Inventory{% endblock %} — Imagine Events Tunisia</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -154,7 +154,8 @@
             navigator.serviceWorker.register("{{ url_for('static', filename='js/service-worker.js') }}");
         });
     }
-    <script>
+
+
     function toggleMenu(){
         var s = document.getElementById('sidebar');
         var open = !s.classList.contains('open');
