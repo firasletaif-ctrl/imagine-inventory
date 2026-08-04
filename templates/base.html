@@ -119,6 +119,29 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
+
+        {% if current_user.is_authenticated %}
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-logo">✦</div>
+                    <div>
+                        <span class="footer-name">IMAGINE EVENTS</span>
+                        <span class="footer-sub">Tunisia · Excellence Événementielle</span>
+                    </div>
+                </div>
+                <div class="footer-info">
+                    <span>📍 Rue du Lac Loch Ness, Imm Neo, 3ème étage, 1053 Les Berges du Lac, Tunis</span>
+                    <span>📞 +216 71 656 056</span>
+                    <span>📱 +216 22 902 824</span>
+                    <span>✉️ info@imagine-events.com</span>
+                </div>
+                <div class="footer-copy">
+                    © 2026 Imagine Events Tunisia · Tous droits réservés
+                </div>
+            </div>
+        </footer>
+        {% endif %}
     </main>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
