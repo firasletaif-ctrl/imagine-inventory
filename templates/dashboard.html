@@ -2,22 +2,34 @@
 {% block title %}Depot{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    {% if is_pending %}
-    <div style="background:#FEF3C7;border:2px solid #D97706;border-radius:14px;padding:1.5rem;text-align:center;margin-bottom:1.5rem">
-        <h2 style="font-size:1.3rem;color:#92400E;margin:0 0 .5rem">⏳ Compte en attente de validation</h2>
-        <p style="color:#B45309;margin:0">Votre compte a ete cree. Un administrateur doit vous assigner un role.<br>Vous ne pouvez rien faire pour le moment.</p>
+{% if is_pending %}
+<div style="display:flex;align-items:center;justify-content:center;min-height:70vh;text-align:center">
+    <div style="max-width:500px;background:white;border-radius:20px;padding:3rem 2rem;box-shadow:0 10px 40px rgba(0,0,0,.1);border:2px solid #D97706">
+        <div style="font-size:5rem;margin-bottom:1rem">⏳</div>
+        <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:2rem;color:#92400E;margin-bottom:1rem">Compte en attente de validation</h1>
+        <p style="color:#B45309;font-size:1.05rem;line-height:1.7;margin-bottom:1.5rem">
+            Votre compte a bien ete cree.<br>
+            Un administrateur doit vous assigner un role avant que vous puissiez acceder a l'application.
+        </p>
+        <div style="background:#FEF3C7;border-radius:10px;padding:1rem;font-size:.9rem;color:#92400E">
+            <strong>🔒 Acces restreint</strong><br>
+            Vous n'avez actuellement acces a aucune fonctionnalite.<br>
+            Veuillez contacter votre administrateur.
+        </div>
+        <form method="POST" action="{{ url_for('logout') }}" style="margin-top:1.5rem">
+            <button class="btn btn-secondary">🚪 Se deconnecter</button>
+        </form>
     </div>
-    {% endif %}
+</div>
+{% else %}
+<div class="dashboard">
     <div class="dash-header">
         <div>
             <h1 class="dash-title">Depot Imagine Events</h1>
             <p class="dash-subtitle">{{ equipment | length }} materiel(s) disponible(s)</p>
         </div>
         <div class="dash-actions">
-            <a href="{{ url_for('add_equipment') }}" class="btn btn-accent">
-                ➕ Ajouter du materiel
-            </a>
+            <a href="{{ url_for('add_equipment') }}" class="btn btn-accent">➕ Ajouter du materiel</a>
         </div>
     </div>
 
@@ -40,14 +52,13 @@
                 {% for cat in categories %}<option value="{{ cat.id }}" {% if category_filter == cat.id|string %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>{% endfor %}
             </select>
         </form>
-
         <div class="category-chips">
             <a href="{{ url_for('dashboard') }}" class="chip {% if not category_filter %}active{% endif %}">Tout</a>
             {% for cat in categories %}
             <span style="display:inline-flex;align-items:center;gap:0">
                 <a href="{{ url_for('dashboard', category=cat.id) }}" class="chip {% if category_filter == cat.id|string %}active{% endif %}">{{ cat.icon }} {{ cat.name }}</a>
                 {% if current_user.has_permission('manage_categories') %}
-                <form method="POST" action="{{ url_for('delete_category', cid=cat.id) }}" style="display:inline;margin-left:-8px" onsubmit="return confirm('Supprimer la categorie {{ cat.name|replace("'","\\'") }} ?')"><button style="background:none;border:none;color:var(--gray-400);cursor:pointer;font-size:.8rem;padding:0 .3rem" title="Supprimer">×</button></form>
+                <form method="POST" action="{{ url_for('delete_category', cid=cat.id) }}" style="display:inline;margin-left:-8px" onsubmit="return confirm('Supprimer la categorie ?')"><button style="background:none;border:none;color:var(--gray-400);cursor:pointer;font-size:.8rem;padding:0 .3rem" title="Supprimer">×</button></form>
                 {% endif %}
             </span>
             {% endfor %}
@@ -110,7 +121,7 @@
         <form method="POST" action="{{ url_for('add_category') }}">
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group"><label>Icone</label><select name="icon"><option value="📺">📺 Ecrans</option><option value="🎤">🎤 Audio</option><option value="💡">💡 Eclairage</option><option value="🎭">🎭 Scene</option><option value="🛋️">🛋️ Mobilier</option><option value="🔌">🔌 Cablage</option><option value="📦">📦 General</option><option value="🎥">🎥 Video</option><option value="🖥️">🖥️ Informatique</option><option value="🚗">🚗 Vehicules</option><option value="🎪">🎪 Chapiteau</option><option value="🍽️">🍽️ Traiteur</option></select></div>
+                    <div class="form-group"><label>Icone</label><select name="icon"><option value="📺">📺 Ecrans</option><option value="🎤">🎤 Audio</option><option value="💡">💡 Eclairage</option><option value="🎭">🎭 Scene</option><option value="🛋️">🛋️ Mobilier</option><option value="🔌">🔌 Cablage</option><option value="📦">📦 General</option></select></div>
                     <div class="form-group" style="flex:2"><label>Nom de la categorie *</label><input type="text" name="name" required placeholder="Ex: Decoration florale"></div>
                 </div>
             </div>
@@ -145,16 +156,17 @@
             <div class="borrow-info"><strong>{{ b.equipment.name }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event">🎯 {{ b.event_name }}</span>{% endif %}</div>
             <div class="borrow-dates"><span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️ EN RETARD{% endif %}</span></div>
             <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" class="borrow-action">
-                        {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
-                        <button class="btn btn-sm btn-success">✅ Retourner</button>
-                        {% else %}
-                        <span style="color:var(--gray-400);font-size:.75rem;padding:.25rem .5rem">🔒 {{ b.user.full_name }} uniquement</span>
-                        {% endif %}
-                    </form>
+                {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
+                <button class="btn btn-sm btn-success">✅ Retourner</button>
+                {% else %}
+                <span style="color:var(--gray-400);font-size:.75rem;padding:.25rem .5rem">🔒 {{ b.user.full_name }} uniquement</span>
+                {% endif %}
+            </form>
         </div>
         {% endfor %}
     </div>
 </div>
+{% endif %}
 {% endif %}
 {% endblock %}
 

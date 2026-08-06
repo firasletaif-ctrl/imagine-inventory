@@ -17,6 +17,7 @@
 </head>
 <body>
     {% if current_user.is_authenticated %}
+    {% if current_user.has_permission('borrow_equipment') or current_user.has_permission('manage_equipment') or current_user.has_permission('manage_users') %}
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon">✦</div>
@@ -119,8 +120,9 @@
         <span class="brand-name">IMAGINE</span>
     </header>
     {% endif %}
+    {% endif %}
 
-    <main class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}">
+    <main class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}{% if not (current_user.has_permission('borrow_equipment') or current_user.has_permission('manage_equipment') or current_user.has_permission('manage_users')) %} no-sidebar{% endif %}">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="flash-container">
