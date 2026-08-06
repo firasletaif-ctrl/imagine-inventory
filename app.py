@@ -330,7 +330,7 @@ def register():
                 if pending: u.role_id = pending.id
             db.session.add(u); db.session.commit()
             # Notify admins
-            notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', '/admin/users')
+            notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', url_for('manage_users', _external=True))
             log_action('register', f'Nouveau compte cree par {name} ({email})'); flash('Compte cree ! En attente de validation par l\'admin.','success')
             return redirect(url_for('login'))
     return render_template('register.html')
@@ -816,7 +816,7 @@ def create_event():
     for uid in user_ids:
         u = db.session.get(User, uid)
         if u:
-            notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" le {ed.strftime("%d/%m/%Y")} ({st}-{et})', '/schedule')
+            notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" le {ed.strftime("%d/%m/%Y")} ({st}-{et})', url_for('schedule', _external=True))
     log_action('create_event', f'Evenement "{title}" cree le {ed.strftime("%d/%m/%Y")}'); flash(f'Evenement "{title}" cree.','success')
     return redirect(url_for('schedule'))
 
