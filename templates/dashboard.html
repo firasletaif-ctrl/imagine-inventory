@@ -16,9 +16,7 @@
             Vous n'avez actuellement acces a aucune fonctionnalite.<br>
             Veuillez contacter votre administrateur.
         </div>
-        <form method="POST" action="{{ url_for('logout') }}" style="margin-top:1.5rem">
-            <button class="btn btn-secondary">🚪 Se deconnecter</button>
-        </form>
+        <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="margin-top:1.5rem">🚪 Se deconnecter</a>
     </div>
 </div>
 {% else %}

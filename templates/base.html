@@ -122,7 +122,7 @@
     {% endif %}
     {% endif %}
 
-    <main class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}{% if not (current_user.has_permission('borrow_equipment') or current_user.has_permission('manage_equipment') or current_user.has_permission('manage_users')) %} no-sidebar{% endif %}">
+    <main class="main-content {% if not current_user.is_authenticated or not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users') %}no-sidebar{% endif %}">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="flash-container">
