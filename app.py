@@ -268,8 +268,10 @@ def email_template(title, greeting, content, action_link='', action_text=''):
 
 
 def notify_admins(title, message, link=''):
-    for a in User.query.filter(User.role_id.in_(db.session.query(CustomRole.id).filter_by(name='Admin'))).all():
-        notify_user(a.id, title, message, link)
+    admin_role = CustomRole.query.filter_by(name='Admin').first()
+    if admin_role:
+        for a in User.query.filter_by(role_id=admin_role.id).all():
+            notify_user(a.id, title, message, link)
 
 ALL_PERMISSIONS = [
     {"key":"manage_users","label":"Gerer les utilisateurs","desc":"Creer, modifier, supprimer des comptes","icon":"👥"},
