@@ -179,6 +179,11 @@ def update_availability(eq_id):
         qty = db.session.query(db.func.sum(Borrow.quantity)).filter_by(equipment_id=eq_id, status='active').scalar() or 0
         eq.available_quantity = max(0, eq.total_quantity - qty); db.session.commit()
 
+
+def is_pending_user():
+    """Verifie si l'utilisateur est en attente (aucune permission)"""
+    return not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
+
 def log_action(action, description='', equipment_name='', quantity=0):
     """Enregistre une action. Si l'utilisateur n'est pas connecte, user_id = None."""
     uid = current_user.id if current_user.is_authenticated else None
@@ -363,6 +368,7 @@ def dashboard():
 @app.route('/equipment/<int:eid>')
 @login_required
 def equipment_detail(eid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
     borrows = Borrow.query.filter_by(equipment_id=eid).order_by(Borrow.borrow_date.desc()).all()
@@ -792,6 +798,7 @@ def delete_category(cid):
 @app.route('/schedule')
 @login_required
 def schedule():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
     """Main calendar/schedule view"""
     upcoming = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
     past = Event.query.filter(Event.event_date < date.today()).order_by(Event.event_date.desc()).limit(20).all()
@@ -876,6 +883,7 @@ def unassign_user(evid, uid):
 @app.route('/notifications')
 @login_required
 def notifications():
+    if is_pending_user(): return redirect(url_for('dashboard'))
     notifs = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(100).all()
     return render_template('notifications.html', notifs=notifs)
 
