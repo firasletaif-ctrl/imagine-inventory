@@ -154,6 +154,9 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
 }
 .nav-item {
     display: flex;
@@ -1099,6 +1102,19 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     .detail-info { padding: 1.25rem 1.5rem; }
     .stats-row { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 768px) {
+    .detail-hero { grid-template-columns: 1fr; display: block; }
+    .detail-gallery { min-height: 200px; max-height: 280px; }
+    .detail-gallery img { max-height: 250px; }
+    .detail-info { padding: 1rem 1.25rem; }
+    .detail-name { font-size: 1.2rem; }
+    .detail-desc { font-size: .85rem; }
+    .detail-meta-grid { grid-template-columns: 1fr; gap: .5rem; }
+    .detail-actions { flex-direction: column; gap: .5rem; }
+    .detail-actions .btn, .detail-actions form { width: 100%; }
+    .detail-actions .btn { justify-content: center; }
+    .gallery-thumbs { overflow-x: auto; flex-wrap: nowrap; }
+}
 
 @media (max-width: 768px) {
     .sidebar {
@@ -1118,8 +1134,16 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     .main-content {
         margin-left: 0;
         max-width: 100vw;
-        padding: 4.5rem 1rem 1rem;
+        padding: 4rem .75rem 1rem;
     }
+    .form-page { max-width: 100%; }
+    .detail-page { overflow-x: hidden; }
+    .detail-section { padding: 1rem; }
+    .spec-row { flex-direction: column; gap: .25rem; }
+    .spec-key { min-width: auto; }
+    .history-table { font-size: .75rem; }
+    .history-table th, .history-table td { padding: .4rem .3rem; }
+    .avail-box { padding: .75rem 1rem; flex-direction: column; text-align: center; }
     .stats-row { grid-template-columns: 1fr 1fr; }
     .equipment-grid { grid-template-columns: 1fr; }
     .search-form { flex-direction: column; }
