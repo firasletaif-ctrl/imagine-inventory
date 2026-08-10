@@ -337,7 +337,7 @@ def register():
                 if pending: u.role_id = pending.id
             db.session.add(u); db.session.commit()
             # Notify admins
-            notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', url_for('manage_users', _external=True))
+            notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', '/admin/users')
             log_action('register', f'Nouveau compte cree par {name} ({email})'); flash('Compte cree ! En attente de validation par l\'admin.','success')
             return redirect(url_for('login'))
     return render_template('register.html')
@@ -740,7 +740,7 @@ def equipment_qrcode(eid):
     eq = db.session.get(Equipment, eid)
     if not eq:
         return "Introuvable", 404
-    url = url_for('equipment_detail', eid=eid, _external=True)
+    url = request.host_url.rstrip('/') + url_for('equipment_detail', eid=eid)
     qr = qrcode.QRCode(box_size=6, border=2)
     qr.add_data(url)
     qr.make(fit=True)
@@ -852,7 +852,7 @@ def create_event():
     for uid in user_ids:
         u = db.session.get(User, uid)
         if u:
-            notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" le {ed.strftime("%d/%m/%Y")} ({st}-{et})', url_for('schedule', _external=True))
+            notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" le {ed.strftime("%d/%m/%Y")} ({st}-{et})', '/schedule')
     log_action('create_event', f'Evenement "{title}" cree le {ed.strftime("%d/%m/%Y")}'); flash(f'Evenement "{title}" cree.','success')
     return redirect(url_for('schedule'))
 
