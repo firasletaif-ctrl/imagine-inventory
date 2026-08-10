@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>QR Code - {{ eq.name }}</title>
+<style>
+  @media print { body{ -webkit-print-color-adjust:exact; print-color-adjust:exact } .no-print{display:none!important} @page{size:A4;margin:10mm} }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;background:white;color:#1E293B;display:flex;justify-content:center;align-items:center;min-height:100vh;flex-direction:column;gap:2rem;padding:2rem}
+  .card{text-align:center;border:3px solid #0B1D3A;border-radius:16px;padding:2rem 2.5rem;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+  .card h1{font-family:Georgia,serif;font-size:1.4rem;color:#0B1D3A;margin-bottom:.5rem;letter-spacing:1px}
+  .card h1 span{color:#C41E3A}
+  .card .ref{font-family:monospace;font-size:.85rem;color:#64748B;margin-bottom:1rem}
+  .card .qr{border:2px solid #E2E8F0;border-radius:8px;padding:1rem;background:white;display:inline-block;margin:1rem 0}
+  .card .qr img{width:200px;height:200px}
+  .card .info{font-size:.85rem;color:#64748B;margin-top:.5rem}
+  .card .info strong{color:#0B1D3A}
+  .no-print{text-align:center;margin-top:1rem}
+  .no-print button{background:#C41E3A;color:white;border:none;padding:12px 40px;font-size:1.1rem;border-radius:8px;cursor:pointer;font-weight:bold}
+  .no-print button:hover{background:#A01830}
+  .footer{margin-top:1rem;font-size:.75rem;color:#94A3B8}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>IMAGINE<span> EVENTS</span></h1>
+  <p class="ref">{{ eq.reference }}</p>
+  <h2 style="font-size:1.2rem;margin-bottom:.5rem">{{ eq.name }}</h2>
+  <div class="qr">
+    <img src="{{ url_for('equipment_qrcode', eid=eq.id) }}" alt="QR Code">
+  </div>
+  <p class="info">
+    <strong>Categorie :</strong> {{ eq.category.name if eq.category else '—' }}<br>
+    <strong>Emplacement :</strong> {{ eq.location }}<br>
+    <strong>Scannez pour voir la fiche complete</strong>
+  </p>
+</div>
+<div class="no-print">
+  <button onclick="window.print()">🖨️ Imprimer le QR Code</button>
+  <p style="margin-top:.5rem"><a href="{{ url_for('equipment_detail', eid=eq.id) }}" style="color:#1E4D8C">← Retour a la fiche</a></p>
+</div>
+<div class="footer">Imagine Events Tunisia · {{ eq.reference }}</div>
+</body>
+</html>

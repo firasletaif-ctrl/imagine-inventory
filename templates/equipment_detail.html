@@ -108,6 +108,9 @@
                       onsubmit="return confirm('Supprimer definitivement {{ eq.name | escape }} ?')" style="display:inline">
                     <button type="submit" class="btn btn-danger">🗑️ Supprimer</button>
                 </form>
+                <a href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" class="btn btn-secondary" target="_blank">
+                    🔲 QR Code
+                </a>
             </div>
         </div>
     </div>

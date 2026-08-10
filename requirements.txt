@@ -4,5 +4,7 @@ flask-login==0.6.3
 werkzeug==3.1.4
 pillow==11.3.0
 openpyxl==3.1.5
-psycopg2-binary==2.9.10
-gunicorn==23.0.0
+qrcode[pil]==7.4.2
+# Pour la production sur OVH/Render uniquement :
+# psycopg2-binary==2.9.10
+# gunicorn==23.0.0

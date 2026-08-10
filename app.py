@@ -733,6 +733,33 @@ def clear_history():
     flash(f'{c} emprunt(s) effaces.','success')
     return redirect(url_for('dashboard'))
 
+@app.route('/equipment/<int:eid>/qrcode')
+@login_required
+def equipment_qrcode(eid):
+    import qrcode, io as bio
+    eq = db.session.get(Equipment, eid)
+    if not eq:
+        return "Introuvable", 404
+    url = url_for('equipment_detail', eid=eid, _external=True)
+    qr = qrcode.QRCode(box_size=6, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='#0B1D3A', back_color='white')
+    buf = bio.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png')
+
+
+@app.route('/equipment/<int:eid>/qrcode-print')
+@login_required
+def equipment_qrcode_print(eid):
+    eq = db.session.get(Equipment, eid)
+    if not eq:
+        flash('Introuvable.','error'); return redirect(url_for('dashboard'))
+    return render_template('equipment_qrcode.html', eq=eq)
+
+
 @app.route('/equipment/<int:eid>/clear-history', methods=['POST'])
 @permission_required('clear_history')
 def clear_equipment_history(eid):
