@@ -334,7 +334,7 @@ def register():
             if User.query.count() == 0: u.role_id = 1
             else:
                 pending = CustomRole.query.filter_by(name='En attente').first()
-                if pending: u.role_id = pending.id
+                u.role_id = pending.id if pending else None
             db.session.add(u); db.session.commit()
             # Notify admins
             notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', '/admin/users')
