@@ -765,6 +765,20 @@ def equipment_qrcode_print(eid):
     return render_template('equipment_qrcode.html', eq=eq)
 
 
+@app.route('/qrcodes/all')
+@login_required
+def all_qrcodes():
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    equipment_list = Equipment.query.order_by(Equipment.name).all()
+    total = len(equipment_list)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(1, page), total_pages)
+    start = (page - 1) * per_page
+    page_equipment = equipment_list[start:start+per_page]
+    return render_template('all_qrcodes.html', equipment=page_equipment, page=page, total_pages=total_pages, total=total)
+
+
 @app.route('/equipment/<int:eid>/clear-history', methods=['POST'])
 @permission_required('clear_history')
 def clear_equipment_history(eid):

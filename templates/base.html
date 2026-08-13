@@ -55,6 +55,9 @@
                     <span class="nav-icon">📥</span><span>Restaurer photos</span>
                 </a>
                 {% endif %}
+                <a href="{{ url_for('all_qrcodes') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
+                    <span class="nav-icon">🔲</span><span>QR Codes (tous)</span>
+                </a>
             </div>
             {% endif %}
             {% if current_user.has_permission('manage_users') %}
