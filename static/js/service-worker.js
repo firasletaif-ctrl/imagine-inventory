@@ -1,53 +1,24 @@
-// Imagine Inventory PWA — Service Worker
-// Version 2 : les pages sont TOUJOURS rechargees a jour depuis le serveur.
-// Seuls les fichiers statiques (CSS, JS, icones) sont mis en cache.
-const CACHE = 'imagine-v2';
+// Imagine Inventory PWA — Service Worker (v3 : anti-cache définitif)
+// Cette version EFFACE toutes les anciennes mémoires (caches) puis ne garde
+// PLUS JAMAIS de page en mémoire : chaque visite recharge la page à jour.
+const CACHE = 'imagine-v3-off';
 
+// À l'installation : on passe tout de suite à l'activation
 self.addEventListener('install', function(e) {
-    e.waitUntil(
-        caches.open(CACHE).then(function(cache) {
-            return cache.addAll([
-                '/static/css/style.css',
-                '/static/js/main.js',
-                '/static/manifest.json',
-                '/static/icons/icon-192x192.png',
-                '/static/icons/icon-512x512.png',
-            ]);
-        })
-    );
     self.skipWaiting();
 });
 
-// Supprime les anciens caches (ex: imagine-v1) pour ne jamais resservir de vieilles pages
+// À l'activation : on supprime TOUS les caches existants (anciennes versions)
 self.addEventListener('activate', function(e) {
     e.waitUntil(
         caches.keys().then(function(keys) {
-            return Promise.all(
-                keys.filter(function(k) { return k !== CACHE; })
-                    .map(function(k) { return caches.delete(k); })
-            );
-        })
-    );
-    self.clients.claim();
-});
-
-self.addEventListener('fetch', function(e) {
-    if (e.request.method !== 'GET') return;
-
-    e.respondWith(
-        // 1) On cherche TOUJOURS la version a jour sur le serveur
-        fetch(e.request).then(function(response) {
-            // 2) On ne met en cache QUE les fichiers statiques (pas les pages HTML)
-            if (response && response.status === 200 && e.request.mode !== 'navigate') {
-                var clone = response.clone();
-                caches.open(CACHE).then(function(cache) {
-                    cache.put(e.request, clone);
-                });
-            }
-            return response;
-        }).catch(function() {
-            // 3) Hors ligne : on renvoie la derniere copie connue si elle existe
-            return caches.match(e.request);
+            return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+        }).then(function() {
+            return self.clients.claim();
         })
     );
 });
+
+// IMPORTANT : AUCUN gestionnaire 'fetch'.
+// Sans gestionnaire fetch, le service worker n'intercepte RIEN :
+// toutes les pages sont toujours chargées à jour depuis le serveur.
