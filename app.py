@@ -618,10 +618,12 @@ def import_csv():
             flash('Selectionnez une table et un fichier CSV.','error')
             return redirect(url_for('import_csv'))
         
-        # Read CSV
+        # Read CSV (accepte la virgule OU le point-virgule comme separateur)
         import io, csv as csv_module
-        stream = io.StringIO(csv_file.read().decode('utf-8-sig'))
-        reader = csv_module.DictReader(stream)
+        raw = csv_file.read().decode('utf-8-sig')
+        header = raw.split('\n', 1)[0]
+        delim = ';' if header.count(';') > header.count(',') else ','
+        reader = csv_module.DictReader(io.StringIO(raw), delimiter=delim)
         rows = list(reader)
         if not rows:
             flash('Fichier CSV vide.','error')
@@ -648,79 +650,117 @@ def import_csv():
         # Detect columns and import
         cols = list(rows[0].keys())
         count = 0
-        for row in rows:
+        erreurs = []
+        comptes_sans_mdp = []
+        for i, row in enumerate(rows, 1):
             try:
-                # Check if record already exists
-                existing = None
-                if 'id' in cols and row.get('id','').strip():
-                    existing = db.session.get(model, int(row['id'].strip()))
-                # Fallback: check by unique field (name/email/reference)
-                if not existing:
-                    if table == 'roles' and row.get('name','').strip():
-                        existing = model.query.filter_by(name=row.get('name','').strip()).first()
-                    elif table == 'users' and row.get('email','').strip():
-                        existing = model.query.filter_by(email=row.get('email','').strip().lower()).first()
-                    elif table == 'categories' and row.get('name','').strip():
-                        existing = model.query.filter_by(name=row.get('name','').strip()).first()
-                    elif table == 'equipment' and row.get('reference','').strip():
-                        existing = model.query.filter_by(reference=row.get('reference','').strip()).first()
+                with db.session.begin_nested():
+                    # Check if record already exists
+                    existing = None
+                    if 'id' in cols and row.get('id','').strip():
+                        try:
+                            existing = db.session.get(model, int(row['id'].strip()))
+                        except Exception:
+                            existing = None
+                    # Fallback: check by unique field (name/email/reference)
+                    if not existing:
+                        if table == 'roles' and row.get('name','').strip():
+                            existing = model.query.filter_by(name=row.get('name','').strip()).first()
+                        elif table == 'users' and row.get('email','').strip():
+                            existing = model.query.filter_by(email=row.get('email','').strip().lower()).first()
+                        elif table == 'categories' and row.get('name','').strip():
+                            existing = model.query.filter_by(name=row.get('name','').strip()).first()
+                        elif table == 'equipment' and row.get('reference','').strip():
+                            existing = model.query.filter_by(reference=row.get('reference','').strip()).first()
 
-                obj = existing if existing else model()
-                for col in cols:
-                    val = row.get(col, '').strip()
-                    if val == '' or val.lower() == 'none':
-                        val = None
-                        if col == 'id' and existing: continue  # dont overwrite id
-                        setattr(obj, col, val)
-                        continue
-                    # Convert types
-                    if col == 'id' and existing: continue
-                    if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
-                        try: val = int(val)
-                        except: pass
-                    # Handle date/datetime columns
-                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp'):
-                        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
-                            try: val = datetime.strptime(val, fmt); break
+                    obj = existing if existing else model()
+                    plain_pw = None
+                    for col in cols:
+                        val = row.get(col, '').strip()
+                        if val == '' or val.lower() == 'none':
+                            val = None
+                            if col == 'id' and existing: continue  # dont overwrite id
+                            setattr(obj, col, val)
+                            continue
+                        # Convert types
+                        if col == 'id' and existing: continue
+                        if table == 'users' and col == 'password':
+                            plain_pw = val
+                            continue
+                        if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
+                            try: val = int(val)
                             except: pass
-                        else:
-                            val = None  # can't parse
-                    if col == 'expected_return_date' and val:
-                        try: val = datetime.strptime(val, '%Y-%m-%d').date()
-                        except:
-                            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
-                                try: val = datetime.strptime(val, fmt).date(); break
+                        # Handle date/datetime columns
+                        if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp'):
+                            parsed = None
+                            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
+                                try: parsed = datetime.strptime(val, fmt); break
                                 except: pass
-                            else: val = None
-                    if col == 'permissions' and val and not val.startswith('['):
-                        val = f'["{val}"]'  # ensure JSON format
-                    setattr(obj, col, val)
-                if not existing:
-                    db.session.add(obj)
-                count += 1
+                            val = parsed
+                        if col == 'expected_return_date' and val:
+                            try: val = datetime.strptime(val, '%Y-%m-%d').date()
+                            except:
+                                for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+                                    try: val = datetime.strptime(val, fmt).date(); break
+                                    except: pass
+                                else: val = None
+                        if col == 'permissions' and val and not val.startswith('['):
+                            val = f'["{val}"]'  # ensure JSON format
+                        setattr(obj, col, val)
+                    # Utilisateurs: gerer le mot de passe et les champs obligatoires
+                    if table == 'users':
+                        if obj.email:
+                            obj.email = obj.email.strip().lower()
+                        if not obj.email:
+                            raise ValueError('email vide')
+                        if plain_pw:
+                            obj.set_password(plain_pw)
+                        elif existing is None and not obj.password_hash:
+                            obj.set_password('Imagine123')
+                            comptes_sans_mdp.append(obj.email)
+                        if not obj.full_name:
+                            obj.full_name = obj.email.split('@')[0]
+                        if obj.role_id and not db.session.get(CustomRole, obj.role_id):
+                            obj.role_id = None  # role inconnu -> aucun role
+                    if not existing:
+                        db.session.add(obj)
+                    db.session.flush()
+                    count += 1
             except Exception as e:
-                db.session.rollback()
-                flash(f'Erreur ligne {count+1}: {str(e)}','error')
-                return redirect(url_for('import_csv'))
+                erreurs.append(f'Ligne {i}: {str(e)}')
         
         try:
             db.session.commit()
-            # SECURITE: ne jamais perdre manage_database sur son propre role
-            if table == 'roles':
-                my_role = db.session.get(CustomRole, current_user.role_id) if current_user.role_id else None
-                if my_role and 'manage_database' not in my_role.get_permissions():
-                    perms = my_role.get_permissions()
-                    perms.append('manage_database')
-                    my_role.set_permissions(perms)
-                    db.session.commit()
-                    flash(f'{count} lignes importees. (Permission manage_database conservee sur votre role.)','success')
-                else:
-                    flash(f'{count} lignes importees/mises a jour dans {table}.','success')
-            else:
-                flash(f'{count} lignes importees/mises a jour dans {table}.','success')
         except Exception as e:
             db.session.rollback()
-            flash(f'Conflit: une valeur existe deja (nom, email ou reference duplique).','error')
+            msg = str(e)
+            if 'not-null' in msg.lower() or 'not null' in msg.lower():
+                flash('Erreur: une colonne obligatoire est vide (email, nom, mot de passe...). Verifie ton fichier CSV.','error')
+            elif 'duplicate' in msg.lower() or 'unique' in msg.lower():
+                flash('Erreur: une valeur existe deja (email, nom ou reference duplique).','error')
+            elif 'foreign key' in msg.lower():
+                flash('Erreur: une reference pointe vers un enregistrement inexistant. Importe d abord la table liee (ex: roles avant users).','error')
+            else:
+                flash(f'Erreur: {msg}','error')
+            return redirect(url_for('import_csv'))
+        
+        # SECURITE: ne jamais perdre manage_database sur son propre role
+        if table == 'roles':
+            my_role = db.session.get(CustomRole, current_user.role_id) if current_user.role_id else None
+            if my_role and 'manage_database' not in my_role.get_permissions():
+                perms = my_role.get_permissions()
+                perms.append('manage_database')
+                my_role.set_permissions(perms)
+                db.session.commit()
+                flash(f'{count} ligne(s) importee(s). (Permission manage_database conservee sur votre role.)','success')
+            else:
+                flash(f'{count} ligne(s) importee(s)/mise(s) a jour dans {table}.','success')
+        else:
+            flash(f'{count} ligne(s) importee(s)/mise(s) a jour dans {table}.','success')
+        if comptes_sans_mdp:
+            flash(f'Comptes crees sans mot de passe -> mot de passe temporaire "Imagine123" pour: {", ".join(comptes_sans_mdp)}','warning')
+        if erreurs:
+            flash(f'{len(erreurs)} ligne(s) ignoree(s): ' + ' | '.join(erreurs[:5]), 'warning')
         return redirect(url_for('import_csv'))
     
     tables = ['roles','users','categories','equipment','equipment_images','borrows','events','event_assignments','activity_logs','notifications']
@@ -1095,7 +1135,19 @@ def export_printer():
 def init_db():
     with app.app_context():
         db.create_all()
-        if User.query.first(): return
+        if User.query.first():
+            # REPARATION AUTO: si le compte admin par defaut a ete supprime, on le recree
+            if not User.query.filter_by(email='admin@imagine-events.com').first():
+                ar = CustomRole.query.filter_by(name='Admin').first()
+                if not ar:
+                    ar = CustomRole(name='Admin', icon='👑', description='Toutes les permissions')
+                    ar.set_permissions([p['key'] for p in ALL_PERMISSIONS])
+                    db.session.add(ar); db.session.flush()
+                a = User(email='admin@imagine-events.com', full_name='Admin Imagine', role_id=ar.id)
+                a.set_password('admin123')
+                db.session.add(a); db.session.commit()
+                print('OK - compte admin recree (admin@imagine-events.com / admin123)')
+            return
         ar = CustomRole(name='Admin', icon='👑', description='Toutes les permissions'); ar.set_permissions([p['key'] for p in ALL_PERMISSIONS])
         sr = CustomRole(name='Staff', icon='👷', description='Emprunts et retours'); sr.set_permissions(['borrow_equipment','return_equipment'])
         mr = CustomRole(name='Manager', icon='🛡️', description='Gestion complete sans effacer historique'); mr.set_permissions(['manage_users','manage_equipment','borrow_equipment','return_equipment','manage_categories','view_logs','manage_schedule'])
