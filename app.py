@@ -441,15 +441,39 @@ def add_equipment():
         name = request.form.get('name','').strip()
         if not name: flash('Nom requis.','error'); return redirect(url_for('add_equipment'))
         ref = request.form.get('reference','').strip() or f"IM-{uuid.uuid4().hex[:8].upper()}"
-        eq = Equipment(name=name, description=request.form.get('description','').strip(), reference=ref, category_id=int(request.form.get('category_id',0)) or None, total_quantity=int(request.form.get('total_quantity',1)), available_quantity=int(request.form.get('total_quantity',1)), specifications=request.form.get('specifications','').strip(), condition=request.form.get('condition','Bon etat'), location=request.form.get('location','Depot principal'))
-        db.session.add(eq); db.session.flush()
-        for f in request.files.getlist('images'):
-            sn = save_uploaded_image(f)
-            if sn: db.session.add(EquipmentImage(filename=sn, equipment_id=eq.id))
-        db.session.commit()
-        log_action('add_equipment', f'Ajout de {name}', name)
-        flash(f'"{name}" ajoute au depot !','success')
-        return redirect(url_for('equipment_detail', eid=eq.id))
+        # ── Verification AVANT d'enregistrer : la reference doit etre unique ──
+        if Equipment.query.filter(db.func.lower(Equipment.reference) == ref.lower()).first():
+            flash(f'⚠️ La reference "{ref}" existe deja. Choisis une autre reference (ou laisse le champ vide pour en generer une automatiquement).','error')
+            return redirect(url_for('add_equipment'))
+        # ── Conversion en toute securite (ne plante jamais si champ vide) ──
+        try:
+            cid = int(request.form.get('category_id','') or 0) or None
+        except (TypeError, ValueError):
+            cid = None
+        try:
+            total_qty = int(request.form.get('total_quantity','') or 1)
+        except (TypeError, ValueError):
+            total_qty = 1
+        if total_qty < 1: total_qty = 1
+        try:
+            eq = Equipment(name=name, description=request.form.get('description','').strip(), reference=ref, category_id=cid, total_quantity=total_qty, available_quantity=total_qty, specifications=request.form.get('specifications','').strip(), condition=request.form.get('condition','Bon etat'), location=request.form.get('location','Depot principal'))
+            db.session.add(eq); db.session.flush()
+            for f in request.files.getlist('images'):
+                sn = save_uploaded_image(f)
+                if sn: db.session.add(EquipmentImage(filename=sn, equipment_id=eq.id))
+            db.session.commit()
+            log_action('add_equipment', f'Ajout de {name}', name)
+            flash(f'"{name}" ajoute au depot !','success')
+            return redirect(url_for('equipment_detail', eid=eq.id))
+        except IntegrityError:
+            db.session.rollback()
+            flash('⚠️ Cette reference est deja utilisee par un autre materiel. Choisis une autre reference.','error')
+            return redirect(url_for('add_equipment'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Erreur lors de l\'ajout. Reessaie.','error')
+            print(f'[ADD EQUIPMENT ERROR] {type(e).__name__}: {e}')
+            return redirect(url_for('add_equipment'))
     return render_template('add_equipment.html', categories=Category.query.order_by(Category.name).all())
 
 @app.route('/equipment/<int:eid>/edit', methods=['GET','POST'])
@@ -460,15 +484,30 @@ def edit_equipment(eid):
     if request.method == 'POST':
         eq.name = request.form.get('name','').strip(); eq.description = request.form.get('description','').strip()
         ref = request.form.get('reference','').strip()
-        if ref and ref != eq.reference: eq.reference = ref
-        cid = request.form.get('category_id'); eq.category_id = int(cid) if cid else None
-        old = eq.total_quantity; eq.total_quantity = int(request.form.get('total_quantity',eq.total_quantity))
+        if ref and ref.lower() != (eq.reference or '').lower():
+            # ── La reference doit rester unique : verifier qu'aucun AUTRE materiel ne l'a ──
+            autre = Equipment.query.filter(db.func.lower(Equipment.reference) == ref.lower(), Equipment.id != eid).first()
+            if autre:
+                flash(f'⚠️ La reference "{ref}" est deja utilisee par "{autre.name}". Choisis une autre reference.','error')
+                return redirect(url_for('edit_equipment', eid=eid))
+            eq.reference = ref
+        cid = request.form.get('category_id')
+        try: eq.category_id = int(cid) if cid else None
+        except (TypeError, ValueError): eq.category_id = None
+        old = eq.total_quantity
+        try: eq.total_quantity = int(request.form.get('total_quantity', eq.total_quantity) or eq.total_quantity)
+        except (TypeError, ValueError): pass
         eq.available_quantity = max(0, eq.available_quantity + (eq.total_quantity - old))
         eq.specifications = request.form.get('specifications','').strip(); eq.condition = request.form.get('condition','Bon etat'); eq.location = request.form.get('location','Depot principal')
         for f in request.files.getlist('images'):
             sn = save_uploaded_image(f)
             if sn: db.session.add(EquipmentImage(filename=sn, equipment_id=eq.id))
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('⚠️ Cette reference est deja utilisee par un autre materiel. Choisis une autre reference.','error')
+            return redirect(url_for('edit_equipment', eid=eid))
         log_action('edit_equipment', f'Modification de {eq.name}', eq.name)
         flash(f'"{eq.name}" mis a jour.','success')
         return redirect(url_for('equipment_detail', eid=eq.id))
