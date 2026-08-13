@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta, timezone
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, send_from_directory, has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
 from PIL import Image
@@ -198,7 +198,7 @@ def notify_user(uid, title, message, link=''):
     try:
         u = db.session.get(User, uid)
         if u and os.environ.get('SMTP_PASSWORD'):
-            html = email_template(title, f'Bonjour {u.full_name},', message, link, 'Voir dans Imagine Inventory')
+            html = email_template(title, f'Bonjour {u.full_name},', message, absolute_link(link), 'Voir dans Imagine Inventory')
             send_email(u.email, title, html, message)
     except Exception as e:
         print(f'[EMAIL ERROR] {type(e).__name__}: {e}')
@@ -232,6 +232,29 @@ def send_email(to, subject, body_html, body_text=''):
         print(f'[EMAIL] HTTP {e.code}: {err_body}')
     except Exception as e:
         print(f'[EMAIL] Error: {e}')
+
+
+def absolute_link(path):
+    """Transforme un lien relatif (/dashboard) en lien COMPLET (https://site.com/dashboard).
+    Les emails doivent contenir des liens complets : un lien relatif dans un email
+    donne une erreur 404 quand on clique dessus."""
+    if not path:
+        return ''
+    if path.startswith('http'):
+        return path
+    site = os.environ.get('SITE_URL', '').strip().rstrip('/')
+    if not site:
+        try:
+            if has_request_context():
+                site = request.host_url.rstrip('/')
+                # En production (Render/OVH), forcer https (le site est toujours en https)
+                if not site.startswith('http://localhost') and not site.startswith('http://127.0.0.1'):
+                    site = site.replace('http://', 'https://', 1)
+        except Exception:
+            site = ''
+    if site:
+        return site + '/' + path.lstrip('/')
+    return path
 
 
 def email_template(title, greeting, content, action_link='', action_text=''):
