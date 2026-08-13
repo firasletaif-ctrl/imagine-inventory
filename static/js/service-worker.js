@@ -1,13 +1,12 @@
 // Imagine Inventory PWA — Service Worker
-const CACHE = 'imagine-v1';
+// Version 2 : les pages sont TOUJOURS rechargees a jour depuis le serveur.
+// Seuls les fichiers statiques (CSS, JS, icones) sont mis en cache.
+const CACHE = 'imagine-v2';
 
 self.addEventListener('install', function(e) {
     e.waitUntil(
         caches.open(CACHE).then(function(cache) {
             return cache.addAll([
-                '/dashboard',
-                '/notifications',
-                '/schedule',
                 '/static/css/style.css',
                 '/static/js/main.js',
                 '/static/manifest.json',
@@ -19,22 +18,36 @@ self.addEventListener('install', function(e) {
     self.skipWaiting();
 });
 
+// Supprime les anciens caches (ex: imagine-v1) pour ne jamais resservir de vieilles pages
+self.addEventListener('activate', function(e) {
+    e.waitUntil(
+        caches.keys().then(function(keys) {
+            return Promise.all(
+                keys.filter(function(k) { return k !== CACHE; })
+                    .map(function(k) { return caches.delete(k); })
+            );
+        })
+    );
+    self.clients.claim();
+});
+
 self.addEventListener('fetch', function(e) {
     if (e.request.method !== 'GET') return;
+
     e.respondWith(
-        caches.match(e.request).then(function(cached) {
-            var fetched = fetch(e.request).then(function(response) {
-                if (response && response.status === 200) {
-                    var clone = response.clone();
-                    caches.open(CACHE).then(function(cache) {
-                        cache.put(e.request, clone);
-                    });
-                }
-                return response;
-            }).catch(function() {
-                return cached || new Response('Mode hors-ligne', {status: 503});
-            });
-            return cached || fetched;
+        // 1) On cherche TOUJOURS la version a jour sur le serveur
+        fetch(e.request).then(function(response) {
+            // 2) On ne met en cache QUE les fichiers statiques (pas les pages HTML)
+            if (response && response.status === 200 && e.request.mode !== 'navigate') {
+                var clone = response.clone();
+                caches.open(CACHE).then(function(cache) {
+                    cache.put(e.request, clone);
+                });
+            }
+            return response;
+        }).catch(function() {
+            // 3) Hors ligne : on renvoie la derniere copie connue si elle existe
+            return caches.match(e.request);
         })
     );
 });
