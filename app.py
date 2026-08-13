@@ -852,14 +852,19 @@ def equipment_qrcode_print(eid):
     eq = db.session.get(Equipment, eid)
     if not eq:
         flash('Introuvable.','error'); return redirect(url_for('dashboard'))
-    return render_template('equipment_qrcode.html', eq=eq)
+    try:
+        qty = int(request.args.get('qty', 1))
+    except (TypeError, ValueError):
+        qty = 1
+    qty = max(1, min(qty, 500))  # entre 1 et 500 etiquettes
+    return render_template('equipment_qrcode.html', eq=eq, qty=qty)
 
 
 @app.route('/qrcodes/all')
 @login_required
 def all_qrcodes():
     page = request.args.get('page', 1, type=int)
-    per_page = 10
+    per_page = 15
     equipment_list = Equipment.query.order_by(Equipment.name).all()
     total = len(equipment_list)
     total_pages = max(1, (total + per_page - 1) // per_page)
