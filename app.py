@@ -1133,43 +1133,71 @@ def export_printer():
 
 # ═══════ I N I T   D B ═══════
 def init_db():
+    """Cree les tables et les donnees par defaut manquantes. Sur, idempotent."""
     with app.app_context():
         db.create_all()
-        if User.query.first():
-            # REPARATION AUTO: si le compte admin par defaut a ete supprime, on le recree
-            if not User.query.filter_by(email='admin@imagine-events.com').first():
-                ar = CustomRole.query.filter_by(name='Admin').first()
-                if not ar:
-                    ar = CustomRole(name='Admin', icon='👑', description='Toutes les permissions')
-                    ar.set_permissions([p['key'] for p in ALL_PERMISSIONS])
-                    db.session.add(ar); db.session.flush()
-                a = User(email='admin@imagine-events.com', full_name='Admin Imagine', role_id=ar.id)
-                a.set_password('admin123')
-                db.session.add(a); db.session.commit()
-                print('OK - compte admin recree (admin@imagine-events.com / admin123)')
-            return
-        ar = CustomRole(name='Admin', icon='👑', description='Toutes les permissions'); ar.set_permissions([p['key'] for p in ALL_PERMISSIONS])
-        sr = CustomRole(name='Staff', icon='👷', description='Emprunts et retours'); sr.set_permissions(['borrow_equipment','return_equipment'])
-        mr = CustomRole(name='Manager', icon='🛡️', description='Gestion complete sans effacer historique'); mr.set_permissions(['manage_users','manage_equipment','borrow_equipment','return_equipment','manage_categories','view_logs','manage_schedule'])
-        pr = CustomRole(name='En attente', icon='⏳', description='Nouveau compte en attente'); pr.set_permissions([])
-        db.session.add_all([ar,sr,mr,pr]); db.session.flush()
-        a = User(email='admin@imagine-events.com', full_name='Admin Imagine', role_id=ar.id); a.set_password('admin123')
-        s = User(email='staff@imagine-events.com', full_name='Equipe Logistique', role_id=sr.id); s.set_password('staff123')
-        db.session.add_all([a,s])
-        cats = [Category(name=nm, icon=ic) for nm,ic in [('Ecrans & Affichage','📺'),('Sonorisation','🎤'),('Eclairage','💡'),('Scenes & Structures','🎭'),('Mobilier','🛋️'),('Cablage & Connectique','🔌')]]
-        db.session.add_all(cats); db.session.commit()
-        eqs = [
-            Equipment(name='Ecran LED 43"',description='Ecran LED haute definition 43 pouces.',reference='IM-LED43-001',category_id=1,total_quantity=10,available_quantity=10,specifications='Taille: 43"\nResolution: Full HD\nLuminosite: 350 cd/m2\nConnectique: HDMI, VGA',condition='Excellent',location='Allee A - Etagere 1'),
-            Equipment(name='Ecran LED 55"',description='Ecran LED 55 pouces pour evenements.',reference='IM-LED55-002',category_id=1,total_quantity=6,available_quantity=6,specifications='Taille: 55"\nResolution: 4K UHD',condition='Excellent',location='Allee A - Etagere 2'),
-            Equipment(name='Micro Sans Fil SM58',description='Micro professionnel Shure.',reference='IM-MIC-003',category_id=2,total_quantity=12,available_quantity=12,specifications='Marque: Shure\nType: Dynamique\nPortee: 100m',condition='Bon etat',location='Allee B - Armoire 1'),
-            Equipment(name='Lyre LED Beam',description='Projecteur lyre motorise a LED.',reference='IM-LYR-004',category_id=3,total_quantity=8,available_quantity=8,specifications='LED: 200W\nDMX: 16 canaux\nPrisme: 8 facettes',condition='Excellent',location='Allee C - Etagere 3'),
-            Equipment(name='Canape Lounge Design',description='Canape 3 places pour receptions.',reference='IM-CAN-005',category_id=5,total_quantity=15,available_quantity=15,specifications='Places: 3\nMateriau: Velours premium',condition='Tres bon etat',location='Zone Mobilier - Rangee D'),
-            Equipment(name='Barre LED RGB',description='Barre LED 144 LEDs/m pour eclairage.',reference='IM-BAR-006',category_id=3,total_quantity=20,available_quantity=20,specifications='LEDs: RGB 144/m\nAngle: 120 degres',condition='Bon etat',location='Allee C - Etagere 1'),
-            Equipment(name='Enceinte Active 15"',description='Enceinte 15" 1000W pour sonorisation.',reference='IM-ENC-007',category_id=2,total_quantity=8,available_quantity=8,specifications='Puissance: 1000W\nSPL Max: 132 dB',condition='Excellent',location='Allee B - Sol'),
-            Equipment(name='Scene Modulable 2x1m',description='Element de scene aluminium.',reference='IM-SCN-008',category_id=4,total_quantity=30,available_quantity=30,specifications='Dimensions: 200x100 cm\nCharge max: 750 kg/m2',condition='Bon etat',location='Zone Scenes'),
-        ]
-        db.session.add_all(eqs); db.session.commit()
-        print("OK - admin@imagine-events.com / admin123")
+
+        # ── Roles par defaut (cree seulement s'ils manquent) ──
+        def ensure_role(name, icon, description, perms):
+            r = CustomRole.query.filter_by(name=name).first()
+            if not r:
+                r = CustomRole(name=name, icon=icon, description=description)
+                r.set_permissions(perms)
+                db.session.add(r)
+                db.session.flush()
+            return r
+
+        ar = ensure_role('Admin', '👑', 'Toutes les permissions', [p['key'] for p in ALL_PERMISSIONS])
+        ensure_role('Staff', '👷', 'Emprunts et retours', ['borrow_equipment', 'return_equipment'])
+        ensure_role('Manager', '🛡️', 'Gestion complete sans effacer historique', ['manage_users','manage_equipment','borrow_equipment','return_equipment','manage_categories','view_logs','manage_schedule'])
+        ensure_role('En attente', '⏳', 'Nouveau compte en attente', [])
+
+        # ── Admin par defaut (toujours present) ──
+        admin = User.query.filter_by(email='admin@imagine-events.com').first()
+        if not admin:
+            admin = User(email='admin@imagine-events.com', full_name='Admin Imagine', role_id=ar.id)
+            admin.set_password('admin123')
+            db.session.add(admin)
+            print('OK - compte admin cree/recree (admin@imagine-events.com / admin123)')
+
+        # ── Staff par defaut ──
+        if not User.query.filter_by(email='staff@imagine-events.com').first():
+            sr = CustomRole.query.filter_by(name='Staff').first()
+            staff = User(email='staff@imagine-events.com', full_name='Equipe Logistique', role_id=sr.id if sr else None)
+            staff.set_password('staff123')
+            db.session.add(staff)
+
+        # ── Categories par defaut ──
+        cat_names = ['Ecrans & Affichage', 'Sonorisation', 'Eclairage', 'Scenes & Structures', 'Mobilier', 'Cablage & Connectique']
+        cat_icons = ['📺', '🎤', '💡', '🎭', '🛋️', '🔌']
+        cats_by_id = {}
+        for nm, ic in zip(cat_names, cat_icons):
+            c = Category.query.filter_by(name=nm).first()
+            if not c:
+                c = Category(name=nm, icon=ic)
+                db.session.add(c)
+                db.session.flush()
+            cats_by_id[nm] = c.id
+        db.session.commit()
+
+        # ── Materiel d'exemple (seulement si la table est vide) ──
+        if Equipment.query.count() == 0:
+            cat = {nm: Category.query.filter_by(name=nm).first() for nm in cat_names}
+            eqs = [
+                Equipment(name='Ecran LED 43"', description='Ecran LED haute definition 43 pouces.', reference='IM-LED43-001', category_id=cat['Ecrans & Affichage'].id if cat['Ecrans & Affichage'] else None, total_quantity=10, available_quantity=10, specifications='Taille: 43"\nResolution: Full HD\nLuminosite: 350 cd/m2\nConnectique: HDMI, VGA', condition='Excellent', location='Allee A - Etagere 1'),
+                Equipment(name='Ecran LED 55"', description='Ecran LED 55 pouces pour evenements.', reference='IM-LED55-002', category_id=cat['Ecrans & Affichage'].id if cat['Ecrans & Affichage'] else None, total_quantity=6, available_quantity=6, specifications='Taille: 55"\nResolution: 4K UHD', condition='Excellent', location='Allee A - Etagere 2'),
+                Equipment(name='Micro Sans Fil SM58', description='Micro professionnel Shure.', reference='IM-MIC-003', category_id=cat['Sonorisation'].id if cat['Sonorisation'] else None, total_quantity=12, available_quantity=12, specifications='Marque: Shure\nType: Dynamique\nPortee: 100m', condition='Bon etat', location='Allee B - Armoire 1'),
+                Equipment(name='Lyre LED Beam', description='Projecteur lyre motorise a LED.', reference='IM-LYR-004', category_id=cat['Eclairage'].id if cat['Eclairage'] else None, total_quantity=8, available_quantity=8, specifications='LED: 200W\nDMX: 16 canaux\nPrisme: 8 facettes', condition='Excellent', location='Allee C - Etagere 3'),
+                Equipment(name='Canape Lounge Design', description='Canape 3 places pour receptions.', reference='IM-CAN-005', category_id=cat['Mobilier'].id if cat['Mobilier'] else None, total_quantity=15, available_quantity=15, specifications='Places: 3\nMateriau: Velours premium', condition='Tres bon etat', location='Zone Mobilier - Rangee D'),
+                Equipment(name='Barre LED RGB', description='Barre LED 144 LEDs/m pour eclairage.', reference='IM-BAR-006', category_id=cat['Eclairage'].id if cat['Eclairage'] else None, total_quantity=20, available_quantity=20, specifications='LEDs: RGB 144/m\nAngle: 120 degres', condition='Bon etat', location='Allee C - Etagere 1'),
+                Equipment(name='Enceinte Active 15"', description='Enceinte 15" 1000W pour sonorisation.', reference='IM-ENC-007', category_id=cat['Sonorisation'].id if cat['Sonorisation'] else None, total_quantity=8, available_quantity=8, specifications='Puissance: 1000W\nSPL Max: 132 dB', condition='Excellent', location='Allee B - Sol'),
+                Equipment(name='Scene Modulable 2x1m', description='Element de scene aluminium.', reference='IM-SCN-008', category_id=cat['Scenes & Structures'].id if cat['Scenes & Structures'] else None, total_quantity=30, available_quantity=30, specifications='Dimensions: 200x100 cm\nCharge max: 750 kg/m2', condition='Bon etat', location='Zone Scenes'),
+            ]
+            db.session.add_all(eqs)
+            db.session.commit()
+
+        db.session.commit()
+        print('OK - base initialisee (admin@imagine-events.com / admin123)')
 
 init_db()
 
