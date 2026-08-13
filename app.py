@@ -654,7 +654,17 @@ def import_csv():
                 existing = None
                 if 'id' in cols and row.get('id','').strip():
                     existing = db.session.get(model, int(row['id'].strip()))
-                
+                # Fallback: check by unique field (name/email/reference)
+                if not existing:
+                    if table == 'roles' and row.get('name','').strip():
+                        existing = model.query.filter_by(name=row.get('name','').strip()).first()
+                    elif table == 'users' and row.get('email','').strip():
+                        existing = model.query.filter_by(email=row.get('email','').strip().lower()).first()
+                    elif table == 'categories' and row.get('name','').strip():
+                        existing = model.query.filter_by(name=row.get('name','').strip()).first()
+                    elif table == 'equipment' and row.get('reference','').strip():
+                        existing = model.query.filter_by(reference=row.get('reference','').strip()).first()
+
                 obj = existing if existing else model()
                 for col in cols:
                     val = row.get(col, '').strip()
@@ -693,8 +703,24 @@ def import_csv():
                 flash(f'Erreur ligne {count+1}: {str(e)}','error')
                 return redirect(url_for('import_csv'))
         
-        db.session.commit()
-        flash(f'{count} lignes importees dans {table}.','success')
+        try:
+            db.session.commit()
+            # SECURITE: ne jamais perdre manage_database sur son propre role
+            if table == 'roles':
+                my_role = db.session.get(CustomRole, current_user.role_id) if current_user.role_id else None
+                if my_role and 'manage_database' not in my_role.get_permissions():
+                    perms = my_role.get_permissions()
+                    perms.append('manage_database')
+                    my_role.set_permissions(perms)
+                    db.session.commit()
+                    flash(f'{count} lignes importees. (Permission manage_database conservee sur votre role.)','success')
+                else:
+                    flash(f'{count} lignes importees/mises a jour dans {table}.','success')
+            else:
+                flash(f'{count} lignes importees/mises a jour dans {table}.','success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Conflit: une valeur existe deja (nom, email ou reference duplique).','error')
         return redirect(url_for('import_csv'))
     
     tables = ['roles','users','categories','equipment','equipment_images','borrows','events','event_assignments','activity_logs','notifications']
