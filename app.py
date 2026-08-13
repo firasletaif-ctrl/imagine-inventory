@@ -325,22 +325,27 @@ def register():
     if request.method == 'POST':
         email = request.form.get('email','').strip().lower(); name = request.form.get('full_name','').strip()
         pw = request.form.get('password','')
-        if not email or not name or not pw: flash('Tous les champs requis.','error')
-        elif request.form.get('confirm_password') != pw: flash('Mots de passe differents.','error')
-        elif len(pw) < 6: flash('6 caracteres minimum.','error')
-        elif User.query.filter_by(email=email).first(): flash('Email deja utilise.','error')
+        if not email or not name or not pw: flash('Tous les champs requis.','error'); return render_template('register.html')
+        elif request.form.get('confirm_password') != pw: flash('Mots de passe differents.','error'); return render_template('register.html')
+        elif len(pw) < 6: flash('6 caracteres minimum.','error'); return render_template('register.html')
+        elif User.query.filter_by(email=email).first(): flash('Email deja utilise.','error'); return render_template('register.html')
         else:
-            u = User(email=email, full_name=name); u.set_password(pw)
-            if User.query.count() == 0: u.role_id = 1
-            else:
-                pending = CustomRole.query.filter_by(name='En attente').first()
-                u.role_id = pending.id if pending else None
-            db.session.add(u); db.session.commit()
-            # Notify admins
-            notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', '/admin/users')
-            log_action('register', f'Nouveau compte cree par {name} ({email})'); flash('Compte cree ! En attente de validation par l\'admin.','success')
-            return redirect(url_for('login'))
-    return render_template('register.html')
+            try:
+                u = User(email=email, full_name=name); u.set_password(pw)
+                if User.query.count() == 0: u.role_id = 1
+                else:
+                    pending = CustomRole.query.filter_by(name='En attente').first()
+                    u.role_id = pending.id if pending else None
+                db.session.add(u); db.session.commit()
+                # Notify admins
+                notify_admins(f'Nouveau compte : {name}', f'{name} ({email}) vient de creer un compte. Action requise.', '/admin/users')
+                log_action('register', f'Nouveau compte cree par {name} ({email})'); flash('Compte cree ! En attente de validation par l\'admin.','success')
+                return redirect(url_for('login'))
+            except Exception as e:
+                db.session.rollback()
+                flash('Erreur lors de la creation du compte. Reessayez.','error')
+                print(f'[REGISTER ERROR] {e}')
+                return render_template('register.html')
 
 @app.route('/logout')
 @login_required
@@ -497,8 +502,8 @@ def create_user():
     pw = request.form.get('password',''); rid = request.form.get('role_id')
     try: rid = int(rid) if rid else None
     except: rid = None
-    if not email or not name or not pw: flash('Tous les champs requis.','error')
-    elif len(pw) < 6: flash('6 caracteres minimum.','error')
+    if not email or not name or not pw: flash('Tous les champs requis.','error'); return render_template('register.html')
+    elif len(pw) < 6: flash('6 caracteres minimum.','error'); return render_template('register.html')
     elif User.query.filter_by(email=email).first(): flash('Email deja utilise.','error')
     else:
         u = User(email=email, full_name=name); u.set_password(pw)
