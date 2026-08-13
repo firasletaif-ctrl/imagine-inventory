@@ -5,63 +5,78 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>QR Codes — Imagine Events</title>
 <style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#1E293B;padding:2mm}
+
+  /* ===== En-tête + boutons (masqués à l'impression) ===== */
+  .no-print{padding:8mm 4mm 4mm}
+  .no-print h1{font-family:Georgia,serif;color:#0B1D3A;text-align:center;font-size:1.4rem}
+  .no-print h1 span{color:#C41E3A}
+  .subtitle{text-align:center;color:#64748B;font-size:.9rem;margin:.3rem 0 1rem}
+  .pagination{text-align:center;margin:.6rem 0;font-size:.9rem;color:#64748B}
+  .pagination a{color:#1E4D8C;font-weight:bold;text-decoration:none}
+  .actions{text-align:center;margin:.6rem 0}
+  .actions button{background:#C41E3A;color:#fff;border:none;padding:12px 30px;font-size:1rem;border-radius:8px;cursor:pointer;font-weight:bold;margin:0 .3rem}
+  .actions button:hover{background:#A01830}
+  .actions .nav-btn{background:#0B1D3A}
+  .actions .nav-btn:hover{background:#13294B}
+  .hint{text-align:center;color:#94A3B8;font-size:.8rem;margin-top:.4rem}
+
+  /* ============================================================
+     GRILLE COMPACTE — IDENTIQUE À L'ÉCRAN ET À L'IMPRESSION.
+     (On n'utilise plus de CSS spécial impression : ainsi l'iPad
+      imprime exactement ce qu'il affiche, en petit format.)
+     ============================================================ */
+  .grid{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;padding:0 2mm}
+  .qr-card{
+    width:44mm;margin:1.5mm;
+    border:1.2px solid #0B1D3A;border-radius:2mm;
+    padding:2mm;text-align:center;background:#fff;
+    page-break-inside:avoid;break-inside:avoid;
+  }
+  .qr-card img{width:30mm;height:30mm;display:block;margin:0 auto}
+  .qr-card h3{font-size:7.5pt;color:#0B1D3A;margin:1mm 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qr-card .ref{font-family:monospace;font-size:6pt;color:#334155}
+  .qr-card .loc{font-size:5.8pt;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .footer{margin-top:4mm;text-align:center;font-size:.7rem;color:#94A3B8;padding-bottom:4mm}
+
+  /* Impression : on masque juste l'en-tête et les boutons */
   @media print {
-    body{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .no-print{display:none!important}
     @page{size:A4 portrait;margin:8mm}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm}
-    .qr-card{padding:2mm;page-break-inside:avoid;box-shadow:none;border:1.2px solid #0B1D3A;border-radius:2mm}
-    .qr-card img{width:26mm;height:26mm}
-    .qr-card h3{font-size:8pt}
-    .qr-card .ref{font-size:6pt}
-    .qr-card .loc{font-size:5.5pt}
-    .footer{font-size:6pt}
   }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:Arial,Helvetica,sans-serif;background:#F8FAFC;color:#1E293B;padding:1.5rem}
-  h1{font-family:Georgia,serif;color:#0B1D3A;text-align:center;margin-bottom:.5rem}
-  h1 span{color:#C41E3A}
-  .subtitle{text-align:center;color:#64748B;font-size:.9rem;margin-bottom:1.5rem}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
-  .qr-card{border:2px solid #0B1D3A;border-radius:10px;padding:.9rem;text-align:center;background:white;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-  .qr-card h3{font-size:.9rem;color:#0B1D3A;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .qr-card .ref{font-family:monospace;font-size:.65rem;color:#64748B;margin-bottom:.4rem}
-  .qr-card img{width:120px;height:120px;margin:.2rem auto}
-  .qr-card .loc{font-size:.65rem;color:#64748B;margin-top:.2rem}
-  .no-print{text-align:center;margin:1.5rem 0}
-  .no-print button{background:#C41E3A;color:white;border:none;padding:12px 35px;font-size:1rem;border-radius:8px;cursor:pointer;font-weight:bold;margin:0 .5rem}
-  .no-print button:hover{background:#A01830}
-  .no-print .nav-btn{background:#0B1D3A}
-  .no-print .nav-btn:hover{background:#13294B}
-  .pagination{text-align:center;margin:1rem 0;font-size:.9rem;color:#64748B}
-  .pagination a{color:#1E4D8C;text-decoration:none;font-weight:bold}
-  .footer{margin-top:1.5rem;text-align:center;font-size:.75rem;color:#94A3B8}
 </style>
 </head>
 <body>
+
 <div class="no-print">
   <h1>🔲 Tous les QR Codes <span>Imagine Events</span></h1>
-  <p class="subtitle">{{ total }} matériel(s) — Page {{ page }} / {{ total_pages }} (15 par page · QR compacts pour imprimer)</p>
+  <p class="subtitle">{{ total }} matériel(s) — Page {{ page }} / {{ total_pages }} · QR compacts (≈ 4 par ligne)</p>
   <div class="pagination">
     {% if page > 1 %}<a href="{{ url_for('all_qrcodes', page=page-1) }}">← Précédent</a>{% endif %}
     <span style="margin:0 1rem">Page {{ page }} / {{ total_pages }}</span>
     {% if page < total_pages %}<a href="{{ url_for('all_qrcodes', page=page+1) }}">Suivant →</a>{% endif %}
   </div>
-  <button onclick="window.print()">🖨️ Imprimer cette page</button>
-  <a href="{{ url_for('dashboard') }}" style="margin-left:.5rem"><button class="nav-btn" type="button">← Retour au dépôt</button></a>
+  <div class="actions">
+    <button onclick="window.print()">🖨️ Imprimer cette page</button>
+    <a href="{{ url_for('dashboard') }}"><button class="nav-btn" type="button">← Retour au dépôt</button></a>
+  </div>
+  <p class="hint">💡 L'écran et l'impression sont identiques : les QR s'impriment en petit format, plusieurs par page.</p>
 </div>
 
 <div class="grid">
   {% for eq in equipment %}
   <div class="qr-card">
+    <img src="{{ url_for('equipment_qrcode', eid=eq.id) }}" alt="QR {{ eq.name }}">
     <h3>{{ eq.name }}</h3>
     <div class="ref">{{ eq.reference }}</div>
-    <img src="{{ url_for('equipment_qrcode', eid=eq.id) }}" alt="QR {{ eq.name }}">
     <div class="loc">📍 {{ eq.location }}{% if eq.category %} · {{ eq.category.name }}{% endif %}</div>
   </div>
   {% endfor %}
 </div>
 
 <div class="footer">Imagine Events Tunisia · Imprimez et collez sur le matériel · Page {{ page }}/{{ total_pages }}</div>
+
 </body>
 </html>
