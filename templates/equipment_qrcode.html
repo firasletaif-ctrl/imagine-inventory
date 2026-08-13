@@ -5,41 +5,83 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>QR Code - {{ eq.name }}</title>
 <style>
-  @media print { body{ -webkit-print-color-adjust:exact; print-color-adjust:exact } .no-print{display:none!important} @page{size:A4;margin:10mm} }
+  @media print {
+    body{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
+    .no-print{display:none!important}
+    @page{size:A4 portrait;margin:8mm}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}
+    .qr-card{border:1.2px solid #0B1D3A;border-radius:2mm;padding:2mm;text-align:center;background:white;page-break-inside:avoid}
+    .qr-card img{width:21mm;height:21mm}
+    .qr-card h3{font-size:7pt;color:#0B1D3A;margin:1mm 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .qr-card .ref{font-family:monospace;font-size:5.5pt;color:#334155}
+    .qr-card .loc{font-size:5.5pt;color:#64748B}
+    .footer{font-size:6pt}
+  }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:Arial,Helvetica,sans-serif;background:white;color:#1E293B;display:flex;justify-content:center;align-items:center;min-height:100vh;flex-direction:column;gap:2rem;padding:2rem}
-  .card{text-align:center;border:3px solid #0B1D3A;border-radius:16px;padding:2rem 2.5rem;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
-  .card h1{font-family:Georgia,serif;font-size:1.4rem;color:#0B1D3A;margin-bottom:.5rem;letter-spacing:1px}
-  .card h1 span{color:#C41E3A}
-  .card .ref{font-family:monospace;font-size:.85rem;color:#64748B;margin-bottom:1rem}
-  .card .qr{border:2px solid #E2E8F0;border-radius:8px;padding:1rem;background:white;display:inline-block;margin:1rem 0}
-  .card .qr img{width:200px;height:200px}
-  .card .info{font-size:.85rem;color:#64748B;margin-top:.5rem}
-  .card .info strong{color:#0B1D3A}
-  .no-print{text-align:center;margin-top:1rem}
-  .no-print button{background:#C41E3A;color:white;border:none;padding:12px 40px;font-size:1.1rem;border-radius:8px;cursor:pointer;font-weight:bold}
-  .no-print button:hover{background:#A01830}
-  .footer{margin-top:1rem;font-size:.75rem;color:#94A3B8}
+  body{font-family:Arial,Helvetica,sans-serif;background:#F8FAFC;color:#1E293B;padding:1.5rem}
+  h1{font-family:Georgia,serif;color:#0B1D3A;text-align:center;margin-bottom:.3rem}
+  h1 span{color:#C41E3A}
+  .subtitle{text-align:center;color:#64748B;font-size:.9rem;margin-bottom:1rem}
+  .panel{background:white;border:2px solid #0B1D3A;border-radius:12px;padding:1rem 1.2rem;max-width:560px;margin:0 auto 1.5rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .panel label{display:block;font-weight:bold;color:#0B1D3A;margin-bottom:.5rem}
+  .panel input[type=number]{width:110px;font-size:1.4rem;text-align:center;padding:.4rem;border:2px solid #0B1D3A;border-radius:8px;font-weight:bold}
+  .panel .hint{font-size:.8rem;color:#64748B;margin-top:.6rem}
+  .panel .quick{display:inline-flex;gap:.4rem;margin-top:.6rem;flex-wrap:wrap;justify-content:center}
+  .panel .quick button{background:#0B1D3A;color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:bold}
+  .panel .quick button:hover{background:#13294B}
+  .actions{text-align:center;margin-bottom:1.2rem}
+  .actions button{background:#C41E3A;color:white;border:none;padding:12px 35px;font-size:1rem;border-radius:8px;cursor:pointer;font-weight:bold}
+  .actions button:hover{background:#A01830}
+  .actions .nav-btn{background:#0B1D3A;margin-left:.5rem}
+  .actions .nav-btn:hover{background:#13294B}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;max-width:1000px;margin:0 auto}
+  .qr-card{border:2px solid #0B1D3A;border-radius:10px;padding:.8rem;text-align:center;background:white;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+  .qr-card h3{font-size:.8rem;color:#0B1D3A;margin-bottom:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qr-card .ref{font-family:monospace;font-size:.65rem;color:#64748B;margin-bottom:.3rem}
+  .qr-card img{width:110px;height:110px;margin:0 auto}
+  .qr-card .loc{font-size:.65rem;color:#64748B;margin-top:.15rem}
+  .footer{margin-top:1.5rem;text-align:center;font-size:.75rem;color:#94A3B8}
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>IMAGINE<span> EVENTS</span></h1>
-  <p class="ref">{{ eq.reference }}</p>
-  <h2 style="font-size:1.2rem;margin-bottom:.5rem">{{ eq.name }}</h2>
-  <div class="qr">
-    <img src="{{ url_for('equipment_qrcode', eid=eq.id) }}" alt="QR Code">
-  </div>
-  <p class="info">
-    <strong>Categorie :</strong> {{ eq.category.name if eq.category else '—' }}<br>
-    <strong>Emplacement :</strong> {{ eq.location }}<br>
-    <strong>Scannez pour voir la fiche complete</strong>
-  </p>
-</div>
 <div class="no-print">
-  <button onclick="window.print()">🖨️ Imprimer le QR Code</button>
-  <p style="margin-top:.5rem"><a href="{{ url_for('equipment_detail', eid=eq.id) }}" style="color:#1E4D8C">← Retour a la fiche</a></p>
+  <h1>🔲 QR Code <span>Imagine Events</span></h1>
+  <p class="subtitle">{{ eq.name }} — {{ eq.reference }}</p>
+
+  <div class="panel">
+    <form method="get" action="{{ url_for('equipment_qrcode_print', eid=eq.id) }}">
+      <label for="qty">Combien d'étiquettes veux-tu imprimer ?</label>
+      <input type="number" id="qty" name="qty" value="{{ qty }}" min="1" max="500" required>
+      <div class="quick">
+        <button type="button" onclick="document.getElementById('qty').value=1">1</button>
+        <button type="button" onclick="document.getElementById('qty').value=5">5</button>
+        <button type="button" onclick="document.getElementById('qty').value=10">10</button>
+        <button type="button" onclick="document.getElementById('qty').value={{ eq.total_quantity }}">Tout ({{ eq.total_quantity }})</button>
+      </div>
+      <div class="hint">💡 Ce matériel a {{ eq.total_quantity }} unité(s) en stock.<br>Chaque étiquette aura le même QR code : colle-en une sur chaque unité.</div>
+      <div style="margin-top:.8rem">
+        <button type="submit" class="actions" style="background:#0B1D3A;color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-weight:bold">👀 Afficher</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="actions">
+    <button onclick="window.print()">🖨️ Imprimer ({{ qty }} étiquette(s))</button>
+    <a href="{{ url_for('equipment_detail', eid=eq.id) }}"><button class="nav-btn" type="button">← Retour à la fiche</button></a>
+  </div>
 </div>
-<div class="footer">Imagine Events Tunisia · {{ eq.reference }}</div>
+
+<div class="grid">
+  {% for i in range(qty) %}
+  <div class="qr-card">
+    <img src="{{ url_for('equipment_qrcode', eid=eq.id) }}" alt="QR {{ eq.name }}">
+    <h3>{{ eq.name }}</h3>
+    <div class="ref">{{ eq.reference }}</div>
+    <div class="loc">📍 {{ eq.location }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="footer">Imagine Events Tunisia · {{ eq.reference }} · {{ qty }} étiquette(s) · Imprimez et collez sur le matériel</div>
 </body>
 </html>
