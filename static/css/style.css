@@ -1218,8 +1218,21 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     .form-row { grid-template-columns: 1fr; }
 }
 
-@media(max-width:768px){.footer-content{padding:1rem 1.25rem}.footer-info{gap:.5rem;font-size:.72rem}.footer-info span{display:block;margin-bottom:.2rem}.footer-name{font-size:.95rem}.footer-copy{font-size:.65rem}}
-    .form-row { grid-template-columns: 1fr; }
-    .flex-2 { grid-column: span 1; }
-    .detail-meta-grid { grid-template-columns: 1fr; }
+/* ── Footer Imagine Events ──────────────────── */
+.app-footer{margin-top:2.5rem;background:linear-gradient(135deg,var(--blue-deep),var(--blue-dark));border-radius:var(--radius-lg);overflow:hidden}
+.footer-content{padding:1.25rem 1.5rem}
+.footer-brand{display:flex;align-items:center;gap:.8rem;margin-bottom:.8rem;padding-bottom:.8rem;border-bottom:1px solid rgba(255,255,255,.1)}
+.footer-logo{width:36px;height:36px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;color:white;flex-shrink:0}
+.footer-name{font-family:var(--font-display);font-size:1rem;font-weight:700;color:white;letter-spacing:2px;display:block}
+.footer-sub{font-size:.65rem;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase}
+.footer-info{display:flex;flex-wrap:wrap;gap:.8rem 1.5rem;font-size:.75rem;color:rgba(255,255,255,.65)}
+.footer-copy{font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.6rem;text-align:center}
+
+@media(max-width:768px){
+    .app-footer{margin-top:1.5rem;border-radius:10px}
+    .footer-content{padding:.8rem 1rem}
+    .footer-info{gap:.3rem;font-size:.68rem}
+    .footer-info span{display:block;margin-bottom:.15rem}
+    .footer-name{font-size:.9rem}
+    .footer-copy{font-size:.6rem}
 }

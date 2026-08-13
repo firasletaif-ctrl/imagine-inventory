@@ -8,15 +8,21 @@
   @media print {
     body{ -webkit-print-color-adjust:exact; print-color-adjust:exact }
     .no-print{display:none!important}
-    @page{size:A4;margin:10mm}
-    .page-break{page-break-after:always}
+    @page{size:A4 portrait;margin:8mm}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4mm}
+    .qr-card{padding:3mm;page-break-inside:avoid;box-shadow:none}
+    .qr-card img{width:38mm;height:38mm}
+    .qr-card h3{font-size:9pt}
+    .qr-card .ref{font-size:6pt}
+    .qr-card .loc{font-size:6pt}
+    .footer{font-size:6pt}
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:Arial,Helvetica,sans-serif;background:#F8FAFC;color:#1E293B;padding:1.5rem}
   h1{font-family:Georgia,serif;color:#0B1D3A;text-align:center;margin-bottom:.5rem}
   h1 span{color:#C41E3A}
   .subtitle{text-align:center;color:#64748B;font-size:.9rem;margin-bottom:1.5rem}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
   .qr-card{border:2px solid #0B1D3A;border-radius:10px;padding:1rem;text-align:center;background:white;box-shadow:0 2px 8px rgba(0,0,0,.08)}
   .qr-card h3{font-size:.95rem;color:#0B1D3A;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .qr-card .ref{font-family:monospace;font-size:.7rem;color:#64748B;margin-bottom:.5rem}
