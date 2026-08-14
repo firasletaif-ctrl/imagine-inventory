@@ -1238,3 +1238,47 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     .footer-name{font-size:.9rem}
     .footer-copy{font-size:.6rem}
 }
+
+/* ═══════ EMPRUNTS (préparation par événement) ═══════ */
+.borrow-group{background:var(--white);border:1px solid var(--gray-200);border-left:4px solid var(--blue);border-radius:12px;margin-bottom:1rem;overflow:hidden}
+.borrow-group-head{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.8rem 1rem;background:linear-gradient(135deg,#0B1D3A,#13294B);color:white;flex-wrap:wrap}
+.borrow-group-head strong{font-size:1rem}
+.group-icon{margin-right:.3rem}
+.group-date{display:block;font-size:.72rem;color:rgba(255,255,255,.65);margin-top:.15rem}
+.group-count{background:rgba(255,255,255,.15);padding:.25rem .6rem;border-radius:100px;font-size:.75rem;white-space:nowrap}
+.borrows-table{width:100%}
+.bt-head,.bt-row{display:grid;grid-template-columns:2fr .5fr 1.2fr 1fr 1.4fr;gap:.5rem;align-items:center;padding:.5rem 1rem;border-bottom:1px solid var(--gray-100)}
+.bt-head{background:var(--gray-100);font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:#64748B;font-weight:700}
+.bt-row{font-size:.82rem}
+.bt-row.late{background:#FFF7F7}
+.bt-name{font-weight:600;color:#1E293B}
+.bt-name em{display:block;font-style:normal;font-size:.68rem;color:#94A3B8;font-family:monospace}
+.bt-qty{font-weight:700;color:var(--blue)}
+.bt-qty.red{color:var(--red)}
+.bt-user{color:#475569;font-size:.78rem}
+.bt-date{color:#475569;font-size:.78rem}
+.bt-date.red{color:var(--red);font-weight:700}
+.bt-action{display:flex;flex-direction:column;gap:.25rem;align-items:flex-start}
+.bt-action select,.bt-action input{font-size:.75rem;padding:.3rem;border:1px solid var(--gray-300);border-radius:6px}
+
+/* ═══════ COMMANDES ═══════ */
+.order-card{background:var(--white);border:1px solid var(--gray-200);border-radius:12px;padding:1rem 1.2rem;margin-bottom:.9rem;box-shadow:var(--shadow-sm)}
+.order-card.prio-haute{border-left:4px solid var(--red)}
+.order-top{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+.order-title{font-weight:700;color:#0B1D3A;font-size:1rem}
+.prio-badge{font-size:.7rem;background:#FDE8EC;color:#C41E3A;padding:.15rem .5rem;border-radius:100px;margin-left:.5rem;white-space:nowrap}
+.prio-badge.low{background:#DCFCE7;color:#15803D}
+.status-badge{font-size:.72rem;font-weight:700;padding:.25rem .7rem;border-radius:100px;white-space:nowrap}
+.status-nouvelle{background:#FEF3C7;color:#92400E}
+.status-commandee{background:#DBEAFE;color:#1D4ED8}
+.status-recue{background:#DCFCE7;color:#15803D}
+.order-desc{margin-top:.5rem;font-size:.85rem;color:#475569;white-space:pre-wrap;background:#F8FAFC;border-radius:8px;padding:.6rem .8rem}
+.order-meta{display:flex;justify-content:space-between;align-items:center;margin-top:.6rem;font-size:.72rem;color:#94A3B8;flex-wrap:wrap;gap:.4rem}
+.order-actions{display:flex;gap:.4rem;align-items:center}
+
+/* Responsive emprunts */
+@media (max-width:768px){
+    .bt-head,.bt-row{grid-template-columns:1.6fr .4fr 1fr;font-size:.75rem;padding:.5rem .6rem}
+    .bt-head span:nth-child(4),.bt-row .bt-date{display:none}
+    .bt-action{grid-column:1/-1;width:100%}
+}
