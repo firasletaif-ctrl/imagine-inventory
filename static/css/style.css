@@ -1140,16 +1140,18 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     }
     .detail-gallery {
         min-height: auto;
-        max-height: 220px;
         border-radius: 12px;
-        overflow: hidden;
+        overflow: visible;
         margin: 0 0 .5rem;
+        background: var(--gray-100);
     }
-    .detail-gallery img { max-height: 200px; width: 100%; object-fit: contain; padding: .5rem; }
+    .gallery-main { min-height: 200px; max-height: 260px; }
+    .gallery-main img { max-height: 240px; width: 100%; object-fit: contain; padding: .5rem; }
     .gallery-placeholder { min-height: 150px; }
     .gallery-placeholder .placeholder-icon.large { font-size: 3rem; }
     .gallery-thumbs { overflow-x: auto; flex-wrap: nowrap; gap: .35rem; padding: .5rem; }
-    .gallery-thumb { width: 45px; height: 45px; flex-shrink: 0; }
+    .gallery-thumb { width: 56px; height: 56px; flex-shrink: 0; }
+    .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
     .detail-info { padding: .5rem 0; gap: .4rem; display: flex; flex-direction: column; }
     .detail-name { font-size: 1.05rem; line-height: 1.2; }
     .detail-ref { font-size: .7rem; }
