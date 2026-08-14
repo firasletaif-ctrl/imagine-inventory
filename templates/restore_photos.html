@@ -2,11 +2,22 @@
 {% block title %}Restaurer les photos{% endblock %}
 
 {% block content %}
-<div class="form-page" style="max-width:600px">
+<div class="form-page" style="max-width:640px">
     <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
-    <div class="page-header"><h1>📸 Restaurer les photos</h1><p>Importez un fichier ZIP contenant les photos precedemment exportees.</p></div>
+    <div class="page-header"><h1>📸 Photos &amp; sauvegarde</h1><p>Les photos sont maintenant gardees en securite dans la base de donnees : elles ne disparaissent plus quand le site se met a jour.</p></div>
 
     <div class="form-card">
+        <h2>💾 Sauvegarder les photos actuelles</h2>
+        <p style="font-size:.9rem;color:#64748B">Copie toutes les photos presentes sur le site dans la base de donnees (permanent). A faire une seule fois.</p>
+        <form method="POST" action="{{ url_for('save_photos_to_db') }}">
+            <div class="form-actions" style="margin-top:.5rem">
+                <button class="btn btn-accent btn-lg">💾 Sauvegarder dans la base</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="form-card" style="margin-top:1rem">
+        <h2>📥 Restaurer depuis un fichier ZIP</h2>
         <form method="POST" enctype="multipart/form-data">
             <div class="upload-zone" style="text-align:center;padding:2rem">
                 <div style="font-size:3rem;margin-bottom:.5rem">📸</div>
@@ -17,8 +28,8 @@
                 </div>
             </div>
             <div style="margin-top:1rem;background:#FEF3C7;padding:1rem;border-radius:8px;font-size:.85rem">
-                <strong>⚠️ Important :</strong> Cette action copie uniquement les fichiers photos dans le dossier uploads.
-                Apres l'import, vous devez reassocier chaque photo a son materiel dans Beekeeper (table <code>equipment_images</code>).
+                <strong>💡 Bonne nouvelle :</strong> les photos importees sont maintenant sauvegardees dans la base de donnees
+                (et aussi copiees dans le dossier uploads). Elles ne disparaitront plus aux mises a jour du site.
             </div>
             <div class="form-actions" style="margin-top:1rem">
                 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Annuler</a>
