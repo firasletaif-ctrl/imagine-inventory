@@ -95,6 +95,17 @@ class EquipmentImage(db.Model):
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=tunisia_now)
 
+class ImageBlob(db.Model):
+    """Copie PERMANENTE des photos dans la base de donnees.
+    Sur Render, le dossier uploads/ est efface a CHAQUE mise a jour du site.
+    On garde donc aussi les photos ici pour qu'elles ne disparaissent plus jamais."""
+    __tablename__ = 'image_blobs'
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(300), unique=True, nullable=False)
+    data = db.Column(db.LargeBinary, nullable=False)
+    mimetype = db.Column(db.String(50), default='image/jpeg')
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+
 class Borrow(db.Model):
     __tablename__ = 'borrows'
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -169,8 +180,16 @@ def save_uploaded_image(file):
         if ext != 'jpg':
             try: os.remove(fpath)
             except: pass
+        # ── Copie PERMANENTE dans la base de donnees (le disque de Render est efface a chaque maj) ──
+        try:
+            with open(jpath, 'rb') as fh:
+                blob = fh.read()
+            db.session.add(ImageBlob(filename=jname, data=blob, mimetype='image/jpeg'))
+        except Exception as e:
+            print(f'[IMG-DB] impossible de stocker {jname} en base: {e}')
         return jname
-    except:
+    except Exception as e:
+        print(f'[IMG] conversion impossible ({e}), fichier original conserve')
         if os.path.exists(fpath): return uname
         return None
 
@@ -520,6 +539,8 @@ def delete_image(eid, iid):
     if img and img.equipment_id == eid:
         fp = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
         if os.path.exists(fp): os.remove(fp)
+        blob = ImageBlob.query.filter_by(filename=img.filename).first()
+        if blob: db.session.delete(blob)
         db.session.delete(img); db.session.commit()
     return redirect(url_for('edit_equipment', eid=eid))
 
@@ -531,6 +552,8 @@ def delete_equipment(eid):
         for img in eq.images:
             fp = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
             if os.path.exists(fp): os.remove(fp)
+            blob = ImageBlob.query.filter_by(filename=img.filename).first()
+            if blob: db.session.delete(blob)
         db.session.delete(eq); db.session.commit()
         log_action('delete_equipment', f'Suppression de {eq.name}', eq.name)
         flash(f'"{eq.name}" supprime.','info')
@@ -538,7 +561,13 @@ def delete_equipment(eid):
 
 @app.route('/uploads/<fn>')
 @login_required
-def uploaded_file(fn): return send_from_directory(app.config['UPLOAD_FOLDER'], fn)
+def uploaded_file(fn):
+    # 1) D'abord la copie PERMANENTE en base de donnees
+    blob = ImageBlob.query.filter_by(filename=fn).first()
+    if blob and blob.data:
+        return Response(blob.data, mimetype=blob.mimetype or 'image/jpeg')
+    # 2) Sinon, le fichier sur le disque (anciennes photos non encore migrees)
+    return send_from_directory(app.config['UPLOAD_FOLDER'], fn)
 
 @app.route('/change-password', methods=['GET','POST'])
 @login_required
@@ -1109,14 +1138,42 @@ def export_photos_zip():
     import zipfile
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # 1) Photos en base de donnees (source de verite)
+        for b in ImageBlob.query.all():
+            zf.writestr(b.filename, b.data or b'')
+        # 2) Fichiers sur le disque pas encore en base
         upload_dir = app.config['UPLOAD_FOLDER']
         for fn in os.listdir(upload_dir):
             if fn == '.gitkeep': continue
             fpath = os.path.join(upload_dir, fn)
-            if os.path.isfile(fpath):
+            if os.path.isfile(fpath) and not ImageBlob.query.filter_by(filename=fn).first():
                 zf.write(fpath, fn)
     buf.seek(0)
     return send_file(buf, mimetype='application/zip', as_attachment=True, download_name=f'photos_imagine_{date.today().strftime("%Y%m%d")}.zip')
+
+
+@app.route('/admin/photos/save-to-db', methods=['POST'])
+@permission_required('manage_database')
+def save_photos_to_db():
+    """Copie toutes les photos actuellement sur le disque dans la base de donnees."""
+    added = 0; skipped = 0
+    for fn in os.listdir(app.config['UPLOAD_FOLDER']):
+        fp = os.path.join(app.config['UPLOAD_FOLDER'], fn)
+        if not os.path.isfile(fp) or fn == '.gitkeep': continue
+        if ImageBlob.query.filter_by(filename=fn).first():
+            skipped += 1; continue
+        try:
+            with open(fp, 'rb') as fh:
+                data = fh.read()
+            low = fn.lower()
+            mt = 'image/png' if low.endswith('.png') else 'image/jpeg' if low.endswith(('.jpg','.jpeg')) else 'image/gif' if low.endswith('.gif') else 'application/octet-stream'
+            db.session.add(ImageBlob(filename=fn, data=data, mimetype=mt))
+            added += 1
+        except Exception as e:
+            print(f'[IMG-DB] echec {fn}: {e}')
+    db.session.commit()
+    flash(f'{added} photo(s) sauvegardee(s) dans la base. {skipped} deja presente(s). Elles ne disparaitront plus aux mises a jour.','success')
+    return redirect(url_for('restore_photos'))
 
 
 @app.route('/admin/restore-photos', methods=['GET','POST'])
@@ -1127,26 +1184,28 @@ def restore_photos():
         if not zf or not zf.filename.endswith('.zip'):
             flash('Veuillez selectionner un fichier ZIP valide.','error')
             return redirect(url_for('restore_photos'))
-        import zipfile, tempfile, shutil
-        count = 0
+        import zipfile
+        count = 0; en_base = 0
         with zipfile.ZipFile(zf) as z:
             for fn in z.namelist():
                 if fn.endswith('/') or fn == '.gitkeep': continue
-                # Extraire le fichier dans uploads
-                target = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(fn))
-                if os.path.exists(target): continue  # skip duplicates
-                z.extract(fn, app.config['UPLOAD_FOLDER'])
-                # Renommer si extrait dans un sous-dossier
-                extracted = os.path.join(app.config['UPLOAD_FOLDER'], fn)
-                if extracted != target and os.path.exists(extracted):
-                    os.rename(extracted, target)
-                # Nettoyer le dossier parent si vide
-                parent = os.path.dirname(extracted)
-                if parent != app.config['UPLOAD_FOLDER'] and os.path.isdir(parent):
-                    try: os.rmdir(parent)
-                    except: pass
+                base = os.path.basename(fn)
+                data = z.read(fn)
+                if not data: continue
+                # 1) Stocker dans la base de donnees (permanent)
+                if not ImageBlob.query.filter_by(filename=base).first():
+                    low = base.lower()
+                    mt = 'image/png' if low.endswith('.png') else 'image/jpeg' if low.endswith(('.jpg','.jpeg')) else 'image/gif' if low.endswith('.gif') else 'application/octet-stream'
+                    db.session.add(ImageBlob(filename=base, data=data, mimetype=mt))
+                    en_base += 1
+                # 2) Aussi sur le disque (comme avant)
+                target = os.path.join(app.config['UPLOAD_FOLDER'], base)
+                if not os.path.exists(target):
+                    with open(target, 'wb') as fh:
+                        fh.write(data)
                 count += 1
-        flash(f'{count} photos restaurees dans le dossier uploads. Pensez a les reassocier au materiel dans Beekeeper (table equipment_images).','success')
+        db.session.commit()
+        flash(f'{count} photo(s) restauree(s), dont {en_base} sauvegardee(s) en base. Elles ne disparaitront plus aux mises a jour.','success')
         return redirect(url_for('restore_photos'))
     return render_template('restore_photos.html')
 
@@ -1263,6 +1322,22 @@ def init_db():
                 ]
                 db.session.add_all(eqs)
                 db.session.commit()
+
+            # ── Migration photos : copier en base les photos presentes sur le disque ──
+            try:
+                for fn in os.listdir(app.config['UPLOAD_FOLDER']):
+                    fp = os.path.join(app.config['UPLOAD_FOLDER'], fn)
+                    if not os.path.isfile(fp) or fn == '.gitkeep': continue
+                    if ImageBlob.query.filter_by(filename=fn).first(): continue
+                    with open(fp, 'rb') as fh:
+                        data = fh.read()
+                    low = fn.lower()
+                    mt = 'image/png' if low.endswith('.png') else 'image/jpeg' if low.endswith(('.jpg','.jpeg')) else 'image/gif' if low.endswith('.gif') else 'application/octet-stream'
+                    db.session.add(ImageBlob(filename=fn, data=data, mimetype=mt))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print('[INIT] migration photos ignoree:', type(e).__name__, str(e)[:120])
 
         except IntegrityError as e:
             db.session.rollback()
