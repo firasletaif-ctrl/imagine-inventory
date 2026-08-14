@@ -82,6 +82,7 @@ class Equipment(db.Model):
     description = db.Column(db.Text, default=''); reference = db.Column(db.String(100), unique=True)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
     total_quantity = db.Column(db.Integer, default=1); available_quantity = db.Column(db.Integer, default=1)
+    in_repair = db.Column(db.Integer, default=0)  # unités en réparation
     specifications = db.Column(db.Text, default=''); condition = db.Column(db.String(50), default='Bon etat')
     location = db.Column(db.String(100), default='Depot principal'); created_at = db.Column(db.DateTime, default=tunisia_now)
     images = db.relationship('EquipmentImage', backref='equipment', lazy=True, cascade='all, delete-orphan')
@@ -114,6 +115,7 @@ class Borrow(db.Model):
     expected_return_date = db.Column(db.Date, nullable=False); actual_return_date = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(50), default='active'); notes = db.Column(db.Text, default='')
     event_name = db.Column(db.String(200), default='')
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)  # lien vers un evenement
 
 class ActivityLog(db.Model):
     __tablename__ = 'activity_logs'
@@ -156,6 +158,18 @@ class Notification(db.Model):
     read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=tunisia_now)
 
+# ── NEW: Commandes de materiel personnalise (notes) ──
+class MaterialOrder(db.Model):
+    __tablename__ = 'material_orders'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, default='')
+    status = db.Column(db.String(50), default='nouvelle')   # nouvelle / commandee / recue
+    priority = db.Column(db.String(20), default='normale')   # basse / normale / haute
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    updated_at = db.Column(db.DateTime, default=tunisia_now, onupdate=tunisia_now)
+
 # ═══════════ H E L P E R S ═══════════
 @login_manager.user_loader
 def load_user(uid): return db.session.get(User, int(uid))
@@ -196,8 +210,8 @@ def save_uploaded_image(file):
 def update_availability(eq_id):
     eq = db.session.get(Equipment, eq_id)
     if eq:
-        qty = db.session.query(db.func.sum(Borrow.quantity)).filter_by(equipment_id=eq_id, status='active').scalar() or 0
-        eq.available_quantity = max(0, eq.total_quantity - qty); db.session.commit()
+        qty = db.session.query(db.func.sum(Borrow.quantity)).filter(Borrow.equipment_id==eq_id, Borrow.status.in_(['active','late'])).scalar() or 0
+        eq.available_quantity = max(0, eq.total_quantity - qty - (eq.in_repair or 0)); db.session.commit()
 
 
 def is_pending_user():
@@ -413,7 +427,9 @@ def dashboard():
     db.session.commit()
     eq_json = json.dumps([{'id':e.id,'name':e.name,'available_quantity':e.available_quantity} for e in Equipment.query.all()])
     is_pending = not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
-    return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=Equipment.query.count(), available_count=Equipment.query.filter(Equipment.available_quantity>0).count(), late_count=Borrow.query.filter_by(status='late').count(), equipment_json=eq_json, today=today, is_pending=is_pending)
+    upcoming_events = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    repair_count = Equipment.query.filter(Equipment.in_repair > 0).count()
+    return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=Equipment.query.count(), available_count=Equipment.query.filter(Equipment.available_quantity>0).count(), late_count=Borrow.query.filter_by(status='late').count(), repair_count=repair_count, equipment_json=eq_json, today=today, is_pending=is_pending, upcoming_events=upcoming_events)
 
 @app.route('/equipment/<int:eid>')
 @login_required
@@ -434,7 +450,16 @@ def borrow_equipment(eid):
     except: flash('Date invalide.','error'); return redirect(url_for('dashboard'))
     if return_date < date.today(): flash('Date dans le passe.','error'); return redirect(url_for('dashboard'))
     if qty < 1 or qty > eq.available_quantity: flash(f'Quantite invalide (max {eq.available_quantity}).','error'); return redirect(url_for('dashboard'))
-    b = Borrow(user_id=current_user.id, equipment_id=eid, quantity=qty, expected_return_date=return_date, event_name=request.form.get('event_name','').strip(), notes=request.form.get('notes','').strip())
+    # ── Evenement : soit choisi dans la liste (event_id), soit ecrit librement ──
+    evt = None
+    try:
+        eid_form = int(request.form.get('event_id','') or 0)
+        if eid_form: evt = db.session.get(Event, eid_form)
+    except (TypeError, ValueError):
+        evt = None
+    event_name = request.form.get('event_name','').strip()
+    if evt: event_name = evt.title  # priorite a l'evenement choisi
+    b = Borrow(user_id=current_user.id, equipment_id=eid, quantity=qty, expected_return_date=return_date, event_name=event_name, event_id=evt.id if evt else None, notes=request.form.get('notes','').strip())
     db.session.add(b); db.session.commit(); update_availability(eid)
     log_action('borrow', f'Emprunt de {qty}x {eq.name}', eq.name, qty)
     flash(f'{qty} x {eq.name} emprunte(s). Retour le {return_date.strftime("%d/%m/%Y")}.','success')
@@ -447,11 +472,122 @@ def return_equipment(bid):
     if not b or b.status not in ('active','late'): flash('Emprunt introuvable ou deja retourne.','error'); return redirect(url_for('dashboard'))
     is_admin = current_user.has_permission('manage_users')
     if b.user_id != current_user.id and not is_admin: flash('Vous ne pouvez retourner que vos propres emprunts.','error'); return redirect(url_for('dashboard'))
+    # ── Combien partent en reparation, combien sont propres ? ──
+    try:
+        repair_qty = int(request.form.get('repair_qty','') or 0)
+    except (TypeError, ValueError):
+        repair_qty = 0
+    total = b.quantity
+    if repair_qty < 0 or repair_qty > total: repair_qty = 0
+    ready_qty = total - repair_qty
+    eq = db.session.get(Equipment, b.equipment_id)
+    if eq and repair_qty > 0:
+        eq.in_repair = (eq.in_repair or 0) + repair_qty
     b.status = 'returned'; b.actual_return_date = tunisia_now(); db.session.commit(); update_availability(b.equipment_id)
     who = current_user.full_name if b.user_id == current_user.id else f'{current_user.full_name} (admin) pour {b.user.full_name}'
-    log_action('return', f'Retour de {b.quantity}x {b.equipment.name} par {who}', b.equipment.name, b.quantity)
-    flash(f'{b.equipment.name} retourne avec succes.','success')
+    log_action('return', f'Retour de {b.quantity}x {b.equipment.name} par {who} ({ready_qty} propres, {repair_qty} en reparation)', b.equipment.name, b.quantity)
+    flash(f'{b.equipment.name} retourne : {ready_qty} propre(s) et pret(s), {repair_qty} en reparation.','success')
     return redirect(url_for('dashboard'))
+
+@app.route('/equipment/<int:eid>/repair', methods=['POST'])
+@permission_required('manage_equipment')
+def mark_repaired(eid):
+    """Remettre en stock des unites qui etaient en reparation."""
+    eq = db.session.get(Equipment, eid)
+    if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
+    try:
+        qty = int(request.form.get('qty','') or 0)
+    except (TypeError, ValueError):
+        qty = 0
+    if qty <= 0 or qty > (eq.in_repair or 0):
+        flash(f'Quantite invalide (max {eq.in_repair or 0} en reparation).','error')
+        return redirect(url_for('equipment_detail', eid=eid))
+    eq.in_repair -= qty
+    db.session.commit(); update_availability(eid)
+    log_action('return', f'{qty}x {eq.name} repare(s) et remis en stock', eq.name, qty)
+    flash(f'{qty} unite(s) de {eq.name} reparee(s) et remise(s) en stock.','success')
+    return redirect(url_for('equipment_detail', eid=eid))
+
+# ═══════ E M P R U N T S  (preparation par evenement) ═══════
+@app.route('/borrows')
+@login_required
+def borrows_page():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    active = Borrow.query.filter(Borrow.status.in_(['active','late'])).order_by(Borrow.expected_return_date).all()
+    events = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    # Grouper par evenement
+    by_event = {}   # event_id -> {'event': evt, 'borrows': [...]}
+    no_event = []
+    for b in active:
+        if b.event_id:
+            grp = by_event.setdefault(b.event_id, {'event': db.session.get(Event, b.event_id), 'borrows': []})
+            grp['borrows'].append(b)
+        else:
+            no_event.append(b)
+    # Materiel en reparation
+    repair_list = Equipment.query.filter(Equipment.in_repair > 0).order_by(Equipment.name).all()
+    return render_template('borrows.html', by_event=by_event, no_event=no_event, events=events, repair_list=repair_list, today=date.today(), active_count=len(active))
+
+@app.route('/borrows/<int:bid>/assign-event', methods=['POST'])
+@login_required
+def assign_event_to_borrow(bid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    if not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_schedule'):
+        flash('Acces refuse.','error'); return redirect(url_for('borrows_page'))
+    b = db.session.get(Borrow, bid)
+    if not b: flash('Emprunt introuvable.','error'); return redirect(url_for('borrows_page'))
+    event_id = request.form.get('event_id','')
+    if event_id:
+        evt = db.session.get(Event, int(event_id))
+        if evt:
+            b.event_id = evt.id; b.event_name = evt.title
+            flash(f'Emprunt associe a l\'evenement "{evt.title}".','success')
+    else:
+        b.event_id = None; b.event_name = ''
+        flash('Emprunt dissocie de tout evenement.','info')
+    db.session.commit()
+    return redirect(url_for('borrows_page'))
+
+# ═══════ C O M M A N D E S  (materiel personnalise) ═══════
+@app.route('/orders')
+@login_required
+def orders_page():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    orders = MaterialOrder.query.order_by(MaterialOrder.created_at.desc()).all()
+    return render_template('orders.html', orders=orders)
+
+@app.route('/orders/create', methods=['POST'])
+@permission_required('manage_equipment')
+def create_order():
+    title = request.form.get('title','').strip()
+    if not title: flash('Le titre est requis.','error'); return redirect(url_for('orders_page'))
+    o = MaterialOrder(title=title, description=request.form.get('description','').strip(), priority=request.form.get('priority','normale'), created_by=current_user.id)
+    db.session.add(o); db.session.commit()
+    log_action('create_order', f'Commande creee : {title}')
+    flash(f'Commande "{title}" ajoutee.','success')
+    return redirect(url_for('orders_page'))
+
+@app.route('/orders/<int:oid>/status', methods=['POST'])
+@permission_required('manage_equipment')
+def set_order_status(oid):
+    o = db.session.get(MaterialOrder, oid)
+    if not o: flash('Commande introuvable.','error'); return redirect(url_for('orders_page'))
+    st = request.form.get('status','')
+    if st in ('nouvelle','commandee','recue'):
+        o.status = st
+        db.session.commit()
+        labels = {'nouvelle':'nouvelle','commandee':'commandee','recue':'recue'}
+        flash(f'Commande "{o.title}" -> {labels[st]}.','success')
+    return redirect(url_for('orders_page'))
+
+@app.route('/orders/<int:oid>/delete', methods=['POST'])
+@permission_required('manage_equipment')
+def delete_order(oid):
+    o = db.session.get(MaterialOrder, oid)
+    if o:
+        db.session.delete(o); db.session.commit()
+        flash(f'Commande "{o.title}" supprimee.','info')
+    return redirect(url_for('orders_page'))
 
 @app.route('/equipment/add', methods=['GET','POST'])
 @permission_required('manage_equipment')
@@ -1266,6 +1402,19 @@ def init_db():
     with app.app_context():
         db.create_all()
         try:
+            # ── MIGRATION : ajouter les nouvelles colonnes si elles manquent ──
+            def ensure_column(table, col, ddl):
+                try:
+                    cols = [c['name'] for c in db.inspect(db.engine).get_columns(table)]
+                    if col not in cols:
+                        with db.engine.begin() as conn:
+                            conn.execute(db.text(ddl))
+                        print(f'[INIT] colonne {col} ajoutee a la table {table}')
+                except Exception as e:
+                    print(f'[INIT] migration {table}.{col} ignoree: {str(e)[:120]}')
+            ensure_column('equipment', 'in_repair', 'ALTER TABLE equipment ADD COLUMN in_repair INTEGER DEFAULT 0')
+            ensure_column('borrows', 'event_id', 'ALTER TABLE borrows ADD COLUMN event_id INTEGER')
+
             # ── Roles par defaut (cree seulement s'ils manquent) ──
             def ensure_role(name, icon, description, perms):
                 r = CustomRole.query.filter_by(name=name).first()
