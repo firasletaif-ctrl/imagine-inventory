@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Emprunts{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:900px">
+    <div class="page-header">
+        <h1>📤 Emprunts à préparer</h1>
+        <p>{{ active_count }} emprunt(s) en cours. Préparez le matériel pour chaque événement.</p>
+    </div>
+
+    {% if not by_event and not no_event %}
+    <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <h3>Aucun emprunt en cours</h3>
+        <p>Tout est rentré. Vous pouvez emprunter du matériel depuis la page d'accueil.</p>
+    </div>
+    {% endif %}
+
+    <!-- Groupe par evenement -->
+    {% for eid, grp in by_event.items() %}
+    <div class="borrow-group">
+        <div class="borrow-group-head">
+            <div>
+                <span class="group-icon">🎯</span>
+                <strong>{{ grp.event.title if grp.event else 'Evenement' }}</strong>
+                {% if grp.event %}<span class="group-date">{{ grp.event.event_date.strftime('%d/%m/%Y') }} · {{ grp.event.start_time }}-{{ grp.event.end_time }} · 📍 {{ grp.event.location }}</span>{% endif %}
+            </div>
+            <span class="group-count">{{ grp.borrows | length }} matériel(s)</span>
+        </div>
+        <div class="borrows-table">
+            <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Retour prévu</span><span>Retour (réparation)</span></div>
+            {% for b in grp.borrows %}
+            <div class="bt-row {% if b.status == 'late' %}late{% endif %}">
+                <span class="bt-name">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></span>
+                <span class="bt-qty">×{{ b.quantity }}</span>
+                <span class="bt-user">{{ b.user.full_name }}</span>
+                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
+                <span class="bt-action">
+                    {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
+                    <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
+                        <input type="number" name="repair_qty" value="0" min="0" max="{{ b.quantity }}" style="width:52px" title="Quantité en réparation">
+                        <span style="font-size:.65rem;color:#64748B">🔧 répa</span>
+                        <button class="btn btn-sm btn-success">✅ Retourner</button>
+                    </form>
+                    {% else %}
+                    <span style="color:var(--gray-400);font-size:.72rem">🔒 {{ b.user.full_name }}</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Sans evenement -->
+    {% if no_event %}
+    <div class="borrow-group" style="border-left:4px solid #F59E0B">
+        <div class="borrow-group-head">
+            <div><span class="group-icon">📦</span><strong>Sans événement</strong><span class="group-date">Associez-les à un événement pour mieux organiser la préparation.</span></div>
+            <span class="group-count">{{ no_event | length }} emprunt(s)</span>
+        </div>
+        <div class="borrows-table">
+            <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Retour prévu</span><span>Actions</span></div>
+            {% for b in no_event %}
+            <div class="bt-row {% if b.status == 'late' %}late{% endif %}">
+                <span class="bt-name">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></span>
+                <span class="bt-qty">×{{ b.quantity }}</span>
+                <span class="bt-user">{{ b.user.full_name }}</span>
+                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
+                <span class="bt-action">
+                    <form method="POST" action="{{ url_for('assign_event_to_borrow', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
+                        <select name="event_id" style="max-width:170px;font-size:.75rem">
+                            <option value="">— Associer à… —</option>
+                            {% for ev in events %}
+                            <option value="{{ ev.id }}">{{ ev.title }} ({{ ev.event_date.strftime('%d/%m') }})</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-sm btn-secondary" style="font-size:.7rem">🎯 Associer</button>
+                    </form>
+                    {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
+                    <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;margin-top:.3rem">
+                        <input type="number" name="repair_qty" value="0" min="0" max="{{ b.quantity }}" style="width:52px" title="Quantité en réparation">
+                        <button class="btn btn-sm btn-success" style="font-size:.7rem">✅ Retourner</button>
+                    </form>
+                    {% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- En reparation -->
+    {% if repair_list %}
+    <div class="borrow-group" style="border-left:4px solid #C41E3A">
+        <div class="borrow-group-head">
+            <div><span class="group-icon">🔧</span><strong>Matériel en réparation</strong><span class="group-date">Marquez-les comme réparés quand ils sont prêts.</span></div>
+        </div>
+        <div class="borrows-table">
+            <div class="bt-head"><span>Matériel</span><span>En réparation</span><span>Disponible</span><span>Remettre en stock</span></div>
+            {% for eq in repair_list %}
+            <div class="bt-row">
+                <span class="bt-name">{{ eq.name }} <em>{{ eq.reference }}</em></span>
+                <span class="bt-qty red">🔧 {{ eq.in_repair }}</span>
+                <span class="bt-qty">✅ {{ eq.available_quantity }}</span>
+                <span class="bt-action">
+                    <form method="POST" action="{{ url_for('mark_repaired', eid=eq.id) }}" style="display:flex;gap:.3rem;align-items:center">
+                        <input type="number" name="qty" value="{{ eq.in_repair }}" min="1" max="{{ eq.in_repair }}" style="width:52px">
+                        <button class="btn btn-sm btn-success" style="font-size:.7rem">🔧 Réparé</button>
+                    </form>
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

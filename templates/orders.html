@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Commandes{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:900px">
+    <div class="page-header">
+        <h1>🛒 Commandes de matériel personnalisé</h1>
+        <p>Notez ici le matériel à commander, avec toutes les précisions nécessaires.</p>
+    </div>
+
+    {% if current_user.has_permission('manage_equipment') %}
+    <div class="form-card">
+        <h2>➕ Nouvelle commande</h2>
+        <form method="POST" action="{{ url_for('create_order') }}">
+            <div class="form-group">
+                <label>Objet / Matériel *</label>
+                <input type="text" name="title" required placeholder="Ex: Banderole 3x2m personnalisée logo Imagine Events">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Priorité</label>
+                    <select name="priority">
+                        <option value="normale">Normale</option>
+                        <option value="haute">🔴 Haute</option>
+                        <option value="basse">🟢 Basse</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Notes / précisions</label>
+                <textarea name="description" rows="3" placeholder="Détails : dimensions, couleurs, quantité, fournisseur, budget, date limite..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-accent btn-lg">🛒 Ajouter la commande</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if orders %}
+    {% for o in orders %}
+    <div class="order-card {% if o.priority == 'haute' %}prio-haute{% endif %}">
+        <div class="order-top">
+            <div class="order-title">
+                {{ o.title }}
+                {% if o.priority == 'haute' %}<span class="prio-badge">🔴 Prioritaire</span>{% elif o.priority == 'basse' %}<span class="prio-badge low">🟢 Basse</span>{% endif %}
+            </div>
+            <span class="status-badge status-{{ o.status }}">
+                {% if o.status == 'nouvelle' %}📝 Nouvelle{% elif o.status == 'commandee' %}🛒 Commandée{% else %}📦 Reçue{% endif %}
+            </span>
+        </div>
+        {% if o.description %}<div class="order-desc">{{ o.description }}</div>{% endif %}
+        <div class="order-meta">
+            <span>👤 {{ o.created_by }} · {{ o.created_at.strftime('%d/%m/%Y') }}</span>
+            <span class="order-actions">
+                {% if current_user.has_permission('manage_equipment') %}
+                <form method="POST" action="{{ url_for('set_order_status', oid=o.id) }}" style="display:inline">
+                    <select name="status" onchange="this.form.submit()" style="font-size:.75rem;padding:.3rem">
+                        <option value="nouvelle" {% if o.status=='nouvelle' %}selected{% endif %}>📝 Nouvelle</option>
+                        <option value="commandee" {% if o.status=='commandee' %}selected{% endif %}>🛒 Commandée</option>
+                        <option value="recue" {% if o.status=='recue' %}selected{% endif %}>📦 Reçue</option>
+                    </select>
+                </form>
+                <form method="POST" action="{{ url_for('delete_order', oid=o.id) }}" style="display:inline" onsubmit="return confirm('Supprimer cette commande ?')">
+                    <button class="btn btn-sm btn-danger" style="font-size:.7rem">🗑️</button>
+                </form>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🛒</div>
+        <h3>Aucune commande</h3>
+        <p>Ajoutez votre première commande de matériel personnalisé ci-dessus.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

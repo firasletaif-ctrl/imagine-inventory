@@ -72,6 +72,17 @@
                 </div>
             </div>
 
+            <!-- En reparation : remettre en stock -->
+            {% if eq.in_repair and current_user.has_permission('manage_equipment') %}
+            <div style="background:#FDF2F4;border:1px solid #F5C2CB;border-radius:10px;padding:.75rem 1rem;display:flex;align-items:center;gap:.6rem;justify-content:space-between;flex-wrap:wrap">
+                <div style="font-size:.85rem;color:#C41E3A"><strong>🔧 {{ eq.in_repair }} en réparation</strong></div>
+                <form method="POST" action="{{ url_for('mark_repaired', eid=eq.id) }}" style="display:flex;gap:.4rem;align-items:center">
+                    <input type="number" name="qty" value="{{ eq.in_repair }}" min="1" max="{{ eq.in_repair }}" style="width:60px">
+                    <button class="btn btn-sm btn-success" style="font-size:.75rem">🔧 Réparé, remettre en stock</button>
+                </form>
+            </div>
+            {% endif %}
+
             <!-- Quick borrow -->
             {% if eq.available_quantity > 0 %}
             <button class="btn btn-accent btn-full" onclick="openDetailBorrow()">
@@ -92,6 +103,10 @@
                 <div class="meta-item">
                     <span class="meta-label">Quantité totale</span>
                     <span class="meta-value">{{ eq.total_quantity }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">En réparation</span>
+                    <span class="meta-value">{% if eq.in_repair %}<span style="color:#C41E3A;font-weight:700">🔧 {{ eq.in_repair }}</span>{% else %}0{% endif %}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Ajouté le</span>

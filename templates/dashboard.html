@@ -36,6 +36,7 @@
         <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-value">{{ active_borrows | length }}</div><div class="stat-label">Emprunts actifs</div></div>
         <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">{{ equipment | selectattr('available_quantity', 'gt', 0) | list | length }}</div><div class="stat-label">Disponibles</div></div>
         <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value">{{ active_borrows | selectattr('status', 'eq', 'late') | list | length }}</div><div class="stat-label">En retard</div></div>
+        <div class="stat-card"><div class="stat-icon">🔧</div><div class="stat-value">{{ repair_count }}</div><div class="stat-label">En réparation</div></div>
     </div>
 
     <div class="search-section">
@@ -104,10 +105,42 @@
                     <div class="form-group"><label for="borrowQuantity">Quantite</label><input type="number" id="borrowQuantity" name="quantity" min="1" value="1" required><small id="maxQtyHint"></small></div>
                     <div class="form-group"><label for="borrowReturnDate">Date de retour</label><input type="date" id="borrowReturnDate" name="return_date" required min="{{ today.strftime('%Y-%m-%d') }}"></div>
                 </div>
-                <div class="form-group"><label for="borrowEvent">Evenement (optionnel)</label><input type="text" id="borrowEvent" name="event_name" placeholder="Ex: Congres Medical Tunis 2026"></div>
+                <div class="form-group"><label for="borrowEventId">🎯 Associer a un evenement</label>
+                    <select id="borrowEventId" name="event_id" onchange="fillEventName()">
+                        <option value="">— Aucun —</option>
+                        {% for ev in upcoming_events %}
+                        <option value="{{ ev.id }}" data-title="{{ ev.title | escape }}">{{ ev.title }} — {{ ev.event_date.strftime('%d/%m/%Y') }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group"><label for="borrowEvent">Ou nom d'evenement libre</label><input type="text" id="borrowEvent" name="event_name" placeholder="Ex: Congres Medical Tunis 2026"></div>
                 <div class="form-group"><label for="borrowNotes">Notes (optionnel)</label><textarea id="borrowNotes" name="notes" rows="2" placeholder="Details supplementaires..."></textarea></div>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAnyModal('borrowModal')">Annuler</button><button type="submit" class="btn btn-primary">Confirmer l'emprunt</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- Return Modal (avec choix reparation / propres) -->
+<div class="modal-overlay" id="returnModal">
+    <div class="modal">
+        <div class="modal-header"><h2>✅ Retourner le materiel</h2><button class="modal-close" onclick="closeAnyModal('returnModal')">✕</button></div>
+        <form method="POST" onsubmit="submitReturn(event)">
+            <input type="hidden" id="returnBorrowId" name="borrow_id">
+            <div class="modal-body">
+                <div class="form-group"><label>Materiel</label><div class="selected-equipment" id="returnEquipmentName"></div></div>
+                <div class="form-group"><label>Quantite empruntee</label><div id="returnQty" style="font-weight:bold;color:var(--blue)"></div></div>
+                <div class="form-group">
+                    <label for="repairQty">🔧 Combien partent en reparation ?</label>
+                    <input type="number" id="repairQty" name="repair_qty" min="0" value="0" oninput="updateReadyCount()">
+                    <small id="repairHint"></small>
+                </div>
+                <div class="form-group">
+                    <label>✅ Propres et prets a l'utilisation</label>
+                    <div id="readyCount" style="font-weight:bold;color:#16a34a;font-size:1.1rem"></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAnyModal('returnModal')">Annuler</button><button type="submit" class="btn btn-success">Confirmer le retour</button></div>
         </form>
     </div>
 </div>
@@ -153,13 +186,13 @@
         <div class="borrow-row {% if b.status == 'late' %}borrow-late{% endif %}">
             <div class="borrow-info"><strong>{{ b.equipment.name }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event">🎯 {{ b.event_name }}</span>{% endif %}</div>
             <div class="borrow-dates"><span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️ EN RETARD{% endif %}</span></div>
-            <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" class="borrow-action">
+            <div class="borrow-action">
                 {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
-                <button class="btn btn-sm btn-success">✅ Retourner</button>
+                <button class="btn btn-sm btn-success" onclick="openReturnModal('{{ b.id }}','{{ b.equipment.name | escape }}',{{ b.quantity }})">✅ Retourner</button>
                 {% else %}
                 <span style="color:var(--gray-400);font-size:.75rem;padding:.25rem .5rem">🔒 {{ b.user.full_name }} uniquement</span>
                 {% endif %}
-            </form>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -177,10 +210,32 @@ function openBorrowModal(id,name,maxQty){
     document.getElementById('borrowQuantity').value=1;
     document.getElementById('maxQtyHint').textContent='Max disponible: '+maxQty;
     document.getElementById('borrowReturnDate').value='';
+    document.getElementById('borrowEventId').value='';
     document.getElementById('borrowEvent').value='';
     document.getElementById('borrowNotes').value='';
     document.getElementById('borrowModal').classList.add('open');
 }
+function fillEventName(){var s=document.getElementById('borrowEventId');var o=s.options[s.selectedIndex];document.getElementById('borrowEvent').value=(o&&o.dataset.title)?o.dataset.title:'';}
+
+var returnTotal=0;
+function openReturnModal(id,name,qty){
+    document.getElementById('returnBorrowId').value=id;
+    document.getElementById('returnEquipmentName').textContent=name;
+    document.getElementById('returnQty').textContent=qty+' unite(s)';
+    returnTotal=qty;
+    document.getElementById('repairQty').value=0;
+    document.getElementById('repairQty').max=qty;
+    document.getElementById('repairHint').textContent='Max en reparation: '+qty;
+    updateReadyCount();
+    document.getElementById('returnModal').classList.add('open');
+}
+function updateReadyCount(){
+    var r=parseInt(document.getElementById('repairQty').value||'0');
+    if(isNaN(r)||r<0)r=0;
+    if(r>returnTotal)r=returnTotal;
+    document.getElementById('readyCount').textContent=(returnTotal-r)+' unite(s)';
+}
+function submitReturn(e){e.preventDefault();var id=document.getElementById('returnBorrowId').value;e.target.action='/return/'+id;e.target.submit();}
 function closeAnyModal(id){document.getElementById(id).classList.remove('open');}
 function openAddCategoryModal(){document.getElementById('addCategoryModal').classList.add('open');}
 function openClearHistoryModal(){document.getElementById('clearHistoryModal').classList.add('open');}

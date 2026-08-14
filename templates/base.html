@@ -30,14 +30,20 @@
             <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
                 <span class="nav-icon">📋</span><span>Tout le materiel</span>
             </a>
+            <a href="{{ url_for('borrows_page') }}" class="nav-item {% if request.endpoint == 'borrows_page' %}active{% endif %}">
+                <span class="nav-icon">📤</span><span>Emprunts</span>
+            </a>
+            <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
+                <span class="nav-icon">📅</span><span>Emploi du temps</span>
+            </a>
             {% if current_user.has_permission('manage_equipment') %}
             <a href="{{ url_for('add_equipment') }}" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
                 <span class="nav-icon">➕</span><span>Ajouter du materiel</span>
             </a>
-            {% endif %}
-            <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
-                <span class="nav-icon">📅</span><span>Emploi du temps</span>
+            <a href="{{ url_for('orders_page') }}" class="nav-item {% if request.endpoint == 'orders_page' %}active{% endif %}">
+                <span class="nav-icon">🛒</span><span>Commandes</span>
             </a>
+            {% endif %}
             {% if current_user.has_permission('manage_equipment') %}
             <div style="margin:.25rem 0;padding:0 .5rem">
                 <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">📤 Export</div>
