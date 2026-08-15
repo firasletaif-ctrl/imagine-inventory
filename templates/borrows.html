@@ -46,6 +46,7 @@
                     <span style="color:var(--gray-400);font-size:.72rem">🔒 {{ b.user.full_name }}</span>
                     {% endif %}
                 </span>
+                {% if b.notes %}<span class="bt-note">📝 {{ b.notes }}</span>{% endif %}
             </div>
             {% endfor %}
         </div>
@@ -84,6 +85,7 @@
                     </form>
                     {% endif %}
                 </span>
+                {% if b.notes %}<span class="bt-note">📝 {{ b.notes }}</span>{% endif %}
             </div>
             {% endfor %}
         </div>
