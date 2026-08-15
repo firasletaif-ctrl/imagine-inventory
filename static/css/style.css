@@ -1282,3 +1282,6 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     .bt-head span:nth-child(4),.bt-row .bt-date{display:none}
     .bt-action{grid-column:1/-1;width:100%}
 }
+
+/* Note sur un emprunt (page Emprunts) */
+.bt-note{grid-column:1/-1;font-size:.75rem;color:#475569;background:#F8FAFC;border-left:3px solid #F59E0B;border-radius:6px;padding:.35rem .6rem;margin-top:.15rem;white-space:pre-wrap}
