@@ -239,7 +239,16 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="dEvent">Événement</label>
+                    <label for="dEventId">🎯 Associer à un événement</label>
+                    <select id="dEventId" name="event_id" onchange="fillDetailEventName()">
+                        <option value="">— Aucun —</option>
+                        {% for ev in upcoming_events %}
+                        <option value="{{ ev.id }}" data-title="{{ ev.title | escape }}">{{ ev.title }} — {{ ev.event_date.strftime('%d/%m/%Y') }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="dEvent">Ou nom d'événement libre</label>
                     <input type="text" id="dEvent" name="event_name" placeholder="Ex: Congrès Médical Tunis 2026">
                 </div>
                 <div class="form-group">
@@ -266,6 +275,11 @@ function switchImage(src, el) {
 
 function openDetailBorrow() {
     document.getElementById('detailBorrowModal').classList.add('open');
+}
+function fillDetailEventName(){
+    var s=document.getElementById('dEventId');
+    var o=s.options[s.selectedIndex];
+    document.getElementById('dEvent').value=(o&&o.dataset.title)?o.dataset.title:'';
 }
 function closeDetailBorrow() {
     document.getElementById('detailBorrowModal').classList.remove('open');
