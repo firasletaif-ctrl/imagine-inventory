@@ -26,6 +26,14 @@ if DATABASE_URL:
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventory.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# ── Anti-coupure : verifie que la connexion a la base est vivante avant chaque requete.
+#    Render coupe parfois les connexions (surtout en pause d'inactivite). Sans ca, on a
+#    des erreurs "SSL error: decryption failed or bad record mac". pool_pre_ping recree
+#    automatiquement une connexion saine -> plus jamais de crash de ce type. ──
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,   # verifie la connexion avant usage
+    'pool_recycle': 300,     # ferme les connexions de plus de 5 minutes
+}
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -356,6 +364,20 @@ def permission_required(perm):
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+# ── Page d'erreur propre (au lieu d'un crash brut) ──
+@app.errorhandler(500)
+def handle_internal_error(e):
+    try:
+        db.session.rollback()
+    except Exception:
+        pass
+    try:
+        db.session.remove()
+    except Exception:
+        pass
+    print(f'[ERREUR 500] {type(e).__name__}: {e}')
+    return render_template('error.html'), 500
 
 # ═══════════ R O U T E S ═══════════
 @app.route('/')
