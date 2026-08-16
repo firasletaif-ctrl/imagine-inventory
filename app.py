@@ -438,7 +438,8 @@ def equipment_detail(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
     borrows = Borrow.query.filter_by(equipment_id=eid).order_by(Borrow.borrow_date.desc()).all()
-    return render_template('equipment_detail.html', eq=eq, borrows=borrows, today=date.today())
+    upcoming_events = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    return render_template('equipment_detail.html', eq=eq, borrows=borrows, today=date.today(), upcoming_events=upcoming_events)
 
 @app.route('/borrow/<int:eid>', methods=['POST'])
 @permission_required('borrow_equipment')
@@ -524,9 +525,17 @@ def borrows_page():
             grp['borrows'].append(b)
         else:
             no_event.append(b)
-    # Materiel en reparation
     repair_list = Equipment.query.filter(Equipment.in_repair > 0).order_by(Equipment.name).all()
     return render_template('borrows.html', by_event=by_event, no_event=no_event, events=events, repair_list=repair_list, today=date.today(), active_count=len(active))
+
+# ═══════ R E P A R A T I O N S ═══════
+@app.route('/repairs')
+@login_required
+def repairs_page():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    repair_list = Equipment.query.filter(Equipment.in_repair > 0).order_by(Equipment.name).all()
+    total_repair = sum((e.in_repair or 0) for e in repair_list)
+    return render_template('repairs.html', repair_list=repair_list, total_repair=total_repair, today=date.today())
 
 @app.route('/borrows/<int:bid>/assign-event', methods=['POST'])
 @login_required
