@@ -120,6 +120,7 @@ class Borrow(db.Model):
     id = db.Column(db.Integer, primary_key=True); user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
     quantity = db.Column(db.Integer, default=1); borrow_date = db.Column(db.DateTime, default=tunisia_now)
+    pickup_date = db.Column(db.Date, nullable=True)  # date de prise du materiel
     expected_return_date = db.Column(db.Date, nullable=False); actual_return_date = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(50), default='active'); notes = db.Column(db.Text, default='')
     event_name = db.Column(db.String(200), default='')
@@ -473,6 +474,12 @@ def borrow_equipment(eid):
     except: flash('Date invalide.','error'); return redirect(url_for('dashboard'))
     if return_date < date.today(): flash('Date dans le passe.','error'); return redirect(url_for('dashboard'))
     if qty < 1 or qty > eq.available_quantity: flash(f'Quantite invalide (max {eq.available_quantity}).','error'); return redirect(url_for('dashboard'))
+    # ── Date de prise du materiel (optionnelle, defaut = aujourd'hui) ──
+    pd = request.form.get('pickup_date','')
+    try:
+        pickup_date = datetime.strptime(pd,'%Y-%m-%d').date() if pd else date.today()
+    except (TypeError, ValueError):
+        pickup_date = date.today()
     # ── Evenement : soit choisi dans la liste (event_id), soit ecrit librement ──
     evt = None
     try:
@@ -482,10 +489,10 @@ def borrow_equipment(eid):
         evt = None
     event_name = request.form.get('event_name','').strip()
     if evt: event_name = evt.title  # priorite a l'evenement choisi
-    b = Borrow(user_id=current_user.id, equipment_id=eid, quantity=qty, expected_return_date=return_date, event_name=event_name, event_id=evt.id if evt else None, notes=request.form.get('notes','').strip())
+    b = Borrow(user_id=current_user.id, equipment_id=eid, quantity=qty, expected_return_date=return_date, pickup_date=pickup_date, event_name=event_name, event_id=evt.id if evt else None, notes=request.form.get('notes','').strip())
     db.session.add(b); db.session.commit(); update_availability(eid)
     log_action('borrow', f'Emprunt de {qty}x {eq.name}', eq.name, qty)
-    flash(f'{qty} x {eq.name} emprunte(s). Retour le {return_date.strftime("%d/%m/%Y")}.','success')
+    flash(f'{qty} x {eq.name} emprunte(s). Prise le {pickup_date.strftime("%d/%m/%Y")}, retour le {return_date.strftime("%d/%m/%Y")}.','success')
     return redirect(url_for('dashboard'))
 
 @app.route('/return/<int:bid>', methods=['POST'])
@@ -956,7 +963,7 @@ def import_csv():
                                 try: parsed = datetime.strptime(val, fmt); break
                                 except: pass
                             val = parsed
-                        if col == 'expected_return_date' and val:
+                        if col in ('expected_return_date', 'pickup_date') and val:
                             try: val = datetime.strptime(val, '%Y-%m-%d').date()
                             except:
                                 for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
@@ -1445,6 +1452,7 @@ def init_db():
                     print(f'[INIT] migration {table}.{col} ignoree: {str(e)[:120]}')
             ensure_column('equipment', 'in_repair', 'ALTER TABLE equipment ADD COLUMN in_repair INTEGER DEFAULT 0')
             ensure_column('borrows', 'event_id', 'ALTER TABLE borrows ADD COLUMN event_id INTEGER')
+            ensure_column('borrows', 'pickup_date', 'ALTER TABLE borrows ADD COLUMN pickup_date DATE')
 
             # ── Roles par defaut (cree seulement s'ils manquent) ──
             def ensure_role(name, icon, description, perms):
