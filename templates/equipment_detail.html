@@ -233,7 +233,14 @@
                         <small>Max: {{ eq.available_quantity }}</small>
                     </div>
                     <div class="form-group">
-                        <label for="dReturnDate">Date de retour</label>
+                        <label for="dPickupDate">📦 Date de prise</label>
+                        <input type="date" id="dPickupDate" name="pickup_date"
+                               value="{{ today.strftime('%Y-%m-%d') }}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dReturnDate">⏰ Date de retour</label>
                         <input type="date" id="dReturnDate" name="return_date" required
                                min="{{ today.strftime('%Y-%m-%d') }}">
                     </div>

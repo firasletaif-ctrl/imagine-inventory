@@ -103,7 +103,10 @@
                 <div class="form-group"><label>Materiel</label><div class="selected-equipment" id="selectedEquipmentName"></div></div>
                 <div class="form-row">
                     <div class="form-group"><label for="borrowQuantity">Quantite</label><input type="number" id="borrowQuantity" name="quantity" min="1" value="1" required><small id="maxQtyHint"></small></div>
-                    <div class="form-group"><label for="borrowReturnDate">Date de retour</label><input type="date" id="borrowReturnDate" name="return_date" required min="{{ today.strftime('%Y-%m-%d') }}"></div>
+                    <div class="form-group"><label for="borrowPickupDate">📦 Date de prise</label><input type="date" id="borrowPickupDate" name="pickup_date" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="borrowReturnDate">⏰ Date de retour</label><input type="date" id="borrowReturnDate" name="return_date" required min="{{ today.strftime('%Y-%m-%d') }}"></div>
                 </div>
                 <div class="form-group"><label for="borrowEventId">🎯 Associer a un evenement</label>
                     <select id="borrowEventId" name="event_id" onchange="fillEventName()">
@@ -185,7 +188,7 @@
         {% for b in active_borrows %}
         <div class="borrow-row {% if b.status == 'late' %}borrow-late{% endif %}">
             <div class="borrow-info"><strong>{{ b.equipment.name }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event">🎯 {{ b.event_name }}</span>{% endif %}</div>
-            <div class="borrow-dates"><span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️ EN RETARD{% endif %}</span></div>
+            <div class="borrow-dates">{% if b.pickup_date %}<span class="borrow-return">📦 Prise: {{ b.pickup_date.strftime('%d/%m/%Y') }}</span>{% endif %}<span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️ EN RETARD{% endif %}</span></div>
             <div class="borrow-action">
                 {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
                 <button class="btn btn-sm btn-success" onclick="openReturnModal('{{ b.id }}','{{ b.equipment.name | escape }}',{{ b.quantity }})">✅ Retourner</button>
@@ -210,6 +213,7 @@ function openBorrowModal(id,name,maxQty){
     document.getElementById('borrowQuantity').value=1;
     document.getElementById('maxQtyHint').textContent='Max disponible: '+maxQty;
     document.getElementById('borrowReturnDate').value='';
+    document.getElementById('borrowPickupDate').value='{{ today.strftime("%Y-%m-%d") }}';
     document.getElementById('borrowEventId').value='';
     document.getElementById('borrowEvent').value='';
     document.getElementById('borrowNotes').value='';

@@ -28,13 +28,13 @@
             <span class="group-count">{{ grp.borrows | length }} matériel(s)</span>
         </div>
         <div class="borrows-table">
-            <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Retour prévu</span><span>Retour (réparation)</span></div>
+            <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Prise → Retour</span><span>Retour (réparation)</span></div>
             {% for b in grp.borrows %}
             <div class="bt-row {% if b.status == 'late' %}late{% endif %}">
                 <span class="bt-name">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></span>
                 <span class="bt-qty">×{{ b.quantity }}</span>
                 <span class="bt-user">{{ b.user.full_name }}</span>
-                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
+                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}📦 Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}⏰ Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
                 <span class="bt-action">
                     {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
                     <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
@@ -61,13 +61,13 @@
             <span class="group-count">{{ no_event | length }} emprunt(s)</span>
         </div>
         <div class="borrows-table">
-            <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Retour prévu</span><span>Actions</span></div>
+            <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Prise → Retour</span><span>Actions</span></div>
             {% for b in no_event %}
             <div class="bt-row {% if b.status == 'late' %}late{% endif %}">
                 <span class="bt-name">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></span>
                 <span class="bt-qty">×{{ b.quantity }}</span>
                 <span class="bt-user">{{ b.user.full_name }}</span>
-                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
+                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}📦 Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}⏰ Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
                 <span class="bt-action">
                     <form method="POST" action="{{ url_for('assign_event_to_borrow', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
                         <select name="event_id" style="max-width:170px;font-size:.75rem">
