@@ -805,7 +805,7 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
     padding: 0.15rem 0.5rem;
     border-radius: 100px;
 }
-.borrow-dates { font-size: 0.85rem; color: var(--gray-500); }
+.borrow-dates { font-size: 0.85rem; color: var(--gray-500); display: flex; flex-direction: column; gap: .15rem; }
 .borrow-return.text-red { color: var(--red); font-weight: 600; }
 
 /* ── Detail Page ──────────────────────────────── */
