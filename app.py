@@ -8,7 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, send_from_directory, has_request_context
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
-from PIL import Image
+from PIL import Image, ImageOps, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True  # tolere les photos legerement tronquees
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -189,32 +190,51 @@ def get_user_filter(uid): return db.session.get(User, int(uid)) if uid else None
 def allowed_file(fn): return '.' in fn and fn.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_uploaded_image(file):
+    """Traite une photo le plus vite possible :
+    - lit directement le fichier en memoire (pas d'ecriture disque inutile)
+    - mode 'draft' pour les JPEG = decodage beaucoup plus rapide des grosses photos
+    - redimensionne a 1000px max (suffisant pour l'affichage, mais 4 a 10x plus leger)
+    - corrige l'orientation des photos iPhone (EXIF)
+    Puis garde une copie PERMANENTE dans la base (image_blobs)."""
     if not file or not file.filename: return None
     if not allowed_file(file.filename): return None
-    file.seek(0,2); size = file.tell(); file.seek(0)
+    file.seek(0, 2); size = file.tell(); file.seek(0)
     if size == 0: return None
-    ext = file.filename.rsplit('.',1)[1].lower(); uname = f"{uuid.uuid4().hex}.{ext}"
-    fpath = os.path.join(app.config['UPLOAD_FOLDER'], uname)
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    jname = f"{uuid.uuid4().hex}.jpg"
+    jpath = os.path.join(app.config['UPLOAD_FOLDER'], jname)
     try:
-        file.save(fpath); img = Image.open(fpath); img.thumbnail((1200,1200))
-        if img.mode in ('RGBA','P'): img = img.convert('RGB')
-        jname = f"{uuid.uuid4().hex}.jpg"; jpath = os.path.join(app.config['UPLOAD_FOLDER'], jname)
-        img.save(jpath, 'JPEG', optimize=True, quality=85)
-        if ext != 'jpg':
-            try: os.remove(fpath)
-            except: pass
-        # ── Copie PERMANENTE dans la base de donnees (le disque de Render est efface a chaque maj) ──
+        data = file.read()
+        img = Image.open(io.BytesIO(data))
+        # draft : decode JPEG a resolution reduite -> 3 a 5x plus rapide
+        if img.format == 'JPEG':
+            try: img.draft('RGB', (2000, 2000))
+            except Exception: pass
+        img = ImageOps.exif_transpose(img)          # orientation iPhone
+        img.thumbnail((1000, 1000))                  # taille finale
+        if img.mode in ('RGBA', 'P', 'LA'): img = img.convert('RGB')
+        buf = io.BytesIO()
+        img.save(buf, 'JPEG', optimize=True, quality=82)
+        blob = buf.getvalue()
+        with open(jpath, 'wb') as fh:
+            fh.write(blob)
+        # Copie PERMANENTE dans la base de donnees
         try:
-            with open(jpath, 'rb') as fh:
-                blob = fh.read()
             db.session.add(ImageBlob(filename=jname, data=blob, mimetype='image/jpeg'))
         except Exception as e:
             print(f'[IMG-DB] impossible de stocker {jname} en base: {e}')
         return jname
     except Exception as e:
         print(f'[IMG] conversion impossible ({e}), fichier original conserve')
-        if os.path.exists(fpath): return uname
-        return None
+        # Fallback : garder le fichier original tel quel
+        try:
+            file.seek(0)
+            uname = f"{uuid.uuid4().hex}.{ext}"
+            fpath = os.path.join(app.config['UPLOAD_FOLDER'], uname)
+            file.save(fpath)
+            return uname
+        except Exception:
+            return None
 
 def update_availability(eq_id):
     eq = db.session.get(Equipment, eq_id)
