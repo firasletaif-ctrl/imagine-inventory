@@ -93,6 +93,7 @@
                 <div class="upload-icon">📸</div>
                 <p>Glissez-déposez des images ici</p>
                 <small>PNG, JPG, WEBP — Max 16 Mo par fichier</small>
+                <div id="resizeHint" style="display:none;color:#0B1D3A;font-weight:bold;margin-top:.4rem">⏳ Optimisation des photos…</div>
                 <label for="images" class="btn btn-secondary" style="font-size:1rem;padding:.8rem 1.5rem;cursor:pointer;margin-top:1rem">
                     📸📁 Photo ou galerie
                 </label>
@@ -103,7 +104,7 @@
 
         <div class="form-actions">
             <a href="{{ url_for('equipment_detail', eid=eq.id) }}" class="btn btn-secondary">Annuler</a>
-            <button type="submit" class="btn btn-accent btn-lg">
+            <button type="submit" class="btn btn-accent btn-lg" id="submitBtn">
                 💾 Enregistrer les modifications
             </button>
         </div>
@@ -113,31 +114,84 @@
 
 {% block scripts %}
 <script>
-function previewImages(event) {
-    var container = document.getElementById('imagePreviews');
-    container.innerHTML = '';
-    Array.from(event.target.files).forEach(function(file, idx) {
+// ===== Redimensionne les photos SUR l'appareil avant envoi (max 1200px) =====
+// => envoi beaucoup plus rapide + le serveur traite plus vite.
+function resizeImageFile(file, cb) {
+    try {
         var reader = new FileReader();
         reader.onload = function(e) {
-            var div = document.createElement('div');
-            div.className = 'preview-item';
-            div.style.position = 'relative';
-            div.innerHTML = '<img src="' + e.target.result + '" alt="Aperçu">' +
-                           '<span class="preview-name">' + file.name + '</span>' +
-                           '<span onclick="removePhoto(' + idx + ')" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:10">×</span>';
-            container.appendChild(div);
+            var img = new Image();
+            img.onload = function() {
+                var w = img.width, h = img.height;
+                var maxDim = 1200;
+                var scale = Math.min(1, maxDim / Math.max(w, h));
+                if (scale >= 1 && file.type === 'image/jpeg') { cb(file); return; }
+                var nw = Math.round(w * scale), nh = Math.round(h * scale);
+                var canvas = document.createElement('canvas');
+                canvas.width = nw; canvas.height = nh;
+                canvas.getContext('2d').drawImage(img, 0, 0, nw, nh);
+                canvas.toBlob(function(blob) {
+                    if (!blob) { cb(file); return; }
+                    var name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+                    cb(new File([blob], name, { type: 'image/jpeg' }));
+                }, 'image/jpeg', 0.82);
+            };
+            img.onerror = function() { cb(file); };
+            img.src = e.target.result;
         };
+        reader.onerror = function() { cb(file); };
         reader.readAsDataURL(file);
+    } catch (err) { cb(file); }
+}
+
+function showHint(on) {
+    var h = document.getElementById('resizeHint');
+    if (h) h.style.display = on ? 'block' : 'none';
+}
+
+function renderPreviews(files) {
+    var container = document.getElementById('imagePreviews');
+    container.innerHTML = '';
+    Array.from(files).forEach(function(file, idx) {
+        var url = URL.createObjectURL(file);
+        var div = document.createElement('div');
+        div.className = 'preview-item';
+        div.style.position = 'relative';
+        div.innerHTML = '<img src="' + url + '" alt="Aperçu">' +
+                       '<span class="preview-name">' + file.name + '</span>' +
+                       '<span onclick="removePhoto(' + idx + ')" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:10">×</span>';
+        container.appendChild(div);
     });
 }
+
+function applyFiles(fileList) {
+    var images = Array.from(fileList).filter(function(f) { return f.type && f.type.startsWith('image/'); });
+    if (images.length === 0) return;
+    showHint(true);
+    var dt = new DataTransfer();
+    var done = 0;
+    images.forEach(function(file) {
+        resizeImageFile(file, function(resized) {
+            dt.items.add(resized);
+            done++;
+            if (done === images.length) {
+                var input = document.getElementById('images');
+                input.files = dt.files;
+                renderPreviews(dt.files);
+                showHint(false);
+            }
+        });
+    });
+}
+
+function previewImages(event) { applyFiles(event.target.files); }
 
 function removePhoto(idx) {
     var input = document.getElementById('images');
     var dt = new DataTransfer();
     Array.from(input.files).forEach(function(f, i) { if (i !== idx) dt.items.add(f); });
     input.files = dt.files;
-    var evt = new Event('change', { bubbles: true });
-    input.dispatchEvent(evt);
+    renderPreviews(dt.files);
 }
 
 var zone = document.getElementById('uploadZone');
@@ -146,14 +200,16 @@ zone.addEventListener('dragleave', function(e) { zone.classList.remove('drag-ove
 zone.addEventListener('drop', function(e) {
     e.preventDefault();
     zone.classList.remove('drag-over');
-    var input = document.getElementById('images');
-    var dt = new DataTransfer();
-    Array.from(e.dataTransfer.files).forEach(function(f) {
-        if (f.type.startsWith('image/')) dt.items.add(f);
-    });
-    input.files = dt.files;
-    var evt = new Event('change', { bubbles: true });
-    input.dispatchEvent(evt);
+    applyFiles(e.dataTransfer.files);
 });
+
+// Pendant l'envoi, le bouton affiche "Enregistrement…"
+var form = document.querySelector('form.equipment-form');
+if (form) {
+    form.addEventListener('submit', function() {
+        var b = document.getElementById('submitBtn');
+        if (b) { b.disabled = true; b.textContent = '⏳ Enregistrement…'; }
+    });
+}
 </script>
 {% endblock %}
