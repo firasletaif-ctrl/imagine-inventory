@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Inventaire{% endblock %}
+
+{% block head %}
+<style>
+.inv-today-card{background:white;border:1px solid var(--gray-200);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden}
+.inv-today-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.25rem;background:var(--blue-deep);color:white;flex-wrap:wrap}
+.inv-today-head .sub{font-size:.75rem;opacity:.75;margin-top:2px}
+.inv-progress-wrap{display:flex;align-items:center;gap:.6rem}
+.inv-progress{width:140px;height:10px;background:rgba(255,255,255,.2);border-radius:100px;overflow:hidden}
+.inv-progress-fill{height:100%;background:linear-gradient(90deg,#22C55E,#4ADE80);border-radius:100px;transition:width .4s}
+.inv-progress-label{font-weight:800;font-size:.95rem}
+.inv-done-banner{background:var(--green-pale);color:#166534;padding:.75rem 1.25rem;font-weight:600;font-size:.9rem;border-bottom:1px solid var(--green)}
+.inv-row{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--gray-100);flex-wrap:wrap}
+.inv-row:last-child{border-bottom:none}
+.inv-row.verified{background:#F7FDF9}
+.inv-eq{display:flex;align-items:center;gap:.85rem;min-width:0}
+.inv-eq-icon{width:44px;height:44px;border-radius:10px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.inv-eq-name{font-weight:700;color:var(--blue-deep);text-decoration:none;font-size:.98rem}
+.inv-eq-name:hover{text-decoration:underline}
+.inv-eq-sub{font-size:.76rem;color:var(--gray-500);margin-top:2px}
+.inv-state{flex-shrink:0}
+.inv-verified{font-size:.8rem;color:#166534;font-weight:600;background:var(--green-pale);padding:.4rem .8rem;border-radius:100px;white-space:nowrap}
+.inv-hist-row{display:flex;align-items:center;gap:1rem;padding:.7rem 1rem;border-bottom:1px solid var(--gray-100);flex-wrap:wrap;font-size:.85rem}
+.inv-hist-row:last-child{border-bottom:none}
+.inv-hist-date{font-weight:700;color:var(--gray-700);min-width:85px}
+.inv-hist-count{font-weight:700;color:var(--gray-500);min-width:34px}
+.inv-hist-items{color:var(--gray-500);font-size:.8rem;flex:1;min-width:200px}
+.inv-hist-items b{color:var(--gray-700)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:900px">
+    <div class="page-header">
+        <h1>📦 Inventaire permanent</h1>
+        <p>Chaque jour, <strong>5 matériels sont tirés au hasard</strong> pour un contrôle physique (rotation de tout le dépôt).
+           Vérifie le matériel et confirme avec le bouton.</p>
+    </div>
+
+    <!-- Aujourd'hui -->
+    <div class="inv-today-card">
+        <div class="inv-today-head">
+            <div>
+                <div>📅 Aujourd'hui — {{ today.strftime('%d/%m/%Y') }}</div>
+                <div class="sub">Tirage aléatoire · matériel des 4 derniers jours évité si possible</div>
+            </div>
+            <div class="inv-progress-wrap">
+                <div class="inv-progress"><div class="inv-progress-fill" style="width:{% if todays|length > 0 %}{{ (done_today * 100 // todays|length) }}{% else %}0{% endif %}%"></div></div>
+                <span class="inv-progress-label">{{ done_today }}/{{ todays|length }}</span>
+            </div>
+        </div>
+
+        {% if todays|length > 0 and done_today == todays|length %}
+        <div class="inv-done-banner">🎉 Inventaire du jour terminé ! Les 5 matériels ont été confirmés.</div>
+        {% endif %}
+
+        {% for c in todays %}
+        <div class="inv-row {% if c.status == 'verified' %}verified{% endif %}">
+            <div class="inv-eq">
+                <span class="inv-eq-icon">{{ c.equipment.category.icon if (c.equipment and c.equipment.category) else '📦' }}</span>
+                <div style="min-width:0">
+                    {% if c.equipment %}
+                    <a href="{{ url_for('equipment_detail', eid=c.equipment.id) }}" class="inv-eq-name">{{ c.equipment.name }}</a>
+                    <div class="inv-eq-sub">{{ c.equipment.reference or '' }} · 📍 {{ c.equipment.location }} · {{ c.equipment.available_quantity }}/{{ c.equipment.total_quantity }} dispo</div>
+                    {% else %}
+                    <span class="inv-eq-name">Matériel supprimé</span>
+                    <div class="inv-eq-sub">Cet article n'existe plus au dépôt.</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="inv-state">
+                {% if c.status == 'verified' %}
+                <span class="inv-verified">✅ Testé par {{ c.verifier.full_name if c.verifier else '—' }}{% if c.verified_at %} à {{ c.verified_at.strftime('%H:%M') }}{% endif %}</span>
+                {% else %}
+                <form method="POST" action="{{ url_for('confirm_inventory_check', cid=c.id) }}">
+                    <button class="btn btn-accent" style="font-size:.85rem;padding:.55rem 1.1rem">✅ Confirmé testé</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not todays %}
+        <p style="padding:1.5rem;color:var(--gray-500);font-size:.9rem">Aucun matériel au dépôt pour l'instant — ajoute du matériel pour activer l'inventaire permanent.</p>
+        {% endif %}
+    </div>
+
+    <!-- Historique -->
+    <div style="margin-top:1.75rem">
+        <h2 style="color:var(--blue-deep);font-size:1.05rem;margin-bottom:.9rem">📜 Historique des contrôles</h2>
+        {% if history %}
+        <div style="background:white;border:1px solid var(--gray-200);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)">
+            {% for d, cs in history %}
+            {% set done = cs | selectattr('status','eq','verified') | list | length %}
+            <div class="inv-hist-row">
+                <span class="inv-hist-date">{{ d.strftime('%d/%m/%Y') }}</span>
+                {% if done == cs|length %}
+                <span class="status-badge status-returned">✅ Terminé</span>
+                {% elif done > 0 %}
+                <span class="status-badge status-late">🟡 En cours</span>
+                {% else %}
+                <span class="status-badge" style="background:var(--gray-100);color:var(--gray-500)">⏳ Non traité</span>
+                {% endif %}
+                <span class="inv-hist-count">{{ done }}/{{ cs|length }}</span>
+                <span class="inv-hist-items">
+                    {% for c in cs %}
+                    <b>{{ c.equipment.name if c.equipment else 'Supprimé' }}</b> {{ '✅' if c.status == 'verified' else '⏳' }}{% if not loop.last %} · {% endif %}
+                    {% endfor %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--gray-500);font-size:.9rem">Aucun contrôle hier — l'historique apparaîtra ici au fil des jours.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

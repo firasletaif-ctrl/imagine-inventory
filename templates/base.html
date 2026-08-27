@@ -36,6 +36,9 @@
             <a href="{{ url_for('repairs_page') }}" class="nav-item {% if request.endpoint == 'repairs_page' %}active{% endif %}">
                 <span class="nav-icon">🔧</span><span>Reparations</span>
             </a>
+            <a href="{{ url_for('inventory_page') }}" class="nav-item {% if request.endpoint in ('inventory_page', 'confirm_inventory_check') %}active{% endif %}">
+                <span class="nav-icon">📦</span><span>Inventaire</span>
+            </a>
             <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>

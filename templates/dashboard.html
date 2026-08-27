@@ -37,6 +37,11 @@
         <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">{{ equipment | selectattr('available_quantity', 'gt', 0) | list | length }}</div><div class="stat-label">Disponibles</div></div>
         <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value">{{ active_borrows | selectattr('status', 'eq', 'late') | list | length }}</div><div class="stat-label">En retard</div></div>
         <div class="stat-card"><div class="stat-icon">🔧</div><div class="stat-value">{{ repair_count }}</div><div class="stat-label">En réparation</div></div>
+        <a href="{{ url_for('inventory_page') }}" class="stat-card" style="text-decoration:none" title="Inventaire permanent : controler le tirage du jour">
+            <div class="stat-icon">📦</div>
+            <div class="stat-value" style="color:{% if inv_today|length > 0 and inv_done == inv_today|length %}var(--green){% else %}var(--blue-deep){% endif %}">{{ inv_done }}/{{ inv_today|length if inv_today else 0 }}</div>
+            <div class="stat-label">Inventaire du jour</div>
+        </a>
     </div>
 
     <div class="search-section">

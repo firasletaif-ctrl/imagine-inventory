@@ -1,6 +1,6 @@
 """Imagine Inventory v2 — Imagine Events Tunisia
 Gestion de depot + Emploi du temps + Export + Notifications"""
-import os, uuid, json, io, hashlib
+import os, uuid, json, io, hashlib, random
 from datetime import datetime, date, timedelta, timezone
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -191,6 +191,55 @@ class MaterialOrder(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=tunisia_now)
     updated_at = db.Column(db.DateTime, default=tunisia_now, onupdate=tunisia_now)
+
+# ── NEW: Inventaire permanent (controle tournant : 5 materiels tires au hasard par jour) ──
+class InventoryCheck(db.Model):
+    __tablename__ = 'inventory_checks'
+    id = db.Column(db.Integer, primary_key=True)
+    check_date = db.Column(db.Date, nullable=False, index=True)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending / verified
+    verified_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    verified_at = db.Column(db.DateTime, nullable=True)
+    equipment = db.relationship('Equipment', backref=db.backref('inventory_checks', lazy=True))
+    verifier = db.relationship('User', backref='inv_checks', foreign_keys=[verified_by])
+    __table_args__ = (db.UniqueConstraint('check_date', 'equipment_id', name='uq_inv_check_date_equip'),)
+
+
+INVENTORY_DAILY_COUNT = 5
+
+
+def generate_daily_checks(today):
+    """Inventaire permanent : tire au hasard 5 materiels a controler ce jour-la.
+    - La liste est creee automatiquement au 1er acces du jour (pas de cron)
+    - Rotation : les materiels tires au cours des 4 jours precedents sont
+      evites si possible -> tout le depot est passe en revue en rotation
+    - Les admins sont notifies quand la liste du jour est creee"""
+    existing = InventoryCheck.query.filter_by(check_date=today).all()
+    if existing:
+        return existing
+    all_eqs = Equipment.query.order_by(Equipment.id).all()
+    if not all_eqs:
+        return []
+    recent_ids = set(r[0] for r in db.session.query(InventoryCheck.equipment_id)
+                     .filter(InventoryCheck.check_date >= today - timedelta(days=4)).all())
+    pool = [e for e in all_eqs if e.id not in recent_ids]
+    if len(pool) < INVENTORY_DAILY_COUNT:
+        pool = list(all_eqs)  # pas assez de candidats "frais" -> tout le depot
+    chosen = random.sample(pool, min(INVENTORY_DAILY_COUNT, len(pool)))
+    new_checks = [InventoryCheck(check_date=today, equipment_id=e.id, status='pending') for e in chosen]
+    db.session.add_all(new_checks)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()  # un autre utilisateur a genere la liste en meme temps
+        return InventoryCheck.query.filter_by(check_date=today).order_by(InventoryCheck.id).all()
+    try:
+        names = ', '.join(e.name for e in chosen)
+        notify_admins('📋 Inventaire du jour', f'{len(chosen)} materiels a verifier : {names}.', '/inventory')
+    except Exception:
+        pass
+    return InventoryCheck.query.filter_by(check_date=today).order_by(InventoryCheck.id).all()
 
 # ═══════════ H E L P E R S ═══════════
 @login_manager.user_loader
@@ -532,7 +581,10 @@ def dashboard():
     is_pending = not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
     upcoming_events = Event.query.filter(Event.end_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
     repair_count = Equipment.query.filter(Equipment.in_repair > 0).count()
-    return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=Equipment.query.count(), available_count=Equipment.query.filter(Equipment.available_quantity>0).count(), late_count=Borrow.query.filter_by(status='late').count(), repair_count=repair_count, equipment_json=eq_json, today=today, is_pending=is_pending, upcoming_events=upcoming_events)
+    # Inventaire du jour (genere la liste si pas encore faite aujourd'hui)
+    inv_today = [] if is_pending else generate_daily_checks(date.today())
+    inv_done = sum(1 for c in inv_today if c.status == 'verified')
+    return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=Equipment.query.count(), available_count=Equipment.query.filter(Equipment.available_quantity>0).count(), late_count=Borrow.query.filter_by(status='late').count(), repair_count=repair_count, equipment_json=eq_json, today=today, is_pending=is_pending, upcoming_events=upcoming_events, inv_today=inv_today, inv_done=inv_done)
 
 @app.route('/equipment/<int:eid>')
 @login_required
@@ -561,6 +613,43 @@ def equipment_detail(eid):
             'event': b.event_name or ''
         })
     return render_template('equipment_detail.html', eq=eq, borrows=borrows, today=date.today(), upcoming_events=upcoming_events, cal_borrows=cal_borrows, cal_borrows_json=json.dumps(cal_borrows), today_str=date.today().strftime('%Y-%m-%d'))
+
+# ═══════════ N E W :  I N V E N T A I R E   P E R M A N E N T ═══════════
+@app.route('/inventory')
+@login_required
+def inventory_page():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    today = date.today()
+    todays = generate_daily_checks(today)
+    done_today = sum(1 for c in todays if c.status == 'verified')
+    # Historique des 14 derniers jours (5 par jour max)
+    hist = InventoryCheck.query.filter(InventoryCheck.check_date < today)\
+        .order_by(InventoryCheck.check_date.desc(), InventoryCheck.id.asc()).limit(70).all()
+    by_date = {}
+    for c in hist:
+        by_date.setdefault(c.check_date, []).append(c)
+    history = [(d, cs) for d, cs in sorted(by_date.items(), reverse=True)]
+    return render_template('inventory.html', todays=todays, done_today=done_today, history=history, today=today)
+
+
+@app.route('/inventory/<int:cid>/confirm', methods=['POST'])
+@login_required
+def confirm_inventory_check(cid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    c = db.session.get(InventoryCheck, cid)
+    if not c:
+        flash('Verification introuvable.','error'); return redirect(url_for('inventory_page'))
+    if c.status == 'verified':
+        flash('Ce materiel est deja confirme.','info'); return redirect(url_for('inventory_page'))
+    c.status = 'verified'; c.verified_by = current_user.id; c.verified_at = tunisia_now()
+    db.session.commit()
+    eqname = c.equipment.name if c.equipment else 'Matériel'
+    done = InventoryCheck.query.filter_by(check_date=c.check_date, status='verified').count()
+    total = InventoryCheck.query.filter_by(check_date=c.check_date).count()
+    log_action('inventory_check', f'Inventaire : {eqname} confirme teste par {current_user.full_name}', eqname)
+    flash(f'✅ {eqname} confirme teste. Inventaire du jour : {done}/{total}.','success')
+    return redirect(url_for('inventory_page'))
+
 
 @app.route('/borrow/<int:eid>', methods=['POST'])
 @permission_required('borrow_equipment')
