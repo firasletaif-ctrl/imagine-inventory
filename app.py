@@ -662,8 +662,7 @@ def borrows_page():
             grp['borrows'].append(b)
         else:
             no_event.append(b)
-    repair_list = Equipment.query.filter(Equipment.in_repair > 0).order_by(Equipment.name).all()
-    return render_template('borrows.html', by_event=by_event, no_event=no_event, events=events, repair_list=repair_list, today=date.today(), active_count=len(active))
+    return render_template('borrows.html', by_event=by_event, no_event=no_event, events=events, today=date.today(), active_count=len(active))
 
 # ═══════ R E P A R A T I O N S ═══════
 @app.route('/repairs')

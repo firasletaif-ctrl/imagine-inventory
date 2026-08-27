@@ -91,30 +91,5 @@
         </div>
     </div>
     {% endif %}
-
-    <!-- En reparation -->
-    {% if repair_list %}
-    <div class="borrow-group" style="border-left:4px solid #C41E3A">
-        <div class="borrow-group-head">
-            <div><span class="group-icon">🔧</span><strong>Matériel en réparation</strong><span class="group-date">Marquez-les comme réparés quand ils sont prêts.</span></div>
-        </div>
-        <div class="borrows-table">
-            <div class="bt-head"><span>Matériel</span><span>En réparation</span><span>Disponible</span><span>Remettre en stock</span></div>
-            {% for eq in repair_list %}
-            <div class="bt-row">
-                <span class="bt-name">{{ eq.name }} <em>{{ eq.reference }}</em></span>
-                <span class="bt-qty red">🔧 {{ eq.in_repair }}</span>
-                <span class="bt-qty">✅ {{ eq.available_quantity }}</span>
-                <span class="bt-action">
-                    <form method="POST" action="{{ url_for('mark_repaired', eid=eq.id) }}" style="display:flex;gap:.3rem;align-items:center">
-                        <input type="number" name="qty" value="{{ eq.in_repair }}" min="1" max="{{ eq.in_repair }}" style="width:52px">
-                        <button class="btn btn-sm btn-success" style="font-size:.7rem">🔧 Réparé</button>
-                    </form>
-                </span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
