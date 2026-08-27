@@ -1528,10 +1528,19 @@ def ai_configured():
     return bool(os.environ.get('OPENAI_API_KEY', '').strip() or os.environ.get('GROQ_API_KEY', '').strip())
 
 
+def ai_provider():
+    """'openai' si OPENAI_API_KEY presente (priorite), 'groq' si GROQ_API_KEY, sinon None."""
+    if os.environ.get('OPENAI_API_KEY', '').strip():
+        return 'openai'
+    if os.environ.get('GROQ_API_KEY', '').strip():
+        return 'groq'
+    return None
+
+
 def generate_ai_recap(evt, matos_lines, team_lines):
     """Resume du recap redige par IA. Selection du provider (par priorite) :
       1. OPENAI_API_KEY -> OpenAI (gpt-4o-mini) — payant (periode d'essai dispo)
-      2. GROQ_API_KEY   -> Groq (llama-3.3-70b) — 100% gratuit, sans carte bancaire
+      2. GROQ_API_KEY   -> Groq (qwen3.8-27b par defaut) — 100% gratuit, sans carte bancaire
     Retourne None si rien n'est configure ou en cas d'erreur — le recap
     structure reste toujours disponible a cote."""
     import urllib.request
@@ -1545,7 +1554,7 @@ def generate_ai_recap(evt, matos_lines, team_lines):
     elif groq_key:
         url = 'https://api.groq.com/openai/v1/chat/completions'
         api_key = groq_key
-        model = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
+        model = os.environ.get('GROQ_MODEL', 'qwen/qwen3.8-27b')
     if not api_key:
         return None
     notes = (evt.description or '').strip() or '(aucune note saisie)'
@@ -1572,7 +1581,7 @@ Structure exacte (puces "- " pour les listes, aucun tableau, aucune asterrisque)
 4. POINTS D'ATTENTION — delais, materiel critique, choses a verifier avant l'evenement
 Maximum 300 mots. Ton professionnel et concis."""
     data = json.dumps({
-        "model": os.environ.get('OPENAI_MODEL', 'gpt-4o-mini'),
+        "model": model,
         "temperature": 0.4,
         "messages": [
             {"role": "system", "content": "Tu es l'assistant interne de la societe d'evenements Imagine Events Tunisia (Tunis). Tu rediges des recaps de preparation professionnels, clairs et concis en francais."},
@@ -1582,7 +1591,13 @@ Maximum 300 mots. Ton professionnel et concis."""
     req = urllib.request.Request(
         url,
         data=data,
-        headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'},
+        headers={
+            'Authorization': 'Bearer ' + api_key,
+            'Content-Type': 'application/json',
+            # UA type navigateur : certains providers (Cloudflare/Groq) bloquent
+            # le User-Agent par defaut de Python
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+        },
         method='POST'
     )
     try:
@@ -1590,7 +1605,13 @@ Maximum 300 mots. Ton professionnel et concis."""
             out = json.loads(resp.read().decode('utf-8'))
             return out['choices'][0]['message']['content'].strip()
     except Exception as e:
-        print(f'[AI RECAP] erreur: {type(e).__name__}: {str(e)[:200]}')
+        detail = ''
+        try:
+            if hasattr(e, 'read'):
+                detail = ' ' + e.read().decode('utf-8')[:300]
+        except Exception:
+            pass
+        print(f'[AI RECAP] erreur: {type(e).__name__}: {str(e)[:200]}{detail}')
         return None
 
 
@@ -1648,7 +1669,10 @@ def recap_ai(evid):
     elif not configured:
         ctx.update({'ai_text': None, 'ai_error': 'not_configured'})
     else:
-        ctx.update({'ai_text': None, 'ai_error': "L'IA n'a pas répondu. Vérifie la clé API (OPENAI_API_KEY) ou réessaie dans quelques secondes."})
+        if ai_provider() == 'openai':
+            ctx.update({'ai_text': None, 'ai_error': "L'IA (OpenAI) n'a pas répondu. Vérifie la clé OPENAI_API_KEY, ou change le modèle via la variable OPENAI_MODEL, puis réessaie."})
+        else:
+            ctx.update({'ai_text': None, 'ai_error': "L'IA (Groq) n'a pas répondu. Vérifie la clé GROQ_API_KEY, ou change le modèle via la variable GROQ_MODEL, puis réessaie."})
     return render_template('recap.html', **ctx)
 
 
