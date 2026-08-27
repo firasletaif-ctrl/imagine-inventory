@@ -945,7 +945,7 @@ def edit_equipment(eid):
     return render_template('edit_equipment.html', eq=eq, categories=Category.query.order_by(Category.name).all())
 
 @app.route('/equipment/<int:eid>/delete-image/<int:iid>', methods=['POST'])
-@login_required
+@permission_required('manage_equipment')
 def delete_image(eid, iid):
     img = db.session.get(EquipmentImage, iid)
     if img and img.equipment_id == eid:
