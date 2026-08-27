@@ -58,7 +58,7 @@
         <span style="font-size:.85rem;color:var(--gray-500)">Document généré le {{ now.strftime('%d/%m/%Y à %H:%M') }}</span>
         <span style="flex:1"></span>
         <form method="POST" action="{{ url_for('recap_ai', evid=evt.id) }}">
-            <button class="btn btn-secondary" {% if not ai_configured %}title="Configure OPENAI_API_KEY dans Render pour activer l'IA"{% endif %}>🤖 {{ "Régénérer le résumé IA" if ai_text else "Générer le résumé IA" }}</button>
+            <button class="btn btn-secondary" {% if not ai_configured %}title="Configure GROQ_API_KEY (gratuit) ou OPENAI_API_KEY dans Render pour activer l'IA"{% endif %}>🤖 {{ "Régénérer le résumé IA" if ai_text else "Générer le résumé IA" }}</button>
         </form>
         <button class="btn btn-accent" onclick="window.print()">🖨️ Imprimer / PDF</button>
     </div>
@@ -102,9 +102,9 @@
                 {% endif %}
                 {% if ai_error == 'not_configured' %}
                 <div class="ai-box info">
-                    ℹ️ <strong>IA non configurée.</strong> Ajoute <code>OPENAI_API_KEY</code> (clé de platform.openai.com/api-keys)
-                    dans les variables d'environnement de ton service Render, puis appuie sur « Générer le résumé IA ».
-                    Le récap structuré ci-dessous fonctionne dans tous les cas.
+                    ℹ️ <strong>IA non configurée.</strong> Pour l'activer, ajoute une variable d'environnement dans ton service Render :
+                    <strong>GROQ_API_KEY</strong> (gratuit — console.groq.com/keys, sans carte bancaire) ou <strong>OPENAI_API_KEY</strong> (payant).
+                    Puis appuie sur « Générer le résumé IA ». Le récap structuré ci-dessous fonctionne dans tous les cas.
                 </div>
                 {% elif ai_error %}
                 <div class="ai-box err">⚠️ {{ ai_error }}</div>

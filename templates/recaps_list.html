@@ -10,10 +10,13 @@
 
     {% if not ai_configured %}
     <div style="background:var(--blue-pale);border:1px solid var(--blue);border-radius:10px;padding:.8rem 1rem;margin-bottom:1.2rem;font-size:.85rem;color:var(--blue-deep);line-height:1.6">
-        ℹ️ <strong>Mode IA non activé.</strong> Les récaps structuré(e)s (matos, notes, équipe, impression PDF) fonctionnent déjà.
-        Pour activer le <strong>résumé rédigé par IA</strong>, ajoute la variable d'environnement
-        <code style="background:white;padding:.1rem .4rem;border-radius:4px">OPENAI_API_KEY</code> dans ton service Render
-        (onglet Environment → Add environment variable), avec une clé obtenue sur platform.openai.com/api-keys.
+        ℹ️ <strong>Mode IA non activé.</strong> Les récaps structurés (matos, notes, équipe, impression PDF) fonctionnent déjà.
+        Pour activer le <strong>résumé rédigé par IA</strong>, ajoute une variable d'environnement dans ton service Render
+        (onglet Environment) :
+        <ul style="margin:.5rem 0 0 1.2rem;padding:0">
+            <li><strong>Gratuit — recommandé :</strong> <code style="background:white;padding:.1rem .4rem;border-radius:4px">GROQ_API_KEY</code> → clé 100% gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> (sans carte bancaire)</li>
+            <li><strong>Payant (optionnel) :</strong> <code style="background:white;padding:.1rem .4rem;border-radius:4px">OPENAI_API_KEY</code> → clé sur platform.openai.com/api-keys</li>
+        </ul>
     </div>
     {% endif %}
 

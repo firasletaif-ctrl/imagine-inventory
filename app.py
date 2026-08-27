@@ -1523,14 +1523,31 @@ def _recap_context(evid):
     return {'evt': evt, 'borrows': borrows, 'matos_groups': matos_groups, 'total_units': total_units, 'team': team}
 
 
+def ai_configured():
+    """Vrai s'au moins un provider IA est configure (OpenAI ou Groq)."""
+    return bool(os.environ.get('OPENAI_API_KEY', '').strip() or os.environ.get('GROQ_API_KEY', '').strip())
+
+
 def generate_ai_recap(evt, matos_lines, team_lines):
-    """Resume du recap redige par IA (OpenAI). Retourne None si pas de cle
-    OPENAI_API_KEY ou en cas d'erreur — le recap structure reste toujours
-    disponible a cote."""
-    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    """Resume du recap redige par IA. Selection du provider (par priorite) :
+      1. OPENAI_API_KEY -> OpenAI (gpt-4o-mini) — payant (periode d'essai dispo)
+      2. GROQ_API_KEY   -> Groq (llama-3.3-70b) — 100% gratuit, sans carte bancaire
+    Retourne None si rien n'est configure ou en cas d'erreur — le recap
+    structure reste toujours disponible a cote."""
+    import urllib.request
+    url = api_key = model = None
+    openai_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    groq_key = os.environ.get('GROQ_API_KEY', '').strip()
+    if openai_key:
+        url = 'https://api.openai.com/v1/chat/completions'
+        api_key = openai_key
+        model = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+    elif groq_key:
+        url = 'https://api.groq.com/openai/v1/chat/completions'
+        api_key = groq_key
+        model = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
     if not api_key:
         return None
-    import urllib.request
     notes = (evt.description or '').strip() or '(aucune note saisie)'
     prompt = f"""Redige le recapitulatif de preparation de cet evenement, en francais, pour l'equipe de production.
 
@@ -1563,7 +1580,7 @@ Maximum 300 mots. Ton professionnel et concis."""
         ]
     }).encode('utf-8')
     req = urllib.request.Request(
-        'https://api.openai.com/v1/chat/completions',
+        url,
         data=data,
         headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'},
         method='POST'
@@ -1593,7 +1610,7 @@ def recaps_list():
                 counts['name:' + key] = counts.get('name:' + key, 0) + 1
     for e in events:
         e.recap_count = counts.get(e.id, 0) + counts.get('name:' + (e.title or '').strip().lower(), 0)
-    return render_template('recaps_list.html', events=events, ai_configured=bool(os.environ.get('OPENAI_API_KEY', '').strip()))
+    return render_template('recaps_list.html', events=events, ai_configured=ai_configured())
 
 
 @app.route('/recap/<int:evid>')
@@ -1602,7 +1619,7 @@ def recap_view(evid):
     if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
     ctx = _recap_context(evid)
     if not ctx: flash('Evenement introuvable.','error'); return redirect(url_for('recaps_list'))
-    ctx.update({'ai_text': None, 'ai_error': None, 'ai_configured': bool(os.environ.get('OPENAI_API_KEY', '').strip()), 'now': tunisia_now()})
+    ctx.update({'ai_text': None, 'ai_error': None, 'ai_configured': ai_configured(), 'now': tunisia_now()})
     return render_template('recap.html', **ctx)
 
 
@@ -1621,7 +1638,7 @@ def recap_ai(evid):
             who = b.user.full_name if b.user else '?'
             matos_lines.append(f'    • {b.equipment.name} x{b.quantity} — {who} (prise {p.strftime("%d/%m/%Y")}, retour {b.expected_return_date.strftime("%d/%m/%Y")})')
     team_lines = [f'- {t["name"]} ({t["role"]})' for t in ctx['team']]
-    configured = bool(os.environ.get('OPENAI_API_KEY', '').strip())
+    configured = ai_configured()
     text = generate_ai_recap(evt, matos_lines, team_lines)
     ctx.update({'ai_configured': configured, 'now': tunisia_now()})
     if text:
