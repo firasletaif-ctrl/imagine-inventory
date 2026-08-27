@@ -344,6 +344,7 @@ function openDay(iso, highlightId){
                 + '<div class="day-evt-actions">'
                 + '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' + gcalUrl(e) + '">📆 Ajouter sur Google Calendar</a>'
                 + (CAN_MANAGE ? '<button class="btn btn-sm btn-secondary" onclick="closeModal(\'dayModal\');startEdit(' + e.id + ')">✏️ Modifier</button>' : '')
+                + (CAN_MANAGE ? '<form method="POST" action="/schedule/' + e.id + '/delete" onsubmit="return confirm(\'Supprimer cet événement ? Cette action est irreversible.\')" style="margin:0;display:flex;justify-content:flex-end;flex:1"><button class="btn btn-sm btn-danger">🗑️ Supprimer</button></form>' : '')
                 + '</div></div>';
         }).join('');
     }
