@@ -201,6 +201,7 @@ class InventoryCheck(db.Model):
     status = db.Column(db.String(20), default='pending')  # pending / verified
     verified_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     verified_at = db.Column(db.DateTime, nullable=True)
+    in_repair_qty = db.Column(db.Integer, default=0)  # unites declarees cassees -> partent en reparation
     equipment = db.relationship('Equipment', backref=db.backref('inventory_checks', lazy=True))
     verifier = db.relationship('User', backref='inv_checks', foreign_keys=[verified_by])
     __table_args__ = (db.UniqueConstraint('check_date', 'equipment_id', name='uq_inv_check_date_equip'),)
@@ -629,7 +630,7 @@ def inventory_page():
     for c in hist:
         by_date.setdefault(c.check_date, []).append(c)
     history = [(d, cs) for d, cs in sorted(by_date.items(), reverse=True)]
-    return render_template('inventory.html', todays=todays, done_today=done_today, history=history, today=today)
+    return render_template('inventory.html', todays=todays, done_today=done_today, history=history, today=today, can_manage=current_user.has_permission('manage_equipment'))
 
 
 @app.route('/inventory/<int:cid>/confirm', methods=['POST'])
@@ -641,13 +642,54 @@ def confirm_inventory_check(cid):
         flash('Verification introuvable.','error'); return redirect(url_for('inventory_page'))
     if c.status == 'verified':
         flash('Ce materiel est deja confirme.','info'); return redirect(url_for('inventory_page'))
+    eq = c.equipment
+    # ── Matériel cassé : combien d'unites partent en reparation ? ──
+    try:
+        repair_qty = int(request.form.get('repair_qty', '') or 0)
+    except (TypeError, ValueError):
+        repair_qty = 0
+    if eq:
+        max_repair = max(0, (eq.total_quantity or 0) - (eq.in_repair or 0))
+        if repair_qty < 0 or repair_qty > max_repair:
+            repair_qty = 0
     c.status = 'verified'; c.verified_by = current_user.id; c.verified_at = tunisia_now()
+    c.in_repair_qty = repair_qty
+    if eq and repair_qty > 0:
+        eq.in_repair = (eq.in_repair or 0) + repair_qty
     db.session.commit()
-    eqname = c.equipment.name if c.equipment else 'Matériel'
+    if eq and repair_qty > 0:
+        update_availability(eq.id)
+    eqname = eq.name if eq else 'Matériel'
     done = InventoryCheck.query.filter_by(check_date=c.check_date, status='verified').count()
     total = InventoryCheck.query.filter_by(check_date=c.check_date).count()
-    log_action('inventory_check', f'Inventaire : {eqname} confirme teste par {current_user.full_name}', eqname)
-    flash(f'✅ {eqname} confirme teste. Inventaire du jour : {done}/{total}.','success')
+    log_action('inventory_check', f'Inventaire : {eqname} confirme teste par {current_user.full_name}' + (f' ({repair_qty} en reparation)' if repair_qty else ''), eqname)
+    flash(f'✅ {eqname} confirme teste' + (f' — {repair_qty} unite(s) en reparation' if repair_qty else '') + f'. Inventaire du jour : {done}/{total}.','success')
+    return redirect(url_for('inventory_page'))
+
+
+@app.route('/inventory/regenerate', methods=['POST'])
+@permission_required('manage_equipment')
+def regenerate_inventory():
+    """Nouveau tirage manuel du jour (remplace la liste en cours)."""
+    today = date.today()
+    InventoryCheck.query.filter_by(check_date=today).delete()
+    db.session.commit()
+    generate_daily_checks(today)
+    log_action('inventory_regenerate', f'Nouveau tirage inventaire genere le {today.strftime("%d/%m/%Y")}')
+    flash('🎲 Nouveau tirage du jour genere !','success')
+    return redirect(url_for('inventory_page'))
+
+
+@app.route('/inventory/clear-history', methods=['POST'])
+@permission_required('manage_equipment')
+def clear_inventory_history():
+    if not current_user.check_password(request.form.get('password', '')):
+        flash('Mot de passe incorrect.','error'); return redirect(url_for('inventory_page'))
+    today = date.today()
+    count = InventoryCheck.query.filter(InventoryCheck.check_date < today).delete(synchronize_session='fetch')
+    db.session.commit()
+    log_action('inventory_clear_history', f'Historique inventaire efface ({count} entrees)')
+    flash(f'🗑️ {count} entree(s) d\'historique effacees (le tirage du jour est conserve).','success')
     return redirect(url_for('inventory_page'))
 
 
@@ -1955,6 +1997,7 @@ def init_db():
             ensure_column('borrows', 'event_id', 'ALTER TABLE borrows ADD COLUMN event_id INTEGER')
             ensure_column('borrows', 'pickup_date', 'ALTER TABLE borrows ADD COLUMN pickup_date DATE')
             ensure_column('events', 'end_date', 'ALTER TABLE events ADD COLUMN end_date DATE')
+            ensure_column('inventory_checks', 'in_repair_qty', 'ALTER TABLE inventory_checks ADD COLUMN in_repair_qty INTEGER DEFAULT 0')
             # Backfill : les evenements existants (1 jour) -> end_date = event_date
             # (les requetes filtrent ensuite simplement sur end_date)
             try:

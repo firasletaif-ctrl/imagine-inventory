@@ -45,9 +45,17 @@
                 <div>📅 Aujourd'hui — {{ today.strftime('%d/%m/%Y') }}</div>
                 <div class="sub">Tirage aléatoire · matériel des 4 derniers jours évité si possible</div>
             </div>
-            <div class="inv-progress-wrap">
-                <div class="inv-progress"><div class="inv-progress-fill" style="width:{% if todays|length > 0 %}{{ (done_today * 100 // todays|length) }}{% else %}0{% endif %}%"></div></div>
-                <span class="inv-progress-label">{{ done_today }}/{{ todays|length }}</span>
+            <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+                {% if can_manage %}
+                <form method="POST" action="{{ url_for('regenerate_inventory') }}"
+                      onsubmit="return confirm('Générer un NOUVEAU tirage du jour ? La liste en cours ({{ done_today }}/{{ todays|length }} confirmée(s)) sera remplacée.')">
+                    <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white" title="Nouveau tirage aléatoire sans attendre demain">🎲 Nouveau tirage</button>
+                </form>
+                {% endif %}
+                <div class="inv-progress-wrap">
+                    <div class="inv-progress"><div class="inv-progress-fill" style="width:{% if todays|length > 0 %}{{ (done_today * 100 // todays|length) }}{% else %}0{% endif %}%"></div></div>
+                    <span class="inv-progress-label">{{ done_today }}/{{ todays|length }}</span>
+                </div>
             </div>
         </div>
 
@@ -71,9 +79,11 @@
             </div>
             <div class="inv-state">
                 {% if c.status == 'verified' %}
-                <span class="inv-verified">✅ Testé par {{ c.verifier.full_name if c.verifier else '—' }}{% if c.verified_at %} à {{ c.verified_at.strftime('%H:%M') }}{% endif %}</span>
+                <span class="inv-verified">✅ Testé par {{ c.verifier.full_name if c.verifier else '—' }}{% if c.verified_at %} à {{ c.verified_at.strftime('%H:%M') }}{% endif %}{% if c.in_repair_qty %} · 🔧 {{ c.in_repair_qty }} en répa{% endif %}</span>
                 {% else %}
-                <form method="POST" action="{{ url_for('confirm_inventory_check', cid=c.id) }}">
+                <form method="POST" action="{{ url_for('confirm_inventory_check', cid=c.id) }}" style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap">
+                    <input type="number" name="repair_qty" value="0" min="0" max="{{ (c.equipment.total_quantity - (c.equipment.in_repair or 0)) if c.equipment else 0 }}" style="width:58px" title="Unités cassées : partent en réparation">
+                    <span style="font-size:.7rem;color:var(--gray-500)">🔧 répa</span>
                     <button class="btn btn-accent" style="font-size:.85rem;padding:.55rem 1.1rem">✅ Confirmé testé</button>
                 </form>
                 {% endif %}
@@ -88,7 +98,12 @@
 
     <!-- Historique -->
     <div style="margin-top:1.75rem">
-        <h2 style="color:var(--blue-deep);font-size:1.05rem;margin-bottom:.9rem">📜 Historique des contrôles</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;gap:.5rem;flex-wrap:wrap">
+            <h2 style="color:var(--blue-deep);font-size:1.05rem;margin:0">📜 Historique des contrôles</h2>
+            {% if can_manage and history %}
+            <button class="btn btn-sm btn-danger" onclick="document.getElementById('clearInvHistModal').classList.add('open')">🗑️ Supprimer l'historique</button>
+            {% endif %}
+        </div>
         {% if history %}
         <div style="background:white;border:1px solid var(--gray-200);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm)">
             {% for d, cs in history %}
@@ -116,4 +131,27 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Modal suppression historique (confirmation mot de passe) -->
+{% if can_manage %}
+<div class="modal-overlay" id="clearInvHistModal">
+    <div class="modal">
+        <div class="modal-header"><h2>⚠️ Supprimer l'historique</h2><button class="modal-close" onclick="document.getElementById('clearInvHistModal').classList.remove('open')">✕</button></div>
+        <form method="POST" action="{{ url_for('clear_inventory_history') }}">
+            <div class="modal-body">
+                <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin-bottom:1rem">
+                    <strong>⚠️ Attention :</strong> ceci supprimera définitivement l'historique des contrôles des jours précédents
+                    ({{ history|length }} jour(s)). Le tirage du jour est conservé.
+                </div>
+                <div class="form-group"><label>✅ Confirmez votre mot de passe</label><input type="password" name="password" required placeholder="Votre mot de passe"></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="document.getElementById('clearInvHistModal').classList.remove('open')">Annuler</button><button class="btn btn-danger">🗑️ Confirmer la suppression</button></div>
+        </form>
+    </div>
+</div>
+<script>
+document.getElementById('clearInvHistModal').addEventListener('click', function(e){ if (e.target === this) this.classList.remove('open'); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') document.getElementById('clearInvHistModal').classList.remove('open'); });
+</script>
+{% endif %}
 {% endblock %}
