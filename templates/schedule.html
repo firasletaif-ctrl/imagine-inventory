@@ -58,6 +58,11 @@
 .cal-chip.st-ongoing{background:var(--amber-pale);color:#92400E}
 .cal-chip.st-completed{background:var(--green-pale);color:#166534}
 .cal-chip.st-cancelled{background:var(--gray-100);color:var(--gray-400);text-decoration:line-through}
+/* Evenement multi-jours : barre continue (debut / milieu / fin) */
+.cal-chip.span-single{border-radius:5px}
+.cal-chip.span-start{border-radius:5px 0 0 5px}
+.cal-chip.span-mid{border-radius:0;opacity:.72}
+.cal-chip.span-end{border-radius:0 5px 5px 0}
 .cal-more{font-size:.66rem;color:var(--blue);font-weight:700;cursor:pointer}
 .cal-more:hover{text-decoration:underline}
 
@@ -185,7 +190,10 @@
             <div class="modal-body">
                 <div class="form-group"><label>Titre *</label><input type="text" name="title" required placeholder="Ex: Congres STN 2026"></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Date *</label><input type="date" name="event_date" id="ceDate" required></div>
+                    <div class="form-group"><label>Date debut *</label><input type="date" name="event_date" id="ceDate" required></div>
+                    <div class="form-group"><label>Date de fin <small style="color:var(--gray-400)">(si multi-jours)</small></label><input type="date" name="end_date" id="ceEndDate"></div>
+                </div>
+                <div class="form-row">
                     <div class="form-group"><label>Heure debut</label><input type="time" name="start_time" value="08:00"></div>
                     <div class="form-group"><label>Heure fin</label><input type="time" name="end_time" value="17:00"></div>
                 </div>
@@ -222,7 +230,10 @@
             <div class="modal-body">
                 <div class="form-group"><label>Titre *</label><input type="text" name="title" id="eeTitle" required></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Date *</label><input type="date" name="event_date" id="eeDate" required></div>
+                    <div class="form-group"><label>Date debut *</label><input type="date" name="event_date" id="eeDate" required></div>
+                    <div class="form-group"><label>Date de fin <small style="color:var(--gray-400)">(vide = 1 jour)</small></label><input type="date" name="end_date" id="eeEndDate"></div>
+                </div>
+                <div class="form-row">
                     <div class="form-group"><label>Heure debut</label><input type="time" name="start_time" id="eeStart"></div>
                     <div class="form-group"><label>Heure fin</label><input type="time" name="end_time" id="eeEnd"></div>
                 </div>
@@ -273,8 +284,18 @@ var USER_NAMES = {{ user_names|tojson|safe }};
 var MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 var DOWS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 
+// Un evenement MULTI-JOURS couvre tous les jours du debut a la fin (inclusive)
 var BY_DATE = {};
-EVENTS.forEach(function(e){ (BY_DATE[e.date] = BY_DATE[e.date] || []).push(e); });
+function parseISO(s){ var p = s.split('-'); return new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10)); }
+EVENTS.forEach(function(e){
+    var s = e.date, f = e.dend || e.date;
+    var d = parseISO(s), df = parseISO(f), i = 0;
+    while (d <= df && i < 62){
+        (BY_DATE[isoOf(d)] = BY_DATE[isoOf(d)] || []).push(e);
+        d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+        i++;
+    }
+});
 Object.keys(BY_DATE).forEach(function(k){ BY_DATE[k].sort(function(a,b){ return (a.start||'').localeCompare(b.start||''); }); });
 
 var _t = TODAY_STR.split('-');
@@ -293,7 +314,12 @@ function renderMonth(){
     var first = new Date(view.y, view.m, 1);
     var offset = (first.getDay() + 6) % 7;  // semaine commence le lundi
     var start = new Date(view.y, view.m, 1 - offset);
+    // Nombre d'evenements qui COMMENCENT ce mois (pas de double-comptage multi-jours)
     var monthCount = 0;
+    EVENTS.forEach(function(e){
+        var p = e.date.split('-');
+        if (parseInt(p[0],10) === view.y && parseInt(p[1],10)-1 === view.m) monthCount++;
+    });
     var html = '';
     for (var i = 0; i < 42; i++){
         var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
@@ -301,10 +327,14 @@ function renderMonth(){
         var out = d.getMonth() !== view.m;
         var isToday = (iso === TODAY_STR);
         var evts = BY_DATE[iso] || [];
-        if (!out) monthCount += evts.length;
         var chips = '';
         evts.slice(0, 3).forEach(function(e){
-            chips += '<div class="cal-chip st-' + e.status + '" title="' + esc(e.start + ' - ' + e.title) + '" onclick="event.stopPropagation();openDay(\'' + iso + '\',' + e.id + ')">' + esc(e.start) + ' ' + esc(e.title) + '</div>';
+            var isStart = e.date === iso;
+            var isEnd = (e.dend || e.date) === iso;
+            var span = (isStart && isEnd) ? 'single' : (isStart ? 'start' : (isEnd ? 'end' : 'mid'));
+            var label = isStart ? (esc(e.start) + ' ' + esc(e.title)) : (isEnd ? esc(e.title) : '');
+            var tip = esc(e.title + ' — ' + e.date + ' au ' + (e.dend || e.date));
+            chips += '<div class="cal-chip st-' + e.status + ' span-' + span + '" title="' + tip + '" onclick="event.stopPropagation();openDay(\'' + iso + '\',' + e.id + ')">' + label + '</div>';
         });
         if (evts.length > 3) chips += '<div class="cal-more" onclick="event.stopPropagation();openDay(\'' + iso + '\')">+' + (evts.length - 3) + ' autre(s)</div>';
         html += '<div class="cal-day' + (out ? ' out' : '') + (isToday ? ' today' : '') + '" onclick="openDay(\'' + iso + '\')"><span class="cal-daynum">' + d.getDate() + '</span>' + chips + '</div>';
@@ -335,9 +365,10 @@ function openDay(iso, highlightId){
     } else {
         body.innerHTML = evts.map(function(e){
             var assignees = (e.users||[]).map(function(uid){ return USER_NAMES[uid] || ''; }).filter(Boolean).join(', ');
+            var multij = (e.dend || e.date) !== e.date;
             return '<div class="day-evt" id="evt-' + e.id + '">'
                 + '<div class="day-evt-top"><span class="day-evt-time">🕐 ' + esc(e.start) + ' – ' + esc(e.end) + '</span><span class="status-badge ' + badgeCls(e.status) + '">' + esc(statusLabel(e.status)) + '</span></div>'
-                + '<div class="day-evt-title">' + esc(e.title) + '</div>'
+                + '<div class="day-evt-title">' + esc(e.title) + (multij ? ' <span style="background:var(--blue-pale);color:var(--blue);font-size:.68rem;padding:.1rem .5rem;border-radius:100px;font-weight:700">📆 ' + fmtRange(e) + '</span>' : '') + '</div>'
                 + (e.location ? '<div class="day-evt-meta">📍 ' + esc(e.location) + '</div>' : '')
                 + (assignees ? '<div class="day-evt-meta">👥 ' + esc(assignees) + '</div>' : '')
                 + (e.description ? '<div class="day-evt-desc">' + esc(e.description) + '</div>' : '')
@@ -364,6 +395,7 @@ function startEdit(id){
     if (!e) return;
     fillEditForm({
         id: e.id, title: e.title, description: e.description || '', date: e.date,
+        dend: (e.dend && e.dend !== e.date) ? e.dend : '',
         start: e.start || '08:00', end: e.end || '17:00', location: e.location || '',
         status: e.status || 'upcoming', users: e.users || []
     });
@@ -383,9 +415,14 @@ function togglePast(){
 }
 
 // ═══════════ GOOGLE CALENDAR (bouton par evenement) ═══════════
+function fmtRange(e){
+    var f = function(s){ var p = s.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; };
+    return 'du ' + f(e.date) + ' au ' + f(e.dend);
+}
+
 function gcalUrl(e){
     var s = e.date.replace(/-/g,'') + 'T' + (e.start || '08:00').replace(':','') + '00';
-    var en = e.date.replace(/-/g,'') + 'T' + (e.end || '17:00').replace(':','') + '00';
+    var en = (e.dend || e.date).replace(/-/g,'') + 'T' + (e.end || '17:00').replace(':','') + '00';
     var assignees = (e.users||[]).map(function(id){ return USER_NAMES[id] || ''; }).filter(Boolean).join(', ');
     var desc = (e.description || '') + (assignees ? '\nÉquipe: ' + assignees : '') + '\n\nImagine Events Tunisia';
     return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
@@ -482,6 +519,8 @@ function fillEditForm(d) {
     document.getElementById('eeTitle').value = d.title;
     document.getElementById('eeDesc').value = d.description || '';
     document.getElementById('eeDate').value = d.date;
+    var _eeEnd = document.getElementById('eeEndDate');
+    if (_eeEnd){ _eeEnd.value = d.dend || ''; _eeEnd.min = d.date; }
     document.getElementById('eeStart').value = d.start || '08:00';
     document.getElementById('eeEnd').value = d.end || '17:00';
     document.getElementById('eeLocSearch').value = d.location || '';
@@ -490,6 +529,15 @@ function fillEditForm(d) {
     document.querySelectorAll('#eeUsers input[type=checkbox]').forEach(function(cb){cb.checked = d.users.indexOf(parseInt(cb.value,10)) >= 0});
     document.getElementById('editEventForm').action = '/schedule/' + d.id + '/edit';
     openModal('editEventModal');
+}
+
+// Date de fin >= date debut (modale creation)
+var _ceDateEl = document.getElementById('ceDate');
+if (_ceDateEl){
+    _ceDateEl.addEventListener('change', function(){
+        var x = document.getElementById('ceEndDate');
+        if (x) x.min = this.value;
+    });
 }
 
 // ═══════════ INIT ═══════════

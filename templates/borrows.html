@@ -23,7 +23,7 @@
             <div>
                 <span class="group-icon">🎯</span>
                 <strong>{{ grp.event.title if grp.event else 'Evenement' }}</strong>
-                {% if grp.event %}<span class="group-date">{{ grp.event.event_date.strftime('%d/%m/%Y') }} · {{ grp.event.start_time }}-{{ grp.event.end_time }} · 📍 {{ grp.event.location }}</span>{% endif %}
+                {% if grp.event %}<span class="group-date">{{ grp.event.event_date.strftime('%d/%m/%Y') }}{% if grp.event.is_multiday() %} → {{ grp.event.date_end().strftime('%d/%m/%Y') }}{% endif %} · {{ grp.event.start_time }}-{{ grp.event.end_time }} · 📍 {{ grp.event.location }}</span>{% endif %}
             </div>
             <span class="group-count">{{ grp.borrows | length }} matériel(s)</span>
         </div>
@@ -73,7 +73,7 @@
                         <select name="event_id" style="max-width:170px;font-size:.75rem">
                             <option value="">— Associer à… —</option>
                             {% for ev in events %}
-                            <option value="{{ ev.id }}">{{ ev.title }} ({{ ev.event_date.strftime('%d/%m') }})</option>
+                            <option value="{{ ev.id }}">{{ ev.title }} ({{ ev.event_date.strftime('%d/%m') }}{% if ev.is_multiday() %} → {{ ev.date_end().strftime('%d/%m') }}{% endif %})</option>
                             {% endfor %}
                         </select>
                         <button class="btn btn-sm btn-secondary" style="font-size:.7rem">🎯 Associer</button>

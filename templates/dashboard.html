@@ -112,7 +112,7 @@
                     <select id="borrowEventId" name="event_id" onchange="fillEventName()">
                         <option value="">— Aucun —</option>
                         {% for ev in upcoming_events %}
-                        <option value="{{ ev.id }}" data-title="{{ ev.title | escape }}">{{ ev.title }} — {{ ev.event_date.strftime('%d/%m/%Y') }}</option>
+                        <option value="{{ ev.id }}" data-title="{{ ev.title | escape }}">{{ ev.title }} — {{ ev.event_date.strftime('%d/%m/%Y') }}{% if ev.is_multiday() %} → {{ ev.date_end().strftime('%d/%m/%Y') }}{% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>

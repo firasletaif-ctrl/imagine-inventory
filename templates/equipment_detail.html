@@ -1,6 +1,44 @@
 {% extends "base.html" %}
 {% block title %}{{ eq.name }}{% endblock %}
 
+{% block head %}
+<style>
+.eqcal-card{background:white;border-radius:14px;border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);overflow:hidden}
+.cal-toolbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1.1rem;background:var(--blue-deep);color:white;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:.5rem}
+.cal-month-label{font-size:1.05rem;font-weight:800;letter-spacing:.5px;min-width:175px;text-align:center;text-transform:capitalize}
+.cal-navbtn{background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;width:32px;height:32px;font-size:1rem;cursor:pointer;transition:background .15s}
+.cal-navbtn:hover{background:rgba(255,255,255,.28)}
+.cal-today-btn{background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;padding:.5rem .85rem;font-size:.78rem;font-weight:600;cursor:pointer;transition:background .15s}
+.cal-today-btn:hover{background:rgba(255,255,255,.28)}
+.cal-scroll{overflow-x:auto}
+.cal-grid{min-width:680px}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--gray-100)}
+.cal-dow div{padding:.5rem .4rem;text-align:center;font-size:.66rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:1.5px;border-right:1px solid var(--gray-200)}
+.cal-dow div:last-child{border-right:none}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+.eqcal-day{min-height:76px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);padding:.35rem .4rem;cursor:pointer;background:white;transition:background .12s}
+.eqcal-day:nth-child(7n){border-right:none}
+.cal-days .eqcal-day:nth-last-child(-n+7){border-bottom:none}
+.eqcal-day:hover{background:var(--blue-pale)}
+.eqcal-day.out{background:var(--gray-50)}
+.eqcal-day.out .eqcal-daynum{color:var(--gray-300)}
+.eqcal-daynum{font-size:.78rem;font-weight:600;color:var(--gray-500);display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%}
+.eqcal-day.today{background:#FFF7F8}
+.eqcal-day.today .eqcal-daynum{background:var(--red);color:white;font-weight:800}
+.eqcal-avail{display:inline-block;margin-top:.3rem;font-size:.7rem;font-weight:700;padding:.14rem .5rem;border-radius:100px}
+.eqcal-avail.ok{background:var(--green-pale);color:#166534}
+.eqcal-avail.part{background:var(--amber-pale);color:#92400E}
+.eqcal-avail.full{background:var(--red-pale);color:var(--red-dark)}
+.eqcal-out-tag{font-size:.64rem;color:var(--gray-500);margin-top:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.avail-legend{display:flex;gap:.8rem;font-size:.72rem;color:var(--gray-600);align-items:center}
+.avail-legend span{display:flex;align-items:center;gap:.3rem}
+.avail-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.eqday-row{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;padding:.55rem .7rem;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:.5rem;font-size:.88rem;background:var(--gray-50)}
+.eqday-row .muted{color:var(--gray-400);font-size:.8rem}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="detail-page">
     <!-- Breadcrumb -->
@@ -149,6 +187,70 @@
     </div>
     {% endif %}
 
+    <!-- Disponibilite & emprunts (calendrier) -->
+    <div class="detail-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.6rem">
+            <h2 style="margin:0">📅 Disponibilité du materiel</h2>
+            <div class="avail-legend">
+                <span><i style="background:var(--green)"></i>Tout dispo</span>
+                <span><i style="background:var(--amber)"></i>Partiel</span>
+                <span><i style="background:var(--red)"></i>Tout sorti</span>
+            </div>
+        </div>
+        <div class="eqcal-card">
+            <div class="cal-toolbar">
+                <div class="cal-nav">
+                    <button class="cal-navbtn" onclick="eqNavMonth(-1)" title="Mois precedent">‹</button>
+                    <span class="cal-month-label" id="eqCalLabel"></span>
+                    <button class="cal-navbtn" onclick="eqNavMonth(1)" title="Mois suivant">›</button>
+                    <button class="cal-today-btn" onclick="eqGoToday()">Aujourd'hui</button>
+                </div>
+            </div>
+            <div class="cal-scroll">
+                <div class="cal-grid">
+                    <div class="cal-dow">
+                        <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+                    </div>
+                    <div class="cal-days" id="eqCalDays"></div>
+                </div>
+            </div>
+        </div>
+        <p style="font-size:.8rem;color:var(--gray-500);margin-top:.7rem;line-height:1.6">
+            💡 Clique sur un jour pour le detail (par qui, combien). Pour <strong>reserver ce materiel pour un evenement confirme</strong>,
+            utilise « 📤 Emprunter ce materiel » avec la date de prise et la date de retour de l'evenement :
+            le stock sera alors <strong>bloque sur toute la periode</strong> (impossible de double-emprunter).
+        </p>
+
+        {% if cal_borrows %}
+        <div style="margin-top:1.4rem">
+            <h3 style="color:var(--blue-deep);font-size:1rem;margin-bottom:.7rem">📤 Emprunts en cours et a venir</h3>
+            <div class="history-table-wrapper">
+                <table class="history-table">
+                    <thead><tr><th>Par qui</th><th>Qté</th><th>Du</th><th>Au</th><th>Événement</th><th>Statut</th></tr></thead>
+                    <tbody>
+                        {% for b in cal_borrows %}
+                        <tr>
+                            <td><strong>{{ b.user }}</strong></td>
+                            <td>{{ b.qty }}</td>
+                            <td>{{ b.start_fmt }}</td>
+                            <td>{{ b.end_fmt }}</td>
+                            <td>{{ b.event or '—' }}</td>
+                            <td>
+                                {% if b.status == 'late' %}
+                                <span class="status-badge status-late">⚠️ En retard</span>
+                                {% else %}
+                                <span class="status-badge status-active">Actif</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Borrow History -->
     <div class="detail-section">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -250,7 +352,7 @@
                     <select id="dEventId" name="event_id" onchange="fillDetailEventName()">
                         <option value="">— Aucun —</option>
                         {% for ev in upcoming_events %}
-                        <option value="{{ ev.id }}" data-title="{{ ev.title | escape }}">{{ ev.title }} — {{ ev.event_date.strftime('%d/%m/%Y') }}</option>
+                        <option value="{{ ev.id }}" data-title="{{ ev.title | escape }}">{{ ev.title }} — {{ ev.event_date.strftime('%d/%m/%Y') }}{% if ev.is_multiday() %} → {{ ev.date_end().strftime('%d/%m/%Y') }}{% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -263,17 +365,108 @@
                     <textarea id="dNotes" name="notes" rows="2" placeholder="Détails supplémentaires..."></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeDetailBorrow()">Annuler</button>
-                <button type="submit" class="btn btn-primary">Confirmer</button>
-            </div>
-        </form>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeDetailBorrow()">Annuler</button>
+            <button type="submit" class="btn btn-primary">Confirmer</button>
+        </div>
+    </form>
+    </div>
+</div>
+
+<!-- Day Modal : detail du jour (qui sort, combien) -->
+<div class="modal-overlay" id="eqDayModal">
+    <div class="modal" style="max-width:540px">
+        <div class="modal-header"><h2 id="eqDayTitle"></h2><button class="modal-close" onclick="closeEqDay()">✕</button></div>
+        <div class="modal-body" id="eqDayBody"></div>
+        <div class="modal-footer" id="eqDayFoot"></div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// ═══════════ CALENDRIER DE DISPONIBILITE ═══════════
+var CAL_BORROWS = {{ cal_borrows_json|safe }};
+var TOTAL_QTY = {{ eq.total_quantity or 0 }};
+var IN_REPAIR_QTY = {{ eq.in_repair or 0 }};
+var TODAY_STR = '{{ today_str }}';
+var EQ_MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+var EQ_DOWS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+var eqView = (function(){ var t = TODAY_STR.split('-'); return { y: parseInt(t[0],10), m: parseInt(t[1],10)-1 }; })();
+
+function eqEsc(s){ var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function eqISOOf(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+// Meme regle que le serveur : sorti a partir de la prise, jusqu'au retour prevu
+// (un emprunt en retard reste "sorti" jusqu'a aujourd'hui)
+function eqBorrowOutOn(b, iso){
+    if (iso < b.start) return false;
+    if (iso <= TODAY_STR) return true;
+    return iso <= b.end;
+}
+function eqOutOn(iso){
+    var out = 0;
+    CAL_BORROWS.forEach(function(b){ if (eqBorrowOutOn(b, iso)) out += b.qty; });
+    return out;
+}
+function eqAvailOn(iso){ return Math.max(0, TOTAL_QTY - IN_REPAIR_QTY - eqOutOn(iso)); }
+
+function eqRenderMonth(){
+    document.getElementById('eqCalLabel').textContent = EQ_MONTHS[eqView.m] + ' ' + eqView.y;
+    var first = new Date(eqView.y, eqView.m, 1);
+    var offset = (first.getDay() + 6) % 7;
+    var start = new Date(eqView.y, eqView.m, 1 - offset);
+    var html = '';
+    for (var i = 0; i < 42; i++){
+        var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        var iso = eqISOOf(d);
+        var outM = d.getMonth() !== eqView.m;
+        var isToday = (iso === TODAY_STR);
+        var out = eqOutOn(iso);
+        var avail = eqAvailOn(iso);
+        var cls = (out === 0) ? 'ok' : (out >= TOTAL_QTY) ? 'full' : 'part';
+        var tag = (out > 0) ? '<span class="eqcal-out-tag">-' + out + ' sorti(s)</span>' : '';
+        html += '<div class="eqcal-day' + (outM ? ' out' : '') + (isToday ? ' today' : '') + '" onclick="eqOpenDay(\'' + iso + '\')">'
+              + '<span class="eqcal-daynum">' + d.getDate() + '</span>'
+              + '<span class="eqcal-avail ' + cls + '">' + avail + '/' + TOTAL_QTY + ' dispo</span>'
+              + tag + '</div>';
+    }
+    document.getElementById('eqCalDays').innerHTML = html;
+}
+function eqNavMonth(delta){
+    eqView.m += delta;
+    if (eqView.m < 0){ eqView.m = 11; eqView.y--; }
+    if (eqView.m > 11){ eqView.m = 0; eqView.y++; }
+    eqRenderMonth();
+}
+function eqGoToday(){ var t = TODAY_STR.split('-'); eqView.y = parseInt(t[0],10); eqView.m = parseInt(t[1],10)-1; eqRenderMonth(); }
+
+function eqOpenDay(iso){
+    var p = iso.split('-');
+    var d = new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+    var dayName = EQ_DOWS[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + EQ_MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+    var avail = eqAvailOn(iso);
+    document.getElementById('eqDayTitle').textContent = '📅 ' + dayName + ' — ' + avail + '/' + TOTAL_QTY + ' disponible(s)';
+    var rows = '';
+    CAL_BORROWS.forEach(function(b){
+        if (!eqBorrowOutOn(b, iso)) return;
+        rows += '<div class="eqday-row"><span>📤</span> <strong>' + eqEsc(String(b.qty)) + 'x</strong>&nbsp;par ' + eqEsc(b.user)
+              + ' <span class="muted">(' + b.start_fmt + ' → ' + b.end_fmt + ')</span>'
+              + (b.event ? ' <span class="muted">🎯 ' + eqEsc(b.event) + '</span>' : '')
+              + (b.status === 'late' ? ' <span style="color:var(--red);font-weight:700">⚠️ en retard</span>' : '') + '</div>';
+    });
+    if (IN_REPAIR_QTY > 0) rows += '<div class="eqday-row"><span>🔧</span> ' + IN_REPAIR_QTY + ' en réparation</div>';
+    if (!rows) rows = '<div style="text-align:center;padding:1.2rem;color:var(--gray-500)"><div style="font-size:2.2rem;margin-bottom:.4rem">✅</div>Tout le matériel est disponible ce jour-là.</div>';
+    document.getElementById('eqDayBody').innerHTML = rows;
+    var foot = '';
+    if (avail > 0) foot = '<button class="btn btn-accent" onclick="closeEqDay();openDetailBorrow();var pp=document.getElementById(\'dPickupDate\');if(pp)pp.value=\'' + iso + '\';">📤 Emprunter / réserver pour ce jour</button>';
+    document.getElementById('eqDayFoot').innerHTML = foot;
+    document.getElementById('eqDayModal').classList.add('open');
+}
+function closeEqDay(){ document.getElementById('eqDayModal').classList.remove('open'); }
+document.getElementById('eqDayModal').addEventListener('click', function(e){ if (e.target === this) closeEqDay(); });
+
+eqRenderMonth();
+
 function switchImage(src, el) {
     document.getElementById('mainImage').src = src;
     document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
@@ -297,7 +490,7 @@ document.getElementById('detailBorrowModal').addEventListener('click', function(
 var chm = document.getElementById('clearEqHistoryModal');
 if (chm) { chm.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); }); }
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeDetailBorrow(); if (chm) chm.classList.remove('open'); }
+    if (e.key === 'Escape') { closeDetailBorrow(); closeEqDay(); if (chm) chm.classList.remove('open'); }
 });
 </script>
 {% endblock %}

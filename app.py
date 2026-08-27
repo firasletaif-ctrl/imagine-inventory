@@ -144,6 +144,7 @@ class Event(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, default='')
     event_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)  # evenement multi-jours : derniere journee (NULL = 1 jour)
     start_time = db.Column(db.String(10), default='08:00')  # HH:MM
     end_time = db.Column(db.String(10), default='17:00')
     location = db.Column(db.String(200), default='')
@@ -151,6 +152,14 @@ class Event(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=tunisia_now)
     assignments = db.relationship('EventAssignment', backref='event', lazy=True, cascade='all, delete-orphan')
+    def date_end(self):
+        return self.end_date or self.event_date
+    def is_multiday(self):
+        return bool(self.end_date) and self.end_date != self.event_date
+    def date_label(self):
+        if self.is_multiday():
+            return f"du {self.event_date.strftime('%d/%m/%Y')} au {self.date_end().strftime('%d/%m/%Y')}"
+        return f"le {self.event_date.strftime('%d/%m/%Y')}"
 
 class EventAssignment(db.Model):
     __tablename__ = 'event_assignments'
@@ -239,11 +248,59 @@ def save_uploaded_image(file):
         except Exception:
             return None
 
+def borrow_out_on(b, d):
+    """Un emprunt est 'sorti' au jour d si la periode [prise, retour prevu] couvre d.
+    - avant la prise : pas encore sorti
+    - du jour de la prise jusqu'a AUJOURD'HUI : sorti (le materiel est en main,
+      meme si l'emprunt est en retard : retour non fait)
+    - jours a venir : sorti jusqu'a la date de retour prevue"""
+    start = b.pickup_date or (b.borrow_date.date() if b.borrow_date else None)
+    end = b.expected_return_date
+    if not start or not end:
+        return False
+    if d < start:
+        return False
+    if d <= date.today():
+        return True
+    return d <= end
+
+
+def units_out_on(eq_id, d):
+    """Nombre d'unites emportees/sorties le jour d (emprunts actifs/en retard)."""
+    total = 0
+    for b in Borrow.query.filter_by(equipment_id=eq_id).filter(Borrow.status.in_(['active', 'late'])).all():
+        if borrow_out_on(b, d):
+            total += b.quantity or 0
+    return total
+
+
+def availability_on_date(eq, d):
+    """Unites disponibles du jour d = total - reparations - emprunts sortis ce jour-la."""
+    return max(0, (eq.total_quantity or 0) - (eq.in_repair or 0) - units_out_on(eq.id, d))
+
+
+def min_availability_range(eq, start, end, max_days=120):
+    """La disponibilite MINIMUM sur toute la periode [start, end] (jour par jour).
+    Sert a empecher de double-emprunter une periode deja reservee."""
+    borrows = Borrow.query.filter_by(equipment_id=eq.id).filter(Borrow.status.in_(['active', 'late'])).all()
+    d = start
+    mn = None
+    for _ in range(max_days):
+        if d > end:
+            break
+        out = sum((b.quantity or 0) for b in borrows if borrow_out_on(b, d))
+        a = max(0, (eq.total_quantity or 0) - (eq.in_repair or 0) - out)
+        mn = a if mn is None else min(mn, a)
+        d += timedelta(days=1)
+    if mn is None:
+        mn = max(0, (eq.total_quantity or 0) - (eq.in_repair or 0))
+    return mn
+
+
 def update_availability(eq_id):
     eq = db.session.get(Equipment, eq_id)
     if eq:
-        qty = db.session.query(db.func.sum(Borrow.quantity)).filter(Borrow.equipment_id==eq_id, Borrow.status.in_(['active','late'])).scalar() or 0
-        eq.available_quantity = max(0, eq.total_quantity - qty - (eq.in_repair or 0)); db.session.commit()
+        eq.available_quantity = availability_on_date(eq, date.today()); db.session.commit()
 
 
 def is_pending_user():
@@ -473,7 +530,7 @@ def dashboard():
     db.session.commit()
     eq_json = json.dumps([{'id':e.id,'name':e.name,'available_quantity':e.available_quantity} for e in Equipment.query.all()])
     is_pending = not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
-    upcoming_events = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    upcoming_events = Event.query.filter(Event.end_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
     repair_count = Equipment.query.filter(Equipment.in_repair > 0).count()
     return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=Equipment.query.count(), available_count=Equipment.query.filter(Equipment.available_quantity>0).count(), late_count=Borrow.query.filter_by(status='late').count(), repair_count=repair_count, equipment_json=eq_json, today=today, is_pending=is_pending, upcoming_events=upcoming_events)
 
@@ -484,8 +541,26 @@ def equipment_detail(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
     borrows = Borrow.query.filter_by(equipment_id=eid).order_by(Borrow.borrow_date.desc()).all()
-    upcoming_events = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
-    return render_template('equipment_detail.html', eq=eq, borrows=borrows, today=date.today(), upcoming_events=upcoming_events)
+    upcoming_events = Event.query.filter(Event.end_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    # ── Donnees du calendrier de disponibilite (emprunts en cours / en retard) ──
+    cal_borrows = []
+    for b in Borrow.query.filter_by(equipment_id=eid).filter(Borrow.status.in_(['active', 'late'])).order_by(Borrow.pickup_date, Borrow.id).all():
+        start = b.pickup_date or (b.borrow_date.date() if b.borrow_date else None)
+        end = b.expected_return_date
+        if not (start and end):
+            continue
+        cal_borrows.append({
+            'id': b.id,
+            'user': b.user.full_name if b.user else '?',
+            'qty': b.quantity or 0,
+            'start': start.strftime('%Y-%m-%d'),
+            'end': end.strftime('%Y-%m-%d'),
+            'start_fmt': start.strftime('%d/%m/%Y'),
+            'end_fmt': end.strftime('%d/%m/%Y'),
+            'status': b.status,
+            'event': b.event_name or ''
+        })
+    return render_template('equipment_detail.html', eq=eq, borrows=borrows, today=date.today(), upcoming_events=upcoming_events, cal_borrows=cal_borrows, cal_borrows_json=json.dumps(cal_borrows), today_str=date.today().strftime('%Y-%m-%d'))
 
 @app.route('/borrow/<int:eid>', methods=['POST'])
 @permission_required('borrow_equipment')
@@ -496,13 +571,23 @@ def borrow_equipment(eid):
     try: return_date = datetime.strptime(rd,'%Y-%m-%d').date()
     except: flash('Date invalide.','error'); return redirect(url_for('dashboard'))
     if return_date < date.today(): flash('Date dans le passe.','error'); return redirect(url_for('dashboard'))
-    if qty < 1 or qty > eq.available_quantity: flash(f'Quantite invalide (max {eq.available_quantity}).','error'); return redirect(url_for('dashboard'))
     # ── Date de prise du materiel (optionnelle, defaut = aujourd'hui) ──
     pd = request.form.get('pickup_date','')
     try:
         pickup_date = datetime.strptime(pd,'%Y-%m-%d').date() if pd else date.today()
     except (TypeError, ValueError):
         pickup_date = date.today()
+    if return_date < pickup_date:
+        flash('La date de retour doit etre apres la date de prise.','error'); return redirect(url_for('dashboard'))
+    # ── Quantite : verifiee sur TOUTE la periode [prise, retour] ──
+    # Un emprunt reserve le materiel sur sa periode : impossible de double-
+    # emprunter (ex: materiel deja reserve pour un evenement confirme).
+    if qty < 1:
+        flash('Quantite invalide.','error'); return redirect(url_for('dashboard'))
+    min_avail = min_availability_range(eq, pickup_date, return_date)
+    if qty > min_avail:
+        flash(f'Quantite invalide : il ne reste que {min_avail} unite(s) disponible(s) du {pickup_date.strftime("%d/%m")} au {return_date.strftime("%d/%m")} (emprunts en cours compris).','error')
+        return redirect(url_for('dashboard'))
     # ── Evenement : soit choisi dans la liste (event_id), soit ecrit librement ──
     evt = None
     try:
@@ -567,7 +652,7 @@ def mark_repaired(eid):
 def borrows_page():
     if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
     active = Borrow.query.filter(Borrow.status.in_(['active','late'])).order_by(Borrow.expected_return_date).all()
-    events = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    events = Event.query.filter(Event.end_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
     # Grouper par evenement
     by_event = {}   # event_id -> {'event': evt, 'borrows': [...]}
     no_event = []
@@ -1208,13 +1293,14 @@ def delete_category(cid):
 def schedule():
     if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
     """Main calendar/schedule view"""
-    past = Event.query.filter(Event.event_date < date.today()).order_by(Event.event_date.desc()).limit(20).all()
+    past = Event.query.filter(Event.end_date < date.today()).order_by(Event.event_date.desc()).limit(20).all()
     # Tous les evenements (passes + a venir) pour le calendrier mensuel
     all_events = Event.query.order_by(Event.event_date, Event.start_time).all()
     events_json = json.dumps([
         {'id': e.id, 'title': e.title, 'description': e.description or '',
-         'date': e.event_date.strftime('%Y-%m-%d'), 'start': e.start_time or '08:00',
-         'end': e.end_time or '17:00', 'location': e.location or '', 'status': e.status,
+         'date': e.event_date.strftime('%Y-%m-%d'), 'dend': e.date_end().strftime('%Y-%m-%d'),
+         'start': e.start_time or '08:00', 'end': e.end_time or '17:00',
+         'location': e.location or '', 'status': e.status,
          'users': [a.user_id for a in e.assignments]}
         for e in all_events
     ])
@@ -1262,7 +1348,7 @@ def calendar_ics():
         return 'Cle de souscription invalide.', 403
     today = date.today()
     horizon = today + timedelta(days=92)
-    events = Event.query.filter(Event.event_date >= today, Event.event_date <= horizon).order_by(Event.event_date, Event.start_time).all()
+    events = Event.query.filter(Event.end_date >= today, Event.event_date <= horizon).order_by(Event.event_date, Event.start_time).all()
     dtstamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     lines = [
         'BEGIN:VCALENDAR', 'VERSION:2.0',
@@ -1275,6 +1361,7 @@ def calendar_ics():
     ]
     for evt in events:
         d = evt.event_date.strftime('%Y%m%d')
+        d_end = evt.date_end().strftime('%Y%m%d')  # multi-jours : derniere journee
         st = (evt.start_time or '08:00').replace(':', '') + '00'
         en = (evt.end_time or '17:00').replace(':', '') + '00'
         assignees = ', '.join(a.user.full_name for a in evt.assignments if a.user)
@@ -1286,7 +1373,7 @@ def calendar_ics():
             'UID:imagine-events-' + str(evt.id) + '@imagine-events.tn',
             'DTSTAMP:' + dtstamp,
             'DTSTART;TZID=Africa/Tunis:' + d + 'T' + st,
-            'DTEND;TZID=Africa/Tunis:' + d + 'T' + en,
+            'DTEND;TZID=Africa/Tunis:' + d_end + 'T' + en,
             'SUMMARY:' + ics_escape(evt.title),
             'DESCRIPTION:' + ics_escape(desc),
         ]
@@ -1308,8 +1395,15 @@ def create_event():
     if not title: flash('Titre requis.','error'); return redirect(url_for('schedule'))
     try: ed = datetime.strptime(request.form.get('event_date',''),'%Y-%m-%d').date()
     except: flash('Date invalide.','error'); return redirect(url_for('schedule'))
+    # ── Evenement multi-jours : date de fin (defaut = le jour de debut) ──
+    try:
+        ed_end = datetime.strptime(request.form.get('end_date','') or ed.strftime('%Y-%m-%d'),'%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        ed_end = ed
+    if ed_end < ed:
+        flash('La date de fin doit etre apres (ou egale a) la date de debut.','error'); return redirect(url_for('schedule'))
     st = request.form.get('start_time','08:00'); et = request.form.get('end_time','17:00')
-    evt = Event(title=title, description=request.form.get('description','').strip(), event_date=ed, start_time=st, end_time=et, location=request.form.get('location','').strip(), created_by=current_user.id)
+    evt = Event(title=title, description=request.form.get('description','').strip(), event_date=ed, end_date=ed_end, start_time=st, end_time=et, location=request.form.get('location','').strip(), created_by=current_user.id)
     db.session.add(evt); db.session.flush()
     # Assign users
     user_ids = request.form.getlist('assigned_users')
@@ -1320,8 +1414,8 @@ def create_event():
     for uid in user_ids:
         u = db.session.get(User, uid)
         if u:
-            notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" le {ed.strftime("%d/%m/%Y")} ({st}-{et})', '/schedule')
-    log_action('create_event', f'Evenement "{title}" cree le {ed.strftime("%d/%m/%Y")}'); flash(f'Evenement "{title}" cree.','success')
+            notify_user(u.id, f'Nouvel evenement : {title}', f'Vous etes assigne a "{title}" {evt.date_label()} ({st}-{et})', '/schedule')
+    log_action('create_event', f'Evenement "{title}" cree {evt.date_label()}'); flash(f'Evenement "{title}" cree {evt.date_label()}.','success')
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/edit', methods=['POST'])
@@ -1332,6 +1426,16 @@ def edit_event(evid):
     evt.title = request.form.get('title','').strip(); evt.description = request.form.get('description','').strip()
     try: evt.event_date = datetime.strptime(request.form.get('event_date',''),'%Y-%m-%d').date()
     except: pass
+    # ── Date de fin (evenement multi-jours) ; vide = 1 jour ──
+    end_form = request.form.get('end_date','').strip()
+    if end_form:
+        try:
+            new_end = datetime.strptime(end_form, '%Y-%m-%d').date()
+            evt.end_date = new_end if new_end >= evt.event_date else evt.event_date
+        except (TypeError, ValueError):
+            evt.end_date = evt.event_date
+    else:
+        evt.end_date = evt.event_date
     evt.start_time = request.form.get('start_time','08:00'); evt.end_time = request.form.get('end_time','17:00')
     evt.location = request.form.get('location','').strip(); evt.status = request.form.get('status',evt.status)
     # Update assignments
@@ -1352,10 +1456,10 @@ def delete_event(evid):
 @app.route('/schedule/clear-past', methods=['POST'])
 @permission_required('manage_schedule')
 def clear_past_events():
-    count = Event.query.filter(Event.event_date < date.today()).count()
-    past_ids = [e.id for e in Event.query.filter(Event.event_date < date.today()).all()]
+    count = Event.query.filter(Event.end_date < date.today()).count()
+    past_ids = [e.id for e in Event.query.filter(Event.end_date < date.today()).all()]
     EventAssignment.query.filter(EventAssignment.event_id.in_(past_ids)).delete(synchronize_session='fetch')
-    Event.query.filter(Event.event_date < date.today()).delete()
+    Event.query.filter(Event.end_date < date.today()).delete()
     db.session.commit()
     log_action('clear_past_events', f'{count} evenements passes supprimes'); flash(f'{count} evenement(s) passes supprime(s).','success')
     return redirect(url_for('schedule'))
@@ -1565,6 +1669,15 @@ def init_db():
             ensure_column('equipment', 'in_repair', 'ALTER TABLE equipment ADD COLUMN in_repair INTEGER DEFAULT 0')
             ensure_column('borrows', 'event_id', 'ALTER TABLE borrows ADD COLUMN event_id INTEGER')
             ensure_column('borrows', 'pickup_date', 'ALTER TABLE borrows ADD COLUMN pickup_date DATE')
+            ensure_column('events', 'end_date', 'ALTER TABLE events ADD COLUMN end_date DATE')
+            # Backfill : les evenements existants (1 jour) -> end_date = event_date
+            # (les requetes filtrent ensuite simplement sur end_date)
+            try:
+                db.session.execute(db.text('UPDATE events SET end_date = event_date WHERE end_date IS NULL'))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print('[INIT] backfill events.end_date ignore:', str(e)[:120])
 
             # ── Roles par defaut (cree seulement s'ils manquent) ──
             def ensure_role(name, icon, description, perms):
