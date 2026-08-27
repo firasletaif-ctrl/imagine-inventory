@@ -1479,6 +1479,162 @@ def unassign_user(evid, uid):
     if ea: db.session.delete(ea); db.session.commit()
     return redirect(url_for('schedule'))
 
+# ═══════════ N E W :  R E C A P S   D ' E V E N E M E N T  (matos + notes + equipe + IA) ═══════════
+def _recap_borrows(evid, evt):
+    """Emprunts lies a l'evenement : par event_id OU par nom saisi librement."""
+    borrows = Borrow.query.filter_by(event_id=evid).all()
+    seen = set(b.id for b in borrows)
+    title_lower = (evt.title or '').strip().lower()
+    if title_lower:
+        for b in Borrow.query.filter(db.func.lower(Borrow.event_name) == title_lower).all():
+            if b.event_id is None and b.id not in seen:
+                borrows.append(b)
+    borrows.sort(key=lambda b: (b.pickup_date or b.expected_return_date, b.id))
+    return borrows
+
+
+def _recap_context(evid):
+    """Tout ce qu'il faut pour afficher un recap d'evenement."""
+    evt = db.session.get(Event, evid)
+    if not evt:
+        return None
+    borrows = _recap_borrows(evid, evt)
+    cats = {}
+    total_units = 0
+    for b in borrows:
+        cat_name = b.equipment.category.name if (b.equipment and b.equipment.category) else 'Autre'
+        cats.setdefault(cat_name, []).append(b)
+        total_units += b.quantity or 0
+    matos_groups = []
+    for cat_name in sorted(cats.keys()):
+        bs = cats[cat_name]
+        matos_groups.append({
+            'name': cat_name,
+            'icon': bs[0].equipment.category.icon if (bs[0].equipment and bs[0].equipment.category) else '📦',
+            'total': sum((b.quantity or 0) for b in bs),
+            'rows': bs
+        })
+    team = []
+    for a in evt.assignments:
+        u = db.session.get(User, a.user_id)
+        if u:
+            team.append({'name': u.full_name, 'role': a.role or 'Staff'})
+    team.sort(key=lambda t: t['name'].lower())
+    return {'evt': evt, 'borrows': borrows, 'matos_groups': matos_groups, 'total_units': total_units, 'team': team}
+
+
+def generate_ai_recap(evt, matos_lines, team_lines):
+    """Resume du recap redige par IA (OpenAI). Retourne None si pas de cle
+    OPENAI_API_KEY ou en cas d'erreur — le recap structure reste toujours
+    disponible a cote."""
+    api_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    if not api_key:
+        return None
+    import urllib.request
+    notes = (evt.description or '').strip() or '(aucune note saisie)'
+    prompt = f"""Redige le recapitulatif de preparation de cet evenement, en francais, pour l'equipe de production.
+
+TITRE : {evt.title}
+DATES : {evt.date_label()} de {evt.start_time} a {evt.end_time}
+LIEU : {evt.location or 'non precise'}
+STATUT : {evt.status}
+
+DETAILS / NOTES SAISIS PAR L'EQUIPE :
+{notes}
+
+MATERIEL RESERVE :
+{chr(10).join(matos_lines) or '(aucun materiel lie pour l\'instant)'}
+
+EQUIPE ASSIGNEE :
+{chr(10).join(team_lines) or '(aucun membre assigne)'}
+
+Structure exacte (puces "- " pour les listes, aucun tableau, aucune asterrisque) :
+1. RESUME — 2 a 3 phrases sur l'evenement et son contexte
+2. MATERIEL A PREPARER — liste par categorie avec les quantites totales
+3. EQUIPE MOBILISEE — 1 ou 2 phrases
+4. POINTS D'ATTENTION — delais, materiel critique, choses a verifier avant l'evenement
+Maximum 300 mots. Ton professionnel et concis."""
+    data = json.dumps({
+        "model": os.environ.get('OPENAI_MODEL', 'gpt-4o-mini'),
+        "temperature": 0.4,
+        "messages": [
+            {"role": "system", "content": "Tu es l'assistant interne de la societe d'evenements Imagine Events Tunisia (Tunis). Tu rediges des recaps de preparation professionnels, clairs et concis en francais."},
+            {"role": "user", "content": prompt}
+        ]
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.openai.com/v1/chat/completions',
+        data=data,
+        headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'},
+        method='POST'
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            out = json.loads(resp.read().decode('utf-8'))
+            return out['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        print(f'[AI RECAP] erreur: {type(e).__name__}: {str(e)[:200]}')
+        return None
+
+
+@app.route('/recaps')
+@login_required
+def recaps_list():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    events = Event.query.order_by(Event.event_date.desc()).limit(100).all()
+    # Compteur d'emprunts lies (sans double-compter)
+    counts = {}
+    for b in Borrow.query.all():
+        if b.event_id:
+            counts[b.event_id] = counts.get(b.event_id, 0) + 1
+        else:
+            key = (b.event_name or '').strip().lower()
+            if key:
+                counts['name:' + key] = counts.get('name:' + key, 0) + 1
+    for e in events:
+        e.recap_count = counts.get(e.id, 0) + counts.get('name:' + (e.title or '').strip().lower(), 0)
+    return render_template('recaps_list.html', events=events, ai_configured=bool(os.environ.get('OPENAI_API_KEY', '').strip()))
+
+
+@app.route('/recap/<int:evid>')
+@login_required
+def recap_view(evid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    ctx = _recap_context(evid)
+    if not ctx: flash('Evenement introuvable.','error'); return redirect(url_for('recaps_list'))
+    ctx.update({'ai_text': None, 'ai_error': None, 'ai_configured': bool(os.environ.get('OPENAI_API_KEY', '').strip()), 'now': tunisia_now()})
+    return render_template('recap.html', **ctx)
+
+
+@app.route('/recap/<int:evid>/ai', methods=['POST'])
+@login_required
+def recap_ai(evid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    ctx = _recap_context(evid)
+    if not ctx: flash('Evenement introuvable.','error'); return redirect(url_for('recaps_list'))
+    evt = ctx['evt']
+    matos_lines = []
+    for g in ctx['matos_groups']:
+        matos_lines.append(f'- {g["name"]} : {g["total"]} unite(s) au total')
+        for b in g['rows']:
+            p = b.pickup_date or b.expected_return_date
+            who = b.user.full_name if b.user else '?'
+            matos_lines.append(f'    • {b.equipment.name} x{b.quantity} — {who} (prise {p.strftime("%d/%m/%Y")}, retour {b.expected_return_date.strftime("%d/%m/%Y")})')
+    team_lines = [f'- {t["name"]} ({t["role"]})' for t in ctx['team']]
+    configured = bool(os.environ.get('OPENAI_API_KEY', '').strip())
+    text = generate_ai_recap(evt, matos_lines, team_lines)
+    ctx.update({'ai_configured': configured, 'now': tunisia_now()})
+    if text:
+        log_action('ai_recap', f'Recap IA genere pour "{evt.title}"', evt.title)
+        flash('Résumé IA généré !','success')
+        ctx.update({'ai_text': text, 'ai_error': None})
+    elif not configured:
+        ctx.update({'ai_text': None, 'ai_error': 'not_configured'})
+    else:
+        ctx.update({'ai_text': None, 'ai_error': "L'IA n'a pas répondu. Vérifie la clé API (OPENAI_API_KEY) ou réessaie dans quelques secondes."})
+    return render_template('recap.html', **ctx)
+
+
 # ═══════════ N E W :  N O T I F I C A T I O N S ═══════════
 @app.route('/notifications')
 @login_required

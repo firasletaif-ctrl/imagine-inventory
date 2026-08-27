@@ -39,6 +39,9 @@
             <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>
+            <a href="{{ url_for('recaps_list') }}" class="nav-item {% if request.endpoint in ('recaps_list', 'recap_view', 'recap_ai') %}active{% endif %}">
+                <span class="nav-icon">📄</span><span>Recaps evenements</span>
+            </a>
             {% if current_user.has_permission('manage_equipment') %}
             <a href="{{ url_for('add_equipment') }}" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
                 <span class="nav-icon">➕</span><span>Ajouter du materiel</span>

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Récaps événements{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:900px">
+    <div class="page-header">
+        <h1>📄 Récaps d'événements</h1>
+        <p>Choisis un événement pour générer son récapitulatif : matériel réservé, notes, équipe, et résumé par IA.</p>
+    </div>
+
+    {% if not ai_configured %}
+    <div style="background:var(--blue-pale);border:1px solid var(--blue);border-radius:10px;padding:.8rem 1rem;margin-bottom:1.2rem;font-size:.85rem;color:var(--blue-deep);line-height:1.6">
+        ℹ️ <strong>Mode IA non activé.</strong> Les récaps structuré(e)s (matos, notes, équipe, impression PDF) fonctionnent déjà.
+        Pour activer le <strong>résumé rédigé par IA</strong>, ajoute la variable d'environnement
+        <code style="background:white;padding:.1rem .4rem;border-radius:4px">OPENAI_API_KEY</code> dans ton service Render
+        (onglet Environment → Add environment variable), avec une clé obtenue sur platform.openai.com/api-keys.
+    </div>
+    {% endif %}
+
+    {% if events %}
+    <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm)">
+        <table class="history-table">
+            <thead><tr><th>Événement</th><th> Dates</th><th>Lieu</th><th>Matos lié</th><th>Statut</th><th></th></tr></thead>
+            <tbody>
+                {% for e in events %}
+                <tr>
+                    <td><strong>{{ e.title }}</strong></td>
+                    <td>{{ e.event_date.strftime('%d/%m/%Y') }}{% if e.is_multiday() %} → {{ e.date_end().strftime('%d/%m/%Y') }}{% endif %}<br><small style="color:var(--gray-400)">{{ e.start_time }}-{{ e.end_time }}</small></td>
+                    <td>{{ e.location or '—' }}</td>
+                    <td>{% if e.recap_count %}<strong>{{ e.recap_count }}</strong> matériel(s){% else %}<span style="color:var(--gray-400)">0</span>{% endif %}</td>
+                    <td>
+                        {% if e.status == 'upcoming' %}<span class="status-badge status-active">À venir</span>
+                        {% elif e.status == 'ongoing' %}<span class="status-badge status-late">En cours</span>
+                        {% elif e.status == 'completed' %}<span class="status-badge status-returned">Terminé</span>
+                        {% else %}<span class="status-badge" style="background:var(--gray-100);color:var(--gray-500)">Annulé</span>{% endif %}
+                    </td>
+                    <td><a href="{{ url_for('recap_view', evid=e.id) }}" class="btn btn-sm btn-accent">📄 Récap</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>Aucun événement</h3>
+        <p>Crée d'abord un événement dans l'onglet 📅 Emploi du temps.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

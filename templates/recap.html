@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Récap : {{ evt.title }}{% endblock %}
+
+{% block head %}
+<style>
+.recap-actions{display:flex;gap:.6rem;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap}
+.recap-doc{background:white;border:1px solid var(--gray-200);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden}
+.recap-letterhead{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.5rem 2rem;border-bottom:3px solid var(--blue-deep);flex-wrap:wrap}
+.recap-logo{display:flex;align-items:center;gap:.8rem}
+.recap-logo-icon{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#0B1D3A,#13294B);color:#E63946;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;flex-shrink:0}
+.recap-logo-name{font-family:var(--font-display);font-size:1.25rem;font-weight:700;color:var(--blue-deep);letter-spacing:1px;line-height:1.1}
+.recap-logo-name span{color:var(--red)}
+.recap-logo-sub{font-size:.58rem;letter-spacing:2px;color:var(--gray-500);margin-top:2px}
+.recap-doctitle{text-align:right}
+.recap-doctitle .t1{font-size:1.3rem;font-weight:800;color:var(--blue-deep);letter-spacing:.5px}
+.recap-doctitle .t2{font-size:.75rem;color:var(--gray-500);margin-top:3px}
+.recap-body{padding:1.75rem 2rem}
+.recap-evt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem}
+.recap-evt-title{font-size:1.5rem;font-weight:800;color:var(--blue-deep);line-height:1.25}
+.recap-evt-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem 1.5rem;margin:1rem 0 0;font-size:.9rem}
+.recap-evt-meta .k{font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray-400);font-weight:700}
+.recap-evt-meta .v{color:var(--gray-800);font-weight:600;margin-top:2px}
+.recap-section{margin-top:1.75rem}
+.recap-section > h2{font-size:1.05rem;color:var(--blue-deep);border-bottom:2px solid var(--gray-100);padding-bottom:.5rem;margin-bottom:1rem}
+.matos-cat{margin-bottom:1.1rem}
+.matos-cat-head{background:var(--blue-deep);color:white;font-weight:700;font-size:.85rem;padding:.5rem .9rem;border-radius:8px 8px 0 0}
+.matos-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.matos-table th{background:var(--gray-100);color:var(--gray-600);text-align:left;padding:.45rem .8rem;font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
+.matos-table td{padding:.5rem .8rem;border-bottom:1px solid var(--gray-100);color:var(--gray-800)}
+.matos-table tr:last-child td{border-bottom:none}
+.recap-notes{background:var(--gray-50);border-left:4px solid var(--blue);padding:1rem 1.2rem;border-radius:0 8px 8px 0;font-size:.92rem;color:var(--gray-700);line-height:1.7;white-space:pre-line}
+.team-chip{display:inline-flex;align-items:center;gap:.45rem;background:var(--blue-pale);color:var(--blue-deep);border-radius:100px;padding:.4rem .9rem;margin:.25rem .3rem .25rem 0;font-weight:600;font-size:.88rem}
+.team-chip small{color:var(--gray-500);font-weight:500}
+.ai-text{background:#F6F8FC;border:1px solid var(--blue-pale);border-radius:10px;padding:1.1rem 1.3rem;font-size:.93rem;line-height:1.75;color:var(--gray-800);white-space:pre-line}
+.ai-box{border-radius:10px;padding:.9rem 1.1rem;font-size:.88rem;line-height:1.65;margin-bottom:.9rem}
+.ai-box.info{background:var(--blue-pale);color:var(--blue-deep)}
+.ai-box.err{background:var(--red-pale);color:var(--red-dark)}
+.recap-footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--gray-200);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;font-size:.72rem;color:var(--gray-400);line-height:1.7}
+/* Impression : seulement le document */
+@media print{
+    .sidebar, .mobile-header, .app-footer, .flash-container, .no-print, .breadcrumb { display:none !important }
+    body { background:white !important }
+    .main-content { margin:0 !important; padding:0 !important; max-width:100% !important }
+    .recap-doc { border:none; box-shadow:none; border-radius:0 }
+    .recap-body { padding:0 }
+    .recap-section { break-inside:avoid-page }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:1000px">
+    <div class="breadcrumb no-print">
+        <a href="{{ url_for('recaps_list') }}">← Tous les récaps</a>
+    </div>
+
+    <div class="recap-actions no-print">
+        <span style="font-size:.85rem;color:var(--gray-500)">Document généré le {{ now.strftime('%d/%m/%Y à %H:%M') }}</span>
+        <span style="flex:1"></span>
+        <form method="POST" action="{{ url_for('recap_ai', evid=evt.id) }}">
+            <button class="btn btn-secondary" {% if not ai_configured %}title="Configure OPENAI_API_KEY dans Render pour activer l'IA"{% endif %}>🤖 {{ "Régénérer le résumé IA" if ai_text else "Générer le résumé IA" }}</button>
+        </form>
+        <button class="btn btn-accent" onclick="window.print()">🖨️ Imprimer / PDF</button>
+    </div>
+
+    <div class="recap-doc">
+        <!-- Letterhead : logo en haut a gauche -->
+        <div class="recap-letterhead">
+            <div class="recap-logo">
+                <div class="recap-logo-icon">✦</div>
+                <div>
+                    <div class="recap-logo-name">IMAGINE<span> EVENTS</span></div>
+                    <div class="recap-logo-sub">TUNISIA · EXCELLENCE EVENEMENTIELLE</div>
+                </div>
+            </div>
+            <div class="recap-doctitle">
+                <div class="t1">RÉCAPITULATIF D'ÉVÉNEMENT</div>
+                <div class="t2">Document interne — Imagine Inventory</div>
+            </div>
+        </div>
+
+        <div class="recap-body">
+            <!-- Evenement -->
+            <div class="recap-evt-head">
+                <div class="recap-evt-title">{{ evt.title }}</div>
+                <span class="status-badge {% if evt.status == 'upcoming' %}status-active{% elif evt.status == 'ongoing' %}status-late{% elif evt.status == 'completed' %}status-returned{% else %}{% endif %}" style="{% if evt.status == 'cancelled' %}background:var(--gray-100);color:var(--gray-500){% endif %}">
+                    {{ {'upcoming': 'À venir', 'ongoing': 'En cours', 'completed': 'Terminé', 'cancelled': 'Annulé'}.get(evt.status, evt.status) }}
+                </span>
+            </div>
+            <div class="recap-evt-meta">
+                <div><div class="k">Dates</div><div class="v">{{ evt.date_label() }}</div></div>
+                <div><div class="k">Horaires</div><div class="v">{{ evt.start_time }} – {{ evt.end_time }}</div></div>
+                <div><div class="k">Lieu</div><div class="v">{{ evt.location or 'Non précisé' }}</div></div>
+                <div><div class="k">Matériel lié</div><div class="v">{{ total_units }} unité(s) — {{ borrows|length }} emprunt(s)</div></div>
+            </div>
+
+            <!-- Resume IA -->
+            <div class="recap-section">
+                <h2>🤖 Résumé de préparation</h2>
+                {% if ai_text %}
+                <div class="ai-text">{{ ai_text }}</div>
+                {% endif %}
+                {% if ai_error == 'not_configured' %}
+                <div class="ai-box info">
+                    ℹ️ <strong>IA non configurée.</strong> Ajoute <code>OPENAI_API_KEY</code> (clé de platform.openai.com/api-keys)
+                    dans les variables d'environnement de ton service Render, puis appuie sur « Générer le résumé IA ».
+                    Le récap structuré ci-dessous fonctionne dans tous les cas.
+                </div>
+                {% elif ai_error %}
+                <div class="ai-box err">⚠️ {{ ai_error }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Materiel -->
+            <div class="recap-section">
+                <h2>📦 Matériel réservé — {{ total_units }} unité(s) au total</h2>
+                {% if matos_groups %}
+                {% for g in matos_groups %}
+                <div class="matos-cat">
+                    <div class="matos-cat-head">
+                        {{ g.icon }} {{ g.name }}
+                        <span style="float:right;font-weight:500">{{ g.total }} unité(s)</span>
+                    </div>
+                    <table class="matos-table">
+                        <thead><tr><th>Matériel</th><th>Qté</th><th>Par qui</th><th>Prise</th><th>Retour prévu</th><th>Statut</th></tr></thead>
+                        <tbody>
+                            {% for b in g.rows %}
+                            <tr>
+                                <td><strong>{{ b.equipment.name }}</strong><br><small style="color:var(--gray-400)">{{ b.equipment.reference or '' }}</small></td>
+                                <td><strong>×{{ b.quantity }}</strong></td>
+                                <td>{{ b.user.full_name if b.user else '—' }}</td>
+                                <td>{{ (b.pickup_date or b.expected_return_date).strftime('%d/%m/%Y') }}</td>
+                                <td>{{ b.expected_return_date.strftime('%d/%m/%Y') }}</td>
+                                <td>{% if b.status == 'late' %}⚠️ En retard{% elif b.status == 'returned' %}✅ Retourné{% else %}📤 Sorti{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="color:var(--gray-500);font-size:.9rem">Aucun matériel lié à cet événement pour l'instant. Associez des emprunts à cet événement (onglet 📤 Emprunts) pour qu'ils apparaissent ici.</p>
+                {% endif %}
+            </div>
+
+            <!-- Notes -->
+            <div class="recap-section">
+                <h2>📝 Notes & détails</h2>
+                {% if evt.description and evt.description.strip() %}
+                <div class="recap-notes">{{ evt.description }}</div>
+                {% else %}
+                <p style="color:var(--gray-500);font-size:.9rem">Aucune note saisie pour cet événement.</p>
+                {% endif %}
+            </div>
+
+            <!-- Equipe -->
+            <div class="recap-section">
+                <h2>👥 Équipe mobilisée — {{ team|length }} personne(s)</h2>
+                {% if team %}
+                {% for t in team %}
+                <span class="team-chip">{{ t.name }} <small>({{ t.role }})</small></span>
+                {% endfor %}
+                {% else %}
+                <p style="color:var(--gray-500);font-size:.9rem">Aucun membre assigné à cet événement.</p>
+                {% endif %}
+            </div>
+
+            <div class="recap-footer">
+                <div>
+                    Imagine Events Tunisia — Rue du Lac Loch Ness, Imm Neo, 3ème étage, 1053 Les Berges du Lac, Tunis<br>
+                    +216 71 656 056 · info@imagine-events.com
+                </div>
+                <div style="text-align:right">
+                    Généré le {{ now.strftime('%d/%m/%Y à %H:%M') }}<br>
+                    via Imagine Inventory
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
