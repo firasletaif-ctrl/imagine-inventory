@@ -85,7 +85,7 @@
 
 {% block content %}
 <div class="form-page" style="max-width:1200px">
-    {% if current_user.has_permission('manage_schedule') %}
+    {% if has_perm('schedule_create','manage_schedule') %}
     <div class="dash-header">
         <div><h1 class="dash-title">📅 Emploi du temps</h1><p class="dash-subtitle">Congres, evenements, planning equipe</p></div>
         <button class="btn btn-accent" onclick="openModal('createEventModal')">➕ Nouvel evenement</button>
@@ -158,7 +158,7 @@
     <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem">
             <button class="past-toggle" id="pastToggle" onclick="togglePast()"><span class="caret">▶</span> 📋 Evenements passes ({{ past|length }})</button>
-            {% if current_user.has_permission('manage_schedule') %}
+            {% if has_perm('schedule_clear','manage_schedule') %}
             <form method="POST" action="{{ url_for('clear_past_events') }}" onsubmit="return confirm('Supprimer TOUS les evenements passes ? Cette action est irreversible.')">
                 <button class="btn btn-sm btn-danger">🗑️ Effacer tous les evenements passes</button>
             </form>
@@ -170,7 +170,7 @@
                     <tbody>{% for evt in past %}<tr>
                         <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td><td><strong>{{ evt.title }}</strong></td>
                         <td>{{ evt.assignments|map(attribute='user.full_name')|join(', ') or '—' }}</td><td>{{ evt.status }}</td>
-                        <td>{% if current_user.has_permission('manage_schedule') %}
+                        <td>{% if has_perm('schedule_edit','manage_schedule') %}
                             <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline"><button class="btn btn-sm btn-danger">🗑️</button></form>
                         {% endif %}</td>
                     </tr>{% endfor %}</tbody>
@@ -181,7 +181,7 @@
     {% endif %}
 </div>
 
-{% if current_user.has_permission('manage_schedule') %}
+{% if has_perm('schedule_create','schedule_edit','manage_schedule') %}
 <!-- Create Event Modal -->
 <div class="modal-overlay" id="createEventModal">
     <div class="modal" style="max-width:620px">
@@ -279,7 +279,7 @@
 // ═══════════ DONNEES CALENDRIER ═══════════
 var EVENTS = {{ events_json|safe }};
 var TODAY_STR = '{{ today_str }}';
-var CAN_MANAGE = {{ 'true' if current_user.has_permission('manage_schedule') else 'false' }};
+var CAN_MANAGE = {{ 'true' if has_perm('schedule_create','schedule_edit','schedule_assign','manage_schedule') else 'false' }};
 var USER_NAMES = {{ user_names|tojson|safe }};
 var MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 var DOWS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];

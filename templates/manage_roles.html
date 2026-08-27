@@ -15,14 +15,19 @@
                 <div class="form-group"><label>Description</label><input type="text" name="description" placeholder="Ex: Gerer le depot sans supprimer"></div>
             </div>
             <div style="margin:1rem 0"><strong style="font-size:0.9rem;color:var(--gray-700)">📋 Permissions :</strong></div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.65rem">
-                {% for p in all_permissions %}
-                <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.6rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
-                    <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:18px;height:18px;margin-top:2px">
-                    <div><span style="font-weight:600;font-size:0.9rem">{{ p.icon }} {{ p.label }}</span><br><small style="color:var(--gray-500)">{{ p.desc }}</small></div>
-                </label>
-                {% endfor %}
+            {% for group_name, perms in perm_groups.items() %}
+            <div style="margin-bottom:1.1rem">
+                <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray-400);font-weight:700;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--gray-100)">{{ group_name }}</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.65rem">
+                    {% for p in perms %}
+                    <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.6rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
+                        <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:18px;height:18px;margin-top:2px">
+                        <div><span style="font-weight:600;font-size:0.9rem">{{ p.icon }} {{ p.label }}</span><br><small style="color:var(--gray-500)">{{ p.desc }}</small></div>
+                    </label>
+                    {% endfor %}
+                </div>
             </div>
+            {% endfor %}
             <div style="display:flex;justify-content:flex-end;padding-top:1rem"><button class="btn btn-accent">✅ Creer le role</button></div>
         </form>
     </div>
@@ -66,12 +71,19 @@
                 </div>
                 <div class="form-group"><label>Description</label><input type="text" name="description" id="editDesc"></div>
                 <div style="margin:1rem 0"><strong style="font-size:0.9rem">📋 Permissions :</strong></div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0.5rem" id="editPerms">
-                    {% for p in all_permissions %}
-                    <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.5rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
-                        <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:16px;height:16px;margin-top:2px">
-                        <div><span style="font-weight:600;font-size:.85rem">{{ p.icon }} {{ p.label }}</span></div>
-                    </label>
+                <div id="editPerms">
+                    {% for group_name, perms in perm_groups.items() %}
+                    <div style="margin-bottom:0.9rem">
+                        <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray-400);font-weight:700;margin-bottom:.4rem">{{ group_name }}</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0.5rem">
+                            {% for p in perms %}
+                            <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.5rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
+                                <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:16px;height:16px;margin-top:2px">
+                                <div><span style="font-weight:600;font-size:.85rem">{{ p.icon }} {{ p.label }}</span></div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
                     {% endfor %}
                 </div>
             </div>

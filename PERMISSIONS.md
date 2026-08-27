@@ -1,129 +1,119 @@
 # 🔐 Permissions — Imagine Inventory
 
-Guide complet des droits d'accès par fonctionnalité.
+Chaque fonctionnalité dispose de sa **propre permission**, configurable
+rôle par rôle (⚙️ → Gérer les rôles). Les permissions sont regroupées
+par thème dans l'interface.
 
-## Les 10 permissions
+> **Rétrocompatibilité** : les 4 anciens accès globaux
+> (`manage_equipment`, `manage_schedule`, `clear_history`, `manage_database`)
+> sont conservés (section « Accès global (hérité) »). Un rôle qui a un
+> accès global conserve tous les droits du bloc, même sans les
+> permissions fines. Tes rôles existants (Admin, Manager, Staff)
+> fonctionnent donc sans aucun changement.
 
-| Clé | Nom | Ce qu'elle autorise |
-|-----|-----|---------------------|
-| `manage_users` | Gérer les utilisateurs | Créer / modifier / supprimer des comptes |
-| `manage_roles` | Gérer les rôles | Créer et modifier les rôles et leurs permissions |
-| `manage_equipment` | Gérer le matériel | Ajouter / modifier / supprimer du matériel, commandes, exports, tirage inventaire |
-| `borrow_equipment` | Emprunter | Emprunter du matériel |
-| `return_equipment` | Retourner | Marquer un emprunt comme retourné |
-| `manage_categories` | Gérer les catégories | Ajouter / supprimer des catégories |
-| `view_logs` | Voir les logs | Consulter l'historique d'activité |
-| `clear_history` | Effacer l'historique | Supprimer l'historique des emprunts / logs |
-| `manage_schedule` | Gérer le planning | Créer / modifier / supprimer les événements, assigner l'équipe |
-| `manage_database` | Gérer la base de données | Import CSV, reset tables, photos ZIP, migration |
+## 📦 Matériel & Stock
 
-> Toute action sensible (effacement, reset, import) demande en plus
-> **la saisie du mot de passe** de l'utilisateur, même s'il a la permission.
+| Permission | Ce qu'elle autorise |
+|------------|---------------------|
+| `add_equipment` | ➕ Ajouter du matériel |
+| `edit_equipment` | ✏️ Modifier le matériel (nom, qté, specs, photos) |
+| `delete_equipment` | 🗑️ Supprimer définitivement un article |
+| `delete_photo` | 🖼️ Supprimer une photo d'un article |
+| `manage_categories` | 📂 Ajouter / supprimer des catégories |
+| `repair_stock` | 🔧 Marquer du matériel réparé → remettre en stock |
+| `manage_orders` | 🛒 Commandes de matériel personnalisé (créer, statut, supprimer) |
+
+## 📤 Emprunts
+
+| Permission | Ce qu'elle autorise |
+|------------|---------------------|
+| `borrow_equipment` | 📤 Emprunter (sortie de matériel) |
+| `return_equipment` | ✅ Retourner (inclut la déclaration d'unités en réparation) |
+| `assign_borrow_event` | 🎯 Associer un emprunt à un événement |
+
+## 📅 Planning
+
+| Permission | Ce qu'elle autorise |
+|------------|---------------------|
+| `schedule_create` | ➕ Créer un événement (1 jour ou multi-jours) |
+| `schedule_edit` | ✏️ Modifier / supprimer un événement |
+| `schedule_assign` | 👥 Assigner / retirer des membres sur un événement |
+| `schedule_clear` | 🧹 Effacer les événements passés |
+
+##  Inventaire permanent
+
+| Permission | Ce qu'elle autorise |
+|------------|---------------------|
+| `inventory_generate` | 🎲 Générer un nouveau tirage du jour à la main |
+| `inventory_clear` | 🗑️ Supprimer l'historique des contrôles (mot de passe requis) |
+
+> Voir le tirage du jour et confirmer « ✅ testé » reste ouvert à
+> **tout compte actif** (action quotidienne de toute l'équipe).
+
+##  Exports
+
+| Permission | Ce qu'elle autorise |
+|------------|---------------------|
+| `export_excel` | 📊 Export .xlsx de l'inventaire |
+| `export_pdf` | 🖨️ Export PDF / impression |
+
+## ⚙️ Administration
+
+| Permission | Ce qu'elle autorise |
+|------------|---------------------|
+| `manage_users` | 👥 Créer / modifier / supprimer des comptes |
+| `manage_roles` | 🔐 Gérer les rôles et permissions |
+| `view_logs` | 📜 Consulter l'historique d'activité |
+| `clear_borrow_history` | 🧹 Effacer l'historique des emprunts (mdp requis) |
+| `clear_activity_logs` | 🧹 Effacer les logs d'activité (mdp requis) |
+
+## 🗄️ Base de données (zone sensible — mot de passe requis)
+
+| Permission | Ce qu'elle autorise |
+|------------|---------------------|
+| `import_csv` | 📥 Importer des données par table |
+| `reset_tables` | ♻️ Vider toutes les tables |
+| `photo_backup` | 📸 Exporter les photos (ZIP) |
+| `photo_restore` | 📥 Restaurer / stocker les photos en base |
+
+## 🔓 Accès global (hérité — rétrocompatibilité)
+
+| Permission | Équivaut à |
+|------------|-----------|
+| `manage_equipment` | Tout le bloc « Matériel & Stock » + Exports + Inventaire (actions) |
+| `manage_schedule` | Tout le bloc « Planning » |
+| `clear_history` | Effacement emprunts + logs |
+| `manage_database` | Tout le bloc « Base de données » |
 
 ## Rôles par défaut
 
 | Rôle | Permissions |
 |------|-------------|
-| 👑 **Admin** | Les 10 permissions |
-| 🛡️ **Manager** | `manage_users`, `manage_equipment`, `borrow_equipment`, `return_equipment`, `manage_categories`, `view_logs`, `manage_schedule` |
+| 👑 **Admin** | Toutes les permissions (fines + héritées) |
+| 🛡️ **Manager** | `manage_users`, `manage_equipment` (hérité), `borrow_equipment`, `return_equipment`, `manage_categories`, `view_logs`, `manage_schedule` (hérité) |
 | 👷 **Staff** | `borrow_equipment`, `return_equipment` |
-| ⏳ **En attente** | Aucune (écran « compte en attente de validation ») |
+| ⏳ **En attente** | Aucune |
 
-> Les rôles sont **libres** : tu peux en créer d'autres et cocher n'importe
-> quelle combinaison de permissions (onglet ⚙️ → Gérer les rôles).
+## Exemples de rôles personnalisés
 
-## Matrice par fonctionnalité
-
-### 📋 Dépôt / Matériel
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| Voir le dépôt, rechercher, filtrer | Tout compte actif |
-| Voir la fiche matériel (photos, calendrier de dispo, historique) | Tout compte actif |
-| **Emprunter** du matériel | `borrow_equipment` |
-| **Retourner** (son emprunt, ou n'importe lequel si admin) | `return_equipment` (+ `manage_users` pour ceux des autres) |
-| Déclarer des unités **en réparation** au retour | inclus dans le retour |
-| **Ajouter** du matériel | `manage_equipment` |
-| **Modifier** du matériel | `manage_equipment` |
-| **Supprimer** du matériel | `manage_equipment` |
-| Supprimer une **photo** | `manage_equipment` |
-| **QR code** (fiche, étiquettes, tous les QR) | Tout compte actif |
-| Ajouter / supprimer une **catégorie** | `manage_categories` |
-| **Commandes** (matériel personnalisé) : voir | Tout compte actif |
-| Commandes : créer / changer le statut / supprimer | `manage_equipment` |
-| **Export Excel** | `manage_equipment` |
-| **Export PDF / impression** | `manage_equipment` |
-
-### 📤 Emprunts & 🔧 Réparations
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| Voir la page Emprunts | Tout compte actif |
-| **Retourner** un emprunt (+ unités en répa) | `return_equipment` |
-| **Associer** un emprunt à un événement | `borrow_equipment` ou `manage_schedule` |
-| Voir la page Réparations | Tout compte actif |
-| **Réparé → remettre en stock** | `manage_equipment` |
-
-### 📦 Inventaire permanent
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| Voir le tirage du jour (5 matériels aléatoires) | Tout compte actif |
-| **Confirmer testé** (+ unités en répa) | Tout compte actif |
-| **🎲 Nouveau tirage** (manuel) | `manage_equipment` |
-| **🗑️ Supprimer l'historique** (+ mot de passe) | `manage_equipment` |
-
-### 📅 Emploi du temps
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| Voir le calendrier / les événements | Tout compte actif |
-| **Créer** un événement (multi-jours) | `manage_schedule` |
-| **Modifier / supprimer** un événement | `manage_schedule` |
-| **Assigner / retirer** des membres | `manage_schedule` |
-| Effacer les événements passés | `manage_schedule` |
-| Bouton « Ajouter sur Google Calendar » (par événement) | Tout compte actif |
-| Flux d'abonnement iCal (Google/Apple/Outlook) | URL protégée par clé (pas de compte requis) |
-
-### 📄 Récaps d'événements
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| Voir la liste / générer le récap (matos + notes + équipe) | Tout compte actif |
-| **Résumé IA** (Groq gratuit / OpenAI) | Tout compte actif (clé API configurée sur le serveur) |
-| Imprimer / PDF | Tout compte actif |
-
-### ⚙️ Administration
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| **Gérer les utilisateurs** (créer / modifier / supprimer) | `manage_users` |
-| **Gérer les rôles** et permissions | `manage_roles` |
-| **Logs d'activité** | `view_logs` |
-| Effacer l'historique des **emprunts** (global / par matériel) + mdp | `clear_history` |
-| Effacer les **logs** + mdp | `clear_history` |
-
-### 🗄️ Base de données (zone sensible — mot de passe requis)
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| **Import CSV** (par table) | `manage_database` |
-| **Reset tables** (tout vider) | `manage_database` |
-| **Photos ZIP** (export) | `manage_database` |
-| **Restaurer / stocker les photos** en base | `manage_database` |
-
-### 🔔 Commun à tous les comptes connectés
-| Fonctionnalité | Permission requise |
-|----------------|--------------------|
-| Notifications (voir / marquer lues / supprimer) | Aucun |
-| Changer son mot de passe | Aucun |
-| Se déconnecter | Aucun |
-
-### 🌐 Public (sans connexion)
-| Page | Accès |
-|------|-------|
-| Connexion / Inscription | Public |
-| Flux `calendar.ics` | Public **si** la clé de souscription est fournie |
+| Rôle | Permissions | Effet |
+|------|-------------|-------|
+| 👀 Superviseur | `view_logs`, `export_excel`, `export_pdf`, `view_logs` | Lit tout, exporte, mais ne modifie rien |
+| 💼 Responsable stock | `add_equipment`, `edit_equipment`, `repair_stock`, `inventory_generate`, `export_excel` | Gère le dépôt sans pouvoir supprimer |
+| 📅 Planificateur | `schedule_create`, `schedule_edit`, `schedule_assign` | Gère uniquement le planning |
+| 🧹 Intendance | `inventory_generate`, `inventory_clear`, `repair_stock` | Inventaire + réparations |
 
 ## Règles globales
 
-- **Compte « En attente »** (nouvel inscrit, aucun rôle) : voit un écran
-  d'attente et **aucune** fonctionnalité, jusqu'à ce qu'un admin lui
-  assigne un rôle.
-- La **barre latérale** n'apparaît qu'aux comptes ayant au moins une de :
-  `borrow_equipment`, `manage_equipment` ou `manage_users`.
-- Un emprunt est **réservé sur toute sa période** [prise → retour] : impossible
-  de double-emprunter une plage déjà réservée (les dates sont vérifiées à l'emprunt).
+- **Tout compte actif** (au moins 1 permission) peut : voir le dépôt,
+  les fiches, le calendrier, le planning, les emprunts, générer des
+  récaps, confirmer l'inventaire, voir ses notifications, changer son
+  mot de passe.
+- **Compte « En attente »** (aucune permission) : écran d'attente,
+  aucune fonctionnalité.
+- Actions sensibles (effacements, reset, import) : **mot de passe
+  requis en plus** de la permission.
+- Le flux d'abonnement iCal (Google/Apple/Outlook) est protégé par
+  clé, sans compte.
+- Un emprunt réserve le matériel **sur toute sa période** : impossible
+  de double-emprunter une plage déjà réservée.

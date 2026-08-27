@@ -74,6 +74,9 @@ class User(UserMixin, db.Model):
     def has_permission(self, perm):
         role = db.session.get(CustomRole, self.role_id) if self.role_id else None
         return role.has_permission(perm) if role else False
+    def has_any_permission(self):
+        role = db.session.get(CustomRole, self.role_id) if self.role_id else None
+        return bool(role and role.get_permissions()) if role else False
     @property
     def role_name(self):
         role = db.session.get(CustomRole, self.role_id) if self.role_id else None
@@ -249,6 +252,15 @@ def load_user(uid): return db.session.get(User, int(uid))
 @app.template_filter('get_user')
 def get_user_filter(uid): return db.session.get(User, int(uid)) if uid else None
 
+@app.template_global()
+def has_perm(*perms):
+    """True si l'utilisateur a AU MOINS UNE des permissions (pour afficher
+    un lien/bouton quand l'action est accessible par permission fine OU
+    permission heritee)."""
+    if not current_user.is_authenticated:
+        return False
+    return any(current_user.has_permission(p) for p in perms)
+
 def allowed_file(fn): return '.' in fn and fn.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_uploaded_image(file):
@@ -354,8 +366,8 @@ def update_availability(eq_id):
 
 
 def is_pending_user():
-    """Verifie si l'utilisateur est en attente (aucune permission)"""
-    return not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
+    """Verifie si l'utilisateur est en attente (aucune permission du tout)"""
+    return not current_user.has_any_permission()
 
 def log_action(action, description='', equipment_name='', quantity=0):
     """Enregistre une action. Si l'utilisateur n'est pas connecte, user_id = None."""
@@ -470,17 +482,56 @@ def notify_admins(title, message, link=''):
             notify_user(a.id, title, message, link)
 
 ALL_PERMISSIONS = [
-    {"key":"manage_users","label":"Gerer les utilisateurs","desc":"Creer, modifier, supprimer des comptes","icon":"👥"},
-    {"key":"manage_roles","label":"Gerer les roles","desc":"Creer et modifier les roles et permissions","icon":"🔐"},
-    {"key":"manage_equipment","label":"Gerer le materiel","desc":"Ajouter, modifier, supprimer du materiel","icon":"📦"},
-    {"key":"borrow_equipment","label":"Emprunter","desc":"Emprunter du materiel","icon":"📤"},
-    {"key":"return_equipment","label":"Retourner","desc":"Marquer un emprunt comme retourne","icon":"✅"},
-    {"key":"manage_categories","label":"Gerer les categories","desc":"Ajouter des categories de materiel","icon":"📂"},
-    {"key":"view_logs","label":"Voir les logs","desc":"Consulter l'historique d'activite","icon":"📜"},
-    {"key":"clear_history","label":"Effacer l'historique","desc":"Supprimer l'historique des emprunts","icon":"🗑️"},
-    {"key":"manage_schedule","label":"Gerer le planning","desc":"Creer et gerer l'emploi du temps","icon":"📅"},
-    {"key":"manage_database","label":"Gerer la base de donnees","desc":"Reset, import CSV, restauration photos, migration","icon":"🗄️"},
+    # ── 📦 Matériel & Stock ──
+    {"key":"add_equipment","label":"Ajouter du matériel","desc":"Créer de nouveaux articles au dépôt","icon":"➕","group":"Matériel & Stock"},
+    {"key":"edit_equipment","label":"Modifier le matériel","desc":"Changer nom, quantité, specs, photos","icon":"✏️","group":"Matériel & Stock"},
+    {"key":"delete_equipment","label":"Supprimer du matériel","desc":"Supprimer définitivement un article","icon":"🗑️","group":"Matériel & Stock"},
+    {"key":"delete_photo","label":"Supprimer une photo","desc":"Retirer une photo d'un article","icon":"🖼️","group":"Matériel & Stock"},
+    {"key":"manage_categories","label":"Gérer les catégories","desc":"Ajouter / supprimer des catégories","icon":"📂","group":"Matériel & Stock"},
+    {"key":"repair_stock","label":"Remettre en stock","desc":"Marquer du matériel réparé et le remettre disponible","icon":"🔧","group":"Matériel & Stock"},
+    {"key":"manage_orders","label":"Gérer les commandes","desc":"Commandes de matériel personnalisé (créer, statut, supprimer)","icon":"🛒","group":"Matériel & Stock"},
+    # ── 📤 Emprunts ──
+    {"key":"borrow_equipment","label":"Emprunter","desc":"Sortir du matériel du dépôt","icon":"📤","group":"Emprunts"},
+    {"key":"return_equipment","label":"Retourner","desc":"Enregistrer un retour (+ unités en réparation)","icon":"✅","group":"Emprunts"},
+    {"key":"assign_borrow_event","label":"Lier à un événement","desc":"Associer un emprunt à un événement du planning","icon":"🎯","group":"Emprunts"},
+    # ── 📅 Planning ──
+    {"key":"schedule_create","label":"Créer un événement","desc":"Nouveaux événements (1 jour ou plusieurs)","icon":"➕","group":"Planning"},
+    {"key":"schedule_edit","label":"Modifier / supprimer un événement","desc":"Éditer ou supprimer les événements","icon":"✏️","group":"Planning"},
+    {"key":"schedule_assign","label":"Assigner l'équipe","desc":"Affecter / retirer des membres sur un événement","icon":"👥","group":"Planning"},
+    {"key":"schedule_clear","label":"Effacer les événements passés","desc":"Nettoyer le planning (évènements terminés)","icon":"🧹","group":"Planning"},
+    # ──  Inventaire ──
+    {"key":"inventory_generate","label":"Nouveau tirage inventaire","desc":"Régénérer le tirage aléatoire du jour à la main","icon":"🎲","group":"Inventaire"},
+    {"key":"inventory_clear","label":"Effacer l'historique inventaire","desc":"Supprimer les contrôles des jours précédents","icon":"🗑️","group":"Inventaire"},
+    # ──  Exports ──
+    {"key":"export_excel","label":"Exporter Excel","desc":"Export .xlsx de l'inventaire","icon":"📊","group":"Exports"},
+    {"key":"export_pdf","label":"Exporter PDF / Imprimer","desc":"Version imprimable de l'inventaire","icon":"🖨️","group":"Exports"},
+    # ── ️ Administration ──
+    {"key":"manage_users","label":"Gérer les utilisateurs","desc":"Créer, modifier, supprimer des comptes","icon":"👥","group":"Administration"},
+    {"key":"manage_roles","label":"Gérer les rôles","desc":"Créer et modifier les rôles et permissions","icon":"🔐","group":"Administration"},
+    {"key":"view_logs","label":"Voir les logs","desc":"Consulter l'historique d'activité","icon":"📜","group":"Administration"},
+    {"key":"clear_borrow_history","label":"Effacer l'historique des emprunts","desc":"Global ou par matériel (mot de passe requis)","icon":"🧹","group":"Administration"},
+    {"key":"clear_activity_logs","label":"Effacer les logs d'activité","desc":"Supprimer le journal des actions (mot de passe requis)","icon":"🧹","group":"Administration"},
+    # ── 🗄️ Base de données ──
+    {"key":"import_csv","label":"Importer CSV","desc":"Importer des données par table (mot de passe requis)","icon":"📥","group":"Base de données"},
+    {"key":"reset_tables","label":"Reset tables","desc":"Vider toutes les tables (mot de passe requis)","icon":"♻️","group":"Base de données"},
+    {"key":"photo_backup","label":"Exporter les photos (ZIP)","desc":"Sauvegarde ZIP de toutes les photos","icon":"📸","group":"Base de données"},
+    {"key":"photo_restore","label":"Restaurer les photos","desc":"Restaurer / stocker les photos en base (ZIP)","icon":"📥","group":"Base de données"},
+    # ── 🔓 Accès global (hérité — compatible avec les anciens rôles) ──
+    {"key":"manage_equipment","label":"Matériel : accès global (hérité)","desc":"Toutes les permissions du bloc matériel/stock/exports/inventaire","icon":"","group":"Accès global (hérité)"},
+    {"key":"manage_schedule","label":"Planning : accès global (hérité)","desc":"Toutes les permissions du planning","icon":"📅","group":"Accès global (hérité)"},
+    {"key":"clear_history","label":"Effacement historique : global (hérité)","desc":"Emprunts + logs d'activité","icon":"🗑️","group":"Accès global (hérité)"},
+    {"key":"manage_database","label":"Base de données : accès global (hérité)","desc":"Toutes les permissions du bloc base de données","icon":"🗄️","group":"Accès global (hérité)"},
 ]
+
+LEGACY_EQUIPMENT_PERMS = ('add_equipment','edit_equipment','delete_equipment','delete_photo','repair_stock','manage_orders','export_excel','export_pdf','inventory_generate','inventory_clear')
+
+def get_permission_groups():
+    """Permissions groupees par theme, dans l'ordre d'affichage."""
+    groups = {}
+    for p in ALL_PERMISSIONS:
+        groups.setdefault(p['group'], []).append(p)
+    return groups
+
 
 def permission_required(perm):
     def decorator(f):
@@ -491,6 +542,23 @@ def permission_required(perm):
                 try: log_action('permission_denied', f'Tentative d\'acces refuse : {perm}')
                 except: pass
                 flash('Acces refuse. Permission requise : ' + perm, 'error')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+
+def permission_required_any(*perms):
+    """Autorise si l'utilisateur a AU MOINS UNE des permissions passees.
+    Permet la retrocompatibilite : permission fine OU permission 'heritee'."""
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def decorated(*args, **kwargs):
+            if not any(current_user.has_permission(p) for p in perms):
+                try: log_action('permission_denied', f"Tentative d'acces refuse : {' ou '.join(perms)}")
+                except: pass
+                flash('Acces refuse. Permission requise : ' + ' ou '.join(perms), 'error')
                 return redirect(url_for('dashboard'))
             return f(*args, **kwargs)
         return decorated
@@ -579,7 +647,7 @@ def dashboard():
         if b.status == 'active' and b.expected_return_date < today: b.status = 'late'
     db.session.commit()
     eq_json = json.dumps([{'id':e.id,'name':e.name,'available_quantity':e.available_quantity} for e in Equipment.query.all()])
-    is_pending = not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_equipment') and not current_user.has_permission('manage_users')
+    is_pending = not current_user.has_any_permission()
     upcoming_events = Event.query.filter(Event.end_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
     repair_count = Equipment.query.filter(Equipment.in_repair > 0).count()
     # Inventaire du jour (genere la liste si pas encore faite aujourd'hui)
@@ -668,7 +736,7 @@ def confirm_inventory_check(cid):
 
 
 @app.route('/inventory/regenerate', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('inventory_generate', 'manage_equipment')
 def regenerate_inventory():
     """Nouveau tirage manuel du jour (remplace la liste en cours)."""
     today = date.today()
@@ -681,7 +749,7 @@ def regenerate_inventory():
 
 
 @app.route('/inventory/clear-history', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('inventory_clear', 'manage_equipment')
 def clear_inventory_history():
     if not current_user.check_password(request.form.get('password', '')):
         flash('Mot de passe incorrect.','error'); return redirect(url_for('inventory_page'))
@@ -759,7 +827,7 @@ def return_equipment(bid):
     return redirect(url_for('dashboard'))
 
 @app.route('/equipment/<int:eid>/repair', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('repair_stock', 'manage_equipment')
 def mark_repaired(eid):
     """Remettre en stock des unites qui etaient en reparation."""
     eq = db.session.get(Equipment, eid)
@@ -805,11 +873,8 @@ def repairs_page():
     return render_template('repairs.html', repair_list=repair_list, total_repair=total_repair, today=date.today())
 
 @app.route('/borrows/<int:bid>/assign-event', methods=['POST'])
-@login_required
+@permission_required_any('assign_borrow_event', 'borrow_equipment', 'manage_schedule')
 def assign_event_to_borrow(bid):
-    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
-    if not current_user.has_permission('borrow_equipment') and not current_user.has_permission('manage_schedule'):
-        flash('Acces refuse.','error'); return redirect(url_for('borrows_page'))
     b = db.session.get(Borrow, bid)
     if not b: flash('Emprunt introuvable.','error'); return redirect(url_for('borrows_page'))
     event_id = request.form.get('event_id','')
@@ -833,7 +898,7 @@ def orders_page():
     return render_template('orders.html', orders=orders)
 
 @app.route('/orders/create', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('manage_orders', 'manage_equipment')
 def create_order():
     title = request.form.get('title','').strip()
     if not title: flash('Le titre est requis.','error'); return redirect(url_for('orders_page'))
@@ -844,7 +909,7 @@ def create_order():
     return redirect(url_for('orders_page'))
 
 @app.route('/orders/<int:oid>/status', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('manage_orders', 'manage_equipment')
 def set_order_status(oid):
     o = db.session.get(MaterialOrder, oid)
     if not o: flash('Commande introuvable.','error'); return redirect(url_for('orders_page'))
@@ -857,7 +922,7 @@ def set_order_status(oid):
     return redirect(url_for('orders_page'))
 
 @app.route('/orders/<int:oid>/delete', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('manage_orders', 'manage_equipment')
 def delete_order(oid):
     o = db.session.get(MaterialOrder, oid)
     if o:
@@ -866,7 +931,7 @@ def delete_order(oid):
     return redirect(url_for('orders_page'))
 
 @app.route('/equipment/add', methods=['GET','POST'])
-@permission_required('manage_equipment')
+@permission_required_any('add_equipment', 'manage_equipment')
 def add_equipment():
     if request.method == 'POST':
         name = request.form.get('name','').strip()
@@ -908,7 +973,7 @@ def add_equipment():
     return render_template('add_equipment.html', categories=Category.query.order_by(Category.name).all())
 
 @app.route('/equipment/<int:eid>/edit', methods=['GET','POST'])
-@permission_required('manage_equipment')
+@permission_required_any('edit_equipment', 'manage_equipment')
 def edit_equipment(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
@@ -945,7 +1010,7 @@ def edit_equipment(eid):
     return render_template('edit_equipment.html', eq=eq, categories=Category.query.order_by(Category.name).all())
 
 @app.route('/equipment/<int:eid>/delete-image/<int:iid>', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('delete_photo', 'manage_equipment')
 def delete_image(eid, iid):
     img = db.session.get(EquipmentImage, iid)
     if img and img.equipment_id == eid:
@@ -957,7 +1022,7 @@ def delete_image(eid, iid):
     return redirect(url_for('edit_equipment', eid=eid))
 
 @app.route('/equipment/<int:eid>/delete', methods=['POST'])
-@permission_required('manage_equipment')
+@permission_required_any('delete_equipment', 'manage_equipment')
 def delete_equipment(eid):
     eq = db.session.get(Equipment, eid)
     if eq:
@@ -1062,7 +1127,7 @@ def delete_user(uid):
 @app.route('/admin/roles')
 @permission_required('manage_roles')
 def manage_roles():
-    return render_template('manage_roles.html', roles=CustomRole.query.order_by(CustomRole.name).all(), all_permissions=ALL_PERMISSIONS)
+    return render_template('manage_roles.html', roles=CustomRole.query.order_by(CustomRole.name).all(), all_permissions=ALL_PERMISSIONS, perm_groups=get_permission_groups())
 
 @app.route('/admin/roles/create', methods=['POST'])
 @permission_required('manage_roles')
@@ -1097,7 +1162,7 @@ def delete_role(rid):
     return redirect(url_for('manage_roles'))
 
 @app.route('/admin/logs/clear', methods=['POST'])
-@permission_required('clear_history')
+@permission_required_any('clear_activity_logs', 'clear_history')
 def clear_logs():
     count = ActivityLog.query.count()
     ActivityLog.query.delete()
@@ -1109,7 +1174,7 @@ def clear_logs():
 
 
 @app.route('/admin/import-csv', methods=['GET','POST'])
-@permission_required('manage_database')
+@permission_required_any('import_csv', 'manage_database')
 def import_csv():
     if request.method == 'POST':
         pw = request.form.get('password','')
@@ -1272,7 +1337,7 @@ def import_csv():
 
 
 @app.route('/admin/reset-tables', methods=['GET','POST'])
-@permission_required('manage_database')
+@permission_required_any('reset_tables', 'manage_database')
 def reset_all_tables():
     if request.method == 'POST':
         pw = request.form.get('password','')
@@ -1299,7 +1364,7 @@ def reset_all_tables():
 
 
 @app.route('/admin/clear-history', methods=['POST'])
-@permission_required('clear_history')
+@permission_required_any('clear_borrow_history', 'clear_history')
 def clear_history():
     if not current_user.check_password(request.form.get('password','')): flash('Mot de passe incorrect.','error'); return redirect(url_for('dashboard'))
     c = Borrow.query.filter_by(status='returned').count()
@@ -1355,7 +1420,7 @@ def all_qrcodes():
 
 
 @app.route('/equipment/<int:eid>/clear-history', methods=['POST'])
-@permission_required('clear_history')
+@permission_required_any('clear_borrow_history', 'clear_history')
 def clear_equipment_history(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
@@ -1519,7 +1584,7 @@ def calendar_ics():
                              'Cache-Control': 'public, max-age=3600'})
 
 @app.route('/schedule/create', methods=['POST'])
-@permission_required('manage_schedule')
+@permission_required_any('schedule_create', 'manage_schedule')
 def create_event():
     title = request.form.get('title','').strip()
     if not title: flash('Titre requis.','error'); return redirect(url_for('schedule'))
@@ -1549,7 +1614,7 @@ def create_event():
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/edit', methods=['POST'])
-@permission_required('manage_schedule')
+@permission_required_any('schedule_edit', 'manage_schedule')
 def edit_event(evid):
     evt = db.session.get(Event, evid)
     if not evt: flash('Introuvable.','error'); return redirect(url_for('schedule'))
@@ -1576,7 +1641,7 @@ def edit_event(evid):
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/delete', methods=['POST'])
-@permission_required('manage_schedule')
+@permission_required_any('schedule_edit', 'manage_schedule')
 def delete_event(evid):
     evt = db.session.get(Event, evid)
     if evt: db.session.delete(evt); db.session.commit(); log_action('delete_event', f'Evenement "{evt.title}" supprime'); flash(f'Evenement "{evt.title}" supprime.','info')
@@ -1584,7 +1649,7 @@ def delete_event(evid):
 
 
 @app.route('/schedule/clear-past', methods=['POST'])
-@permission_required('manage_schedule')
+@permission_required_any('schedule_clear', 'manage_schedule')
 def clear_past_events():
     count = Event.query.filter(Event.end_date < date.today()).count()
     past_ids = [e.id for e in Event.query.filter(Event.end_date < date.today()).all()]
@@ -1595,7 +1660,7 @@ def clear_past_events():
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/assign', methods=['POST'])
-@permission_required('manage_schedule')
+@permission_required_any('schedule_assign', 'manage_schedule')
 def assign_one_user(evid):
     """Quick assign one user from schedule page"""
     uid = request.form.get('user_id'); role = request.form.get('role','Staff')
@@ -1604,7 +1669,7 @@ def assign_one_user(evid):
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/unassign/<int:uid>', methods=['POST'])
-@permission_required('manage_schedule')
+@permission_required_any('schedule_assign', 'manage_schedule')
 def unassign_user(evid, uid):
     ea = EventAssignment.query.filter_by(event_id=evid, user_id=uid).first()
     if ea: db.session.delete(ea); db.session.commit()
@@ -1850,7 +1915,7 @@ def clear_all_notifications():
 
 # ═══════════ N E W :  E X P O R T S ═══════════
 @app.route('/export/photos-zip')
-@permission_required('manage_database')
+@permission_required_any('photo_backup', 'manage_database')
 def export_photos_zip():
     import zipfile
     buf = io.BytesIO()
@@ -1870,7 +1935,7 @@ def export_photos_zip():
 
 
 @app.route('/admin/photos/save-to-db', methods=['POST'])
-@permission_required('manage_database')
+@permission_required_any('photo_restore', 'manage_database')
 def save_photos_to_db():
     """Copie toutes les photos actuellement sur le disque dans la base de donnees."""
     added = 0; skipped = 0
@@ -1894,7 +1959,7 @@ def save_photos_to_db():
 
 
 @app.route('/admin/restore-photos', methods=['GET','POST'])
-@permission_required('manage_database')
+@permission_required_any('photo_restore', 'manage_database')
 def restore_photos():
     if request.method == 'POST':
         zf = request.files.get('zipfile')
@@ -1928,7 +1993,7 @@ def restore_photos():
 
 
 @app.route('/export/excel')
-@permission_required('manage_equipment')
+@permission_required_any('export_excel', 'manage_equipment')
 def export_excel():
     log_action('export_excel', 'Export Excel de l\'inventaire')
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Inventaire Imagine Events"
@@ -1970,7 +2035,7 @@ def export_excel():
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'inventaire_imagine_{date.today().strftime("%Y%m%d")}.xlsx')
 
 @app.route('/export/pdf')
-@permission_required('manage_equipment')
+@permission_required_any('export_pdf', 'manage_equipment')
 def export_printer():
     """Page optimisee pour impression (CTRL+P -> PDF)"""
     return render_template('export_print.html', equipment=Equipment.query.order_by(Equipment.name).all(), now=tunisia_now())
@@ -2039,6 +2104,22 @@ def init_db():
                 staff = User(email='staff@imagine-events.com', full_name='Equipe Logistique', role_id=sr.id if sr else None)
                 staff.set_password('staff123')
                 db.session.add(staff)
+
+            # ── Rôle Admin : complete avec les permissions nouvelles (AJOUT uniquement,
+            #    jamais de retrait — migration douce des installations existantes) ──
+            try:
+                all_keys = [p['key'] for p in ALL_PERMISSIONS]
+                arole = CustomRole.query.filter_by(name='Admin').first()
+                if arole:
+                    cur = arole.get_permissions()
+                    missing = [k for k in all_keys if k not in cur]
+                    if missing:
+                        arole.set_permissions(cur + missing)
+                        db.session.commit()
+                        print(f'[INIT] role Admin : {len(missing)} permission(s) ajoutee(s)')
+            except Exception as e:
+                db.session.rollback()
+                print('[INIT] completion role Admin ignoree:', str(e)[:120])
 
             # ── Categories par defaut ──
             cat_names = ['Ecrans & Affichage', 'Sonorisation', 'Eclairage', 'Scenes & Structures', 'Mobilier', 'Cablage & Connectique']

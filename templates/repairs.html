@@ -19,7 +19,7 @@
             <div><span class="group-icon">🔧</span><strong>Matériel en réparation</strong></div>
         </div>
         <div class="borrows-table">
-            <div class="bt-head"><span>Matériel</span><span>En réparation</span><span>Disponible</span><span>Total</span><span>{% if current_user.has_permission('manage_equipment') %}Remettre en stock{% endif %}</span></div>
+            <div class="bt-head"><span>Matériel</span><span>En réparation</span><span>Disponible</span><span>Total</span><span>{% if has_perm('repair_stock','manage_equipment') %}Remettre en stock{% endif %}</span></div>
             {% for eq in repair_list %}
             <div class="bt-row">
                 <span class="bt-name">{{ eq.name }} <em>{{ eq.reference }} · 📍 {{ eq.location }}</em></span>
@@ -27,7 +27,7 @@
                 <span class="bt-qty">✅ {{ eq.available_quantity }}</span>
                 <span class="bt-qty">📦 {{ eq.total_quantity }}</span>
                 <span class="bt-action">
-                    {% if current_user.has_permission('manage_equipment') %}
+                    {% if has_perm('repair_stock','manage_equipment') %}
                     <form method="POST" action="{{ url_for('mark_repaired', eid=eq.id) }}" style="display:flex;gap:.3rem;align-items:center">
                         <input type="number" name="qty" value="{{ eq.in_repair }}" min="1" max="{{ eq.in_repair }}" style="width:56px">
                         <button class="btn btn-sm btn-success" style="font-size:.72rem">✅ Réparé</button>

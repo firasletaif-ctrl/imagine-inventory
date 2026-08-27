@@ -8,7 +8,7 @@
         <p>Notez ici le matériel à commander, avec toutes les précisions nécessaires.</p>
     </div>
 
-    {% if current_user.has_permission('manage_equipment') %}
+    {% if has_perm('manage_orders','manage_equipment') %}
     <div class="form-card">
         <h2>➕ Nouvelle commande</h2>
         <form method="POST" action="{{ url_for('create_order') }}">
@@ -53,7 +53,7 @@
         <div class="order-meta">
             <span>👤 {{ o.created_by }} · {{ o.created_at.strftime('%d/%m/%Y') }}</span>
             <span class="order-actions">
-                {% if current_user.has_permission('manage_equipment') %}
+                {% if has_perm('manage_orders','manage_equipment') %}
                 <form method="POST" action="{{ url_for('set_order_status', oid=o.id) }}" style="display:inline">
                     <select name="status" onchange="this.form.submit()" style="font-size:.75rem;padding:.3rem">
                         <option value="nouvelle" {% if o.status=='nouvelle' %}selected{% endif %}>📝 Nouvelle</option>
