@@ -1,6 +1,6 @@
 """Imagine Inventory v2 — Imagine Events Tunisia
 Gestion de depot + Emploi du temps + Export + Notifications"""
-import os, uuid, json, io
+import os, uuid, json, io, hashlib
 from datetime import datetime, date, timedelta, timezone
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -21,6 +21,9 @@ def tunisia_now(): return datetime.now(TUNISIA_TZ)
 # ── Config ──
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'imagine-events-tunisia-secret-2026')
+# ── Cle du flux ICS (synchronisation Google/Apple/Outlook).
+#    Derivee de SECRET_KEY : stable, unique par installation, pas de base de donnees. ──
+ICS_KEY = hashlib.sha256((app.secret_key + ':ics-feed').encode('utf-8')).hexdigest()[:16]
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
@@ -1205,9 +1208,98 @@ def delete_category(cid):
 def schedule():
     if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
     """Main calendar/schedule view"""
-    upcoming = Event.query.filter(Event.event_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
     past = Event.query.filter(Event.event_date < date.today()).order_by(Event.event_date.desc()).limit(20).all()
-    return render_template('schedule.html', upcoming=upcoming, past=past, today=date.today(), all_users=User.query.order_by(User.full_name).all())
+    # Tous les evenements (passes + a venir) pour le calendrier mensuel
+    all_events = Event.query.order_by(Event.event_date, Event.start_time).all()
+    events_json = json.dumps([
+        {'id': e.id, 'title': e.title, 'description': e.description or '',
+         'date': e.event_date.strftime('%Y-%m-%d'), 'start': e.start_time or '08:00',
+         'end': e.end_time or '17:00', 'location': e.location or '', 'status': e.status,
+         'users': [a.user_id for a in e.assignments]}
+        for e in all_events
+    ])
+    # URL publique du flux ICS (Google Calendar / Apple / Outlook)
+    site = request.host_url.rstrip('/')
+    if not site.startswith('http://localhost') and not site.startswith('http://127.0.0.1'):
+        site = site.replace('http://', 'https://', 1)
+    ics_url = site + '/calendar.ics?key=' + ICS_KEY
+    all_users = User.query.order_by(User.full_name).all()
+    user_names = dict([(u.id, u.full_name) for u in all_users])  # pour le JS (pas de comprehension Jinja)
+    return render_template('schedule.html', past=past, today=tunisia_now().date(), all_users=all_users, events_json=events_json, ics_url=ics_url, user_names=user_names, today_str=tunisia_now().date().strftime('%Y-%m-%d'))
+
+# ── Flux ICS : synchronisation avec Google Calendar, Apple Calendar, Outlook... ──
+def ics_escape(text):
+    if not text: return ''
+    return text.replace('\\', '\\\\').replace(';', '\\;').replace(',', '\\,').replace('\n', '\\n')
+
+def ics_fold(lines):
+    """Plie les lignes > 75 octets (regle RFC 5545) sans couper un caractere unicode."""
+    out = []
+    for ln in lines:
+        b = ln.encode('utf-8')
+        if len(b) <= 75:
+            out.append(ln); continue
+        parts = []
+        while b:
+            chunk = b[:75]
+            while chunk and (chunk[-1] & 0xC0) == 0x80:
+                chunk = chunk[:-1]
+            parts.append(chunk)
+            b = b[len(chunk):]
+        out.append(parts[0].decode('utf-8'))
+        for p in parts[1:]:
+            out.append(' ' + p.decode('utf-8'))
+    return out
+
+@app.route('/calendar.ics')
+def calendar_ics():
+    """Flux iCal public (protege par une cle derivee de SECRET_KEY).
+    A ajouter dans Google Calendar (Autres calendriers -> Ajouter un calendrier
+    -> A partir d'une URL) : Google le recupere automatiquement et met a jour
+    les evenements (creations, modifications, annulations).
+    Param ?dl=1 : telechargement du fichier .ics a la main."""
+    if request.args.get('key') != ICS_KEY:
+        return 'Cle de souscription invalide.', 403
+    today = date.today()
+    horizon = today + timedelta(days=92)
+    events = Event.query.filter(Event.event_date >= today, Event.event_date <= horizon).order_by(Event.event_date, Event.start_time).all()
+    dtstamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    lines = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0',
+        'PRODID:-//Imagine Events Tunisia//Planning Depot//FR',
+        'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'PUBLISHED:' + dtstamp,
+        'X-WR-CALNAME:Imagine Events - Planning', 'X-WR-TIMEZONE:Africa/Tunis',
+        'BEGIN:VTIMEZONE', 'TZID:Africa/Tunis', 'BEGIN:STANDARD',
+        'DTSTART:19700101T000000', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0100',
+        'TZNAME:CET', 'END:STANDARD', 'END:VTIMEZONE',
+    ]
+    for evt in events:
+        d = evt.event_date.strftime('%Y%m%d')
+        st = (evt.start_time or '08:00').replace(':', '') + '00'
+        en = (evt.end_time or '17:00').replace(':', '') + '00'
+        assignees = ', '.join(a.user.full_name for a in evt.assignments if a.user)
+        desc = (evt.description or '').strip()
+        if assignees:
+            desc = (desc + '\n' if desc else '') + 'Equipe: ' + assignees
+        lines += [
+            'BEGIN:VEVENT',
+            'UID:imagine-events-' + str(evt.id) + '@imagine-events.tn',
+            'DTSTAMP:' + dtstamp,
+            'DTSTART;TZID=Africa/Tunis:' + d + 'T' + st,
+            'DTEND;TZID=Africa/Tunis:' + d + 'T' + en,
+            'SUMMARY:' + ics_escape(evt.title),
+            'DESCRIPTION:' + ics_escape(desc),
+        ]
+        if evt.location:
+            lines.append('LOCATION:' + ics_escape(evt.location))
+        lines.append('STATUS:' + ('CANCELLED' if evt.status == 'cancelled' else 'CONFIRMED'))
+        lines.append('END:VEVENT')
+    lines.append('END:VCALENDAR')
+    body = '\r\n'.join(ics_fold(lines)) + '\r\n'
+    disp = 'attachment' if request.args.get('dl') else 'inline'
+    return Response(body, mimetype='text/calendar; charset=utf-8',
+                    headers={'Content-Disposition': disp + '; filename="imagine-events-planning.ics"',
+                             'Cache-Control': 'public, max-age=3600'})
 
 @app.route('/schedule/create', methods=['POST'])
 @permission_required('manage_schedule')

@@ -10,6 +10,71 @@
 .hotel-option:hover{background:var(--blue-pale);color:var(--blue)}
 .hotel-option.custom{border-top:2px solid var(--gray-300);font-style:italic;color:var(--gray-500)}
 .hotel-option.custom:hover{background:var(--gray-100);color:var(--gray-700)}
+
+/* ── Carte synchronisation calendrier externe ── */
+.sync-card{background:white;border:1px solid var(--gray-200);border-radius:14px;margin-bottom:1.5rem;overflow:hidden;box-shadow:var(--shadow-sm)}
+.sync-head{padding:.9rem 1.25rem;font-weight:700;color:var(--blue-deep);cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:var(--gray-50);user-select:none}
+.sync-head:hover{background:var(--blue-pale)}
+.sync-head .sync-caret{transition:transform .2s;font-size:.8rem;color:var(--gray-400)}
+.sync-head.open .sync-caret{transform:rotate(180deg)}
+.sync-body{padding:1.25rem}
+.sync-url-row{display:flex;gap:.5rem;margin:.9rem 0;flex-wrap:wrap}
+.sync-url-row input{flex:1;min-width:220px;font-size:.78rem;font-family:ui-monospace,Menlo,Consolas,monospace;padding:.55rem .75rem;border:1px solid var(--gray-300);border-radius:8px;background:var(--gray-50);color:var(--gray-700)}
+.sync-steps{padding-left:1.3rem;font-size:.88rem;color:var(--gray-600);line-height:1.9}
+.sync-steps b{color:var(--gray-800)}
+.sync-note{font-size:.78rem;color:var(--gray-500);margin-top:.85rem;line-height:1.6}
+
+/* ── Calendrier mensuel ── */
+.cal-card{background:white;border-radius:14px;border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);overflow:hidden}
+.cal-toolbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.9rem 1.25rem;background:var(--blue-deep);color:white;flex-wrap:wrap}
+.cal-nav{display:flex;align-items:center;gap:.5rem}
+.cal-month-label{font-size:1.1rem;font-weight:800;letter-spacing:.5px;min-width:185px;text-align:center;text-transform:capitalize}
+.cal-navbtn{background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;width:34px;height:34px;font-size:1rem;cursor:pointer;transition:background .15s}
+.cal-navbtn:hover{background:rgba(255,255,255,.28)}
+.cal-today-btn{background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;padding:.55rem .95rem;font-size:.8rem;font-weight:600;cursor:pointer;transition:background .15s}
+.cal-today-btn:hover{background:rgba(255,255,255,.28)}
+.cal-legend{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.72rem;align-items:center}
+.cal-legend span{display:flex;align-items:center;gap:.35rem;opacity:.95}
+.cal-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.cal-month-count{background:rgba(255,255,255,.15);border-radius:100px;padding:.2rem .7rem;font-size:.72rem;font-weight:600}
+.cal-scroll{overflow-x:auto}
+.cal-grid{min-width:700px}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--gray-100)}
+.cal-dow div{padding:.55rem .5rem;text-align:center;font-size:.68rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:1.5px;border-right:1px solid var(--gray-200)}
+.cal-dow div:last-child{border-right:none}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-day{min-height:100px;border-right:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);padding:.4rem .45rem;cursor:pointer;background:white;transition:background .12s}
+.cal-day:nth-child(7n){border-right:none}
+.cal-days .cal-day:nth-last-child(-n+7){border-bottom:none}
+.cal-day:hover{background:var(--blue-pale)}
+.cal-day.out{background:var(--gray-50)}
+.cal-day.out .cal-daynum{color:var(--gray-300)}
+.cal-daynum{font-size:.85rem;font-weight:600;color:var(--gray-600);margin-bottom:.3rem;display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
+.cal-day.today{background:#FFF7F8}
+.cal-day.today .cal-daynum{background:var(--red);color:white;font-weight:800}
+.cal-chip{font-size:.68rem;border-radius:5px;padding:.15rem .4rem;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600;line-height:1.35}
+.cal-chip:hover{filter:brightness(.93)}
+.cal-chip.st-upcoming{background:var(--blue-pale);color:var(--blue-deep)}
+.cal-chip.st-ongoing{background:var(--amber-pale);color:#92400E}
+.cal-chip.st-completed{background:var(--green-pale);color:#166534}
+.cal-chip.st-cancelled{background:var(--gray-100);color:var(--gray-400);text-decoration:line-through}
+.cal-more{font-size:.66rem;color:var(--blue);font-weight:700;cursor:pointer}
+.cal-more:hover{text-decoration:underline}
+
+/* ── Panneau du jour ── */
+.day-evt{border:1px solid var(--gray-200);border-radius:10px;padding:.85rem 1rem;margin-bottom:.75rem;background:var(--gray-50)}
+.day-evt-hl{border-color:var(--red);box-shadow:0 0 0 3px var(--red-pale)}
+.day-evt-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;gap:.5rem}
+.day-evt-time{font-size:.85rem;font-weight:700;color:var(--blue-deep)}
+.day-evt-title{font-size:1rem;font-weight:700;color:var(--gray-800);margin-bottom:.2rem}
+.day-evt-meta{font-size:.85rem;color:var(--gray-600);margin-top:.2rem}
+.day-evt-desc{font-size:.85rem;color:var(--gray-500);margin-top:.45rem;white-space:pre-line;line-height:1.55}
+.day-evt-actions{display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap}
+
+/* ── Liste des passes (compacte) ── */
+.past-toggle{display:flex;align-items:center;gap:.4rem;background:none;border:none;color:var(--blue-deep);font-weight:700;font-size:1rem;cursor:pointer;padding:.4rem 0}
+.past-toggle .caret{transition:transform .2s;font-size:.75rem}
+.past-toggle.open .caret{transform:rotate(90deg)}
 </style>
 {% endblock %}
 
@@ -22,75 +87,90 @@
     </div>
     {% else %}
     <div class="dash-header">
-        <div><h1 class="dash-title">📅 Emploi du temps</h1><p class="dash-subtitle">Mes evenements assignes</p></div>
+        <div><h1 class="dash-title">📅 Emploi du temps</h1><p class="dash-subtitle">Calendrier des evenements</p></div>
     </div>
     {% endif %}
 
-    <div style="margin-bottom:2rem">
-        <h2 style="color:var(--blue-deep);margin-bottom:1rem">📌 Evenements a venir</h2>
-        {% if upcoming %}
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:1.25rem">
-            {% for evt in upcoming %}
-            <div class="event-card" style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm)">
-                <div style="background:var(--blue-deep);color:white;padding:.75rem 1.25rem;display:flex;justify-content:space-between;align-items:center">
-                    <strong style="font-size:1.1rem">{{ evt.title }}</strong>
-                    <span style="font-size:.8rem;opacity:.8">{{ evt.event_date.strftime('%d/%m/%Y') }}</span>
-                </div>
-                <div style="padding:1.25rem">
-                    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem">
-                        <span>🕐 {{ evt.start_time }} - {{ evt.end_time }}</span>
-                        {% if evt.location %}<span>📍 {{ evt.location }}</span>{% endif %}
-                        <span class="status-badge {% if evt.status=='upcoming' %}s-active{% elif evt.status=='ongoing' %}s-late{% elif evt.status=='completed' %}s-ok{% else %}s-ok{% endif %}">{{ evt.status }}</span>
-                    </div>
-                    {% if evt.description %}<p style="color:var(--gray-600);font-size:.9rem;margin-bottom:.75rem">{{ evt.description }}</p>{% endif %}
-                    <div style="margin-bottom:.75rem">
-                        <strong style="font-size:.85rem;color:var(--gray-700)">👥 Equipe assignee :</strong>
-                        {% if evt.assignments %}
-                        <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem">
-                            {% for asg in evt.assignments %}
-                            <span style="background:var(--blue-pale);color:var(--blue);padding:.2rem .6rem;border-radius:100px;font-size:.8rem;font-weight:500">{{ asg.user.full_name }}</span>
-                            {% endfor %}
-                        </div>
-                        {% else %}<span style="color:var(--gray-400);font-size:.85rem">Aucun</span>{% endif %}
-                    </div>
-                    {% if current_user.has_permission('manage_schedule') %}
-                    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-                        <button class="btn btn-sm btn-secondary edit-event-btn" data-event='{{ {"id":evt.id,"title":evt.title,"description":evt.description or "","date":evt.event_date|string,"start":evt.start_time,"end":evt.end_time,"location":evt.location or "","status":evt.status,"users":evt.assignments|map(attribute="user_id")|list}|tojson|safe }}'>✏️ Modifier</button>
-                        <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
-                    </div>
-                    {% endif %}
-                </div>
+    <!-- ══ Synchronisation Google / Apple / Outlook ══ -->
+    <div class="sync-card">
+        <div class="sync-head" id="syncHead" onclick="toggleSync()">
+            <span>🔗 Synchroniser avec Google Calendar <small style="font-weight:500;color:var(--gray-500)">— ou Apple Calendar / Outlook</small></span>
+            <span class="sync-caret">▼</span>
+        </div>
+        <div class="sync-body" id="syncBody" style="display:none">
+            <p style="color:var(--gray-600);font-size:.9rem;line-height:1.6">
+                Abonne ton calendrier a ce flux : chaque evenement cree, modifie ou annule ici
+                <b>apparaitra automatiquement</b> dans Google Calendar (et l'inverse ne s'applique pas —
+                le flux va d'ici vers ton calendrier).
+            </p>
+            <div class="sync-url-row">
+                <input type="text" id="icsUrl" readonly value="{{ ics_url }}">
+                <button class="btn btn-secondary btn-sm" id="copyIcsBtn" onclick="copyIcs()">📋 Copier</button>
+                <a class="btn btn-secondary btn-sm" href="{{ ics_url }}&dl=1" title="Telecharger le fichier .ics a la main">⬇️ .ics</a>
             </div>
-            {% endfor %}
+            <ol class="sync-steps">
+                <li>Ouvre <b>Google Calendar</b> (web ou mobile) → menu ☰ → <b>Autres calendriers</b> → <b>Ajouter un calendrier</b></li>
+                <li>Clique sur <b>« A partir d'une URL »</b> et colle le lien ci-dessus → <b>Ajouter le calendrier</b></li>
+                <li>C'est tout : les evenements se mettent a jour automatiquement (re-lecture periodique par Google)</li>
+            </ol>
+            <p class="sync-note">
+                📱 <b>Apple (iPhone/Mac) :</b> Réglages → Calendrier → Comptes → Ajouter un compte → Autres comptes proposes → Ajouter un calendrier par URL.<br>
+                📧 <b>Outlook.com :</b> Ajouter → Ajouter un calendrier par URL.<br>
+                🔒 Le lien contient une cle privee de souscription — ne le partage qu'avec l'equipe.
+            </p>
         </div>
-        {% else %}
-        <div style="text-align:center;padding:3rem;background:white;border-radius:14px;border:1px solid var(--gray-200)">
-            <div style="font-size:3rem;margin-bottom:.5rem">📭</div>
-            <h3 style="color:var(--gray-600)">Aucun evenement a venir</h3>
-        </div>
-        {% endif %}
     </div>
 
+    <!-- ══ Calendrier mensuel ══ -->
+    <div class="cal-card" style="margin-bottom:2rem">
+        <div class="cal-toolbar">
+            <div class="cal-nav">
+                <button class="cal-navbtn" onclick="navMonth(-1)" title="Mois precedent">‹</button>
+                <span class="cal-month-label" id="calMonthLabel"></span>
+                <button class="cal-navbtn" onclick="navMonth(1)" title="Mois suivant">›</button>
+                <button class="cal-today-btn" onclick="goToday()">Aujourd'hui</button>
+            </div>
+            <div class="cal-legend">
+                <span class="cal-month-count" id="calMonthCount"></span>
+                <span><i style="background:var(--blue)"></i>À venir</span>
+                <span><i style="background:var(--amber)"></i>En cours</span>
+                <span><i style="background:var(--green)"></i>Terminé</span>
+                <span><i style="background:var(--gray-300)"></i>Annulé</span>
+            </div>
+        </div>
+        <div class="cal-scroll">
+            <div class="cal-grid">
+                <div class="cal-dow">
+                    <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+                </div>
+                <div class="cal-days" id="calDays"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ Evenements passes ══ -->
     {% if past %}
     <div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-            <h2 style="color:var(--blue-deep);margin:0">📋 Evenements passes</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem">
+            <button class="past-toggle" id="pastToggle" onclick="togglePast()"><span class="caret">▶</span> 📋 Evenements passes ({{ past|length }})</button>
             {% if current_user.has_permission('manage_schedule') %}
             <form method="POST" action="{{ url_for('clear_past_events') }}" onsubmit="return confirm('Supprimer TOUS les evenements passes ? Cette action est irreversible.')">
                 <button class="btn btn-sm btn-danger">🗑️ Effacer tous les evenements passes</button>
             </form>
             {% endif %}
         </div>
-        <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden">
-            <table class="history-table"><thead><tr><th>Date</th><th>Titre</th><th>Equipe</th><th>Statut</th><th>Action</th></tr></thead>
-                <tbody>{% for evt in past %}<tr>
-                    <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td><td><strong>{{ evt.title }}</strong></td>
-                    <td>{{ evt.assignments|map(attribute='user.full_name')|join(', ') or '—' }}</td><td>{{ evt.status }}</td>
-                    <td>{% if current_user.has_permission('manage_schedule') %}
-                        <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline"><button class="btn btn-sm btn-danger">🗑️</button></form>
-                    {% endif %}</td>
-                </tr>{% endfor %}</tbody>
-            </table>
+        <div id="pastWrap" style="display:none">
+            <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden">
+                <table class="history-table"><thead><tr><th>Date</th><th>Titre</th><th>Equipe</th><th>Statut</th><th>Action</th></tr></thead>
+                    <tbody>{% for evt in past %}<tr>
+                        <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td><td><strong>{{ evt.title }}</strong></td>
+                        <td>{{ evt.assignments|map(attribute='user.full_name')|join(', ') or '—' }}</td><td>{{ evt.status }}</td>
+                        <td>{% if current_user.has_permission('manage_schedule') %}
+                            <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                        {% endif %}</td>
+                    </tr>{% endfor %}</tbody>
+                </table>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -105,7 +185,7 @@
             <div class="modal-body">
                 <div class="form-group"><label>Titre *</label><input type="text" name="title" required placeholder="Ex: Congres STN 2026"></div>
                 <div class="form-row">
-                    <div class="form-group"><label>Date *</label><input type="date" name="event_date" required></div>
+                    <div class="form-group"><label>Date *</label><input type="date" name="event_date" id="ceDate" required></div>
                     <div class="form-group"><label>Heure debut</label><input type="time" name="start_time" value="08:00"></div>
                     <div class="form-group"><label>Heure fin</label><input type="time" name="end_time" value="17:00"></div>
                 </div>
@@ -172,11 +252,170 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Day Modal (panneau du jour) -->
+<div class="modal-overlay" id="dayModal">
+    <div class="modal" style="max-width:580px">
+        <div class="modal-header"><h2 id="dayTitle"></h2><button class="modal-close" onclick="closeModal('dayModal')">✕</button></div>
+        <div class="modal-body" id="dayBody"></div>
+        <div class="modal-footer" id="dayFooter"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ── Hotels de Tunisie ──
+// ═══════════ DONNEES CALENDRIER ═══════════
+var EVENTS = {{ events_json|safe }};
+var TODAY_STR = '{{ today_str }}';
+var CAN_MANAGE = {{ 'true' if current_user.has_permission('manage_schedule') else 'false' }};
+var USER_NAMES = {{ user_names|tojson|safe }};
+var MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+var DOWS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+
+var BY_DATE = {};
+EVENTS.forEach(function(e){ (BY_DATE[e.date] = BY_DATE[e.date] || []).push(e); });
+Object.keys(BY_DATE).forEach(function(k){ BY_DATE[k].sort(function(a,b){ return (a.start||'').localeCompare(b.start||''); }); });
+
+var _t = TODAY_STR.split('-');
+var view = { y: parseInt(_t[0],10), m: parseInt(_t[1],10) - 1 };
+
+function esc(s){ var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function statusLabel(s){ return {upcoming:'À venir', ongoing:'En cours', completed:'Terminé', cancelled:'Annulé'}[s] || s; }
+function badgeCls(s){ return s === 'upcoming' ? 's-active' : (s === 'ongoing' ? 's-late' : 's-ok'); }
+
+function isoOf(d){
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function renderMonth(){
+    document.getElementById('calMonthLabel').textContent = MONTHS[view.m] + ' ' + view.y;
+    var first = new Date(view.y, view.m, 1);
+    var offset = (first.getDay() + 6) % 7;  // semaine commence le lundi
+    var start = new Date(view.y, view.m, 1 - offset);
+    var monthCount = 0;
+    var html = '';
+    for (var i = 0; i < 42; i++){
+        var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        var iso = isoOf(d);
+        var out = d.getMonth() !== view.m;
+        var isToday = (iso === TODAY_STR);
+        var evts = BY_DATE[iso] || [];
+        if (!out) monthCount += evts.length;
+        var chips = '';
+        evts.slice(0, 3).forEach(function(e){
+            chips += '<div class="cal-chip st-' + e.status + '" title="' + esc(e.start + ' - ' + e.title) + '" onclick="event.stopPropagation();openDay(\'' + iso + '\',' + e.id + ')">' + esc(e.start) + ' ' + esc(e.title) + '</div>';
+        });
+        if (evts.length > 3) chips += '<div class="cal-more" onclick="event.stopPropagation();openDay(\'' + iso + '\')">+' + (evts.length - 3) + ' autre(s)</div>';
+        html += '<div class="cal-day' + (out ? ' out' : '') + (isToday ? ' today' : '') + '" onclick="openDay(\'' + iso + '\')"><span class="cal-daynum">' + d.getDate() + '</span>' + chips + '</div>';
+    }
+    document.getElementById('calDays').innerHTML = html;
+    document.getElementById('calMonthCount').textContent = monthCount + ' événement' + (monthCount > 1 ? 's' : '') + ' ce mois';
+}
+
+function navMonth(delta){
+    view.m += delta;
+    if (view.m < 0){ view.m = 11; view.y--; }
+    if (view.m > 11){ view.m = 0; view.y++; }
+    renderMonth();
+}
+function goToday(){ var t = TODAY_STR.split('-'); view.y = parseInt(t[0],10); view.m = parseInt(t[1],10) - 1; renderMonth(); }
+
+// ═══════════ PANNEAU DU JOUR ═══════════
+function openDay(iso, highlightId){
+    var evts = BY_DATE[iso] || [];
+    var p = iso.split('-');
+    var d = new Date(parseInt(p[0],10), parseInt(p[1],10) - 1, parseInt(p[2],10));
+    var dayName = DOWS[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+    document.getElementById('dayTitle').textContent = '📅 ' + dayName;
+    var body = document.getElementById('dayBody');
+    var foot = document.getElementById('dayFooter');
+    if (!evts.length){
+        body.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray-500)"><div style="font-size:2.5rem;margin-bottom:.5rem">🗓️</div><p>Aucun événement ce jour.</p></div>';
+    } else {
+        body.innerHTML = evts.map(function(e){
+            var assignees = (e.users||[]).map(function(uid){ return USER_NAMES[uid] || ''; }).filter(Boolean).join(', ');
+            return '<div class="day-evt" id="evt-' + e.id + '">'
+                + '<div class="day-evt-top"><span class="day-evt-time">🕐 ' + esc(e.start) + ' – ' + esc(e.end) + '</span><span class="status-badge ' + badgeCls(e.status) + '">' + esc(statusLabel(e.status)) + '</span></div>'
+                + '<div class="day-evt-title">' + esc(e.title) + '</div>'
+                + (e.location ? '<div class="day-evt-meta">📍 ' + esc(e.location) + '</div>' : '')
+                + (assignees ? '<div class="day-evt-meta">👥 ' + esc(assignees) + '</div>' : '')
+                + (e.description ? '<div class="day-evt-desc">' + esc(e.description) + '</div>' : '')
+                + '<div class="day-evt-actions">'
+                + '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' + gcalUrl(e) + '">📆 Ajouter sur Google Calendar</a>'
+                + (CAN_MANAGE ? '<button class="btn btn-sm btn-secondary" onclick="closeModal(\'dayModal\');startEdit(' + e.id + ')">✏️ Modifier</button>' : '')
+                + '</div></div>';
+        }).join('');
+    }
+    foot.innerHTML = CAN_MANAGE
+        ? '<button class="btn btn-accent" onclick="closeModal(\'dayModal\');newEventOnDate(\'' + iso + '\')">➕ Créer un événement ce jour</button>'
+        : '';
+    openModal('dayModal');
+    if (highlightId){
+        var el = document.getElementById('evt-' + highlightId);
+        if (el){ el.classList.add('day-evt-hl'); setTimeout(function(){ el.scrollIntoView({block:'center'}); }, 60); }
+    }
+}
+
+function startEdit(id){
+    var e = null;
+    for (var i = 0; i < EVENTS.length; i++){ if (EVENTS[i].id === id){ e = EVENTS[i]; break; } }
+    if (!e) return;
+    fillEditForm({
+        id: e.id, title: e.title, description: e.description || '', date: e.date,
+        start: e.start || '08:00', end: e.end || '17:00', location: e.location || '',
+        status: e.status || 'upcoming', users: e.users || []
+    });
+}
+
+function newEventOnDate(iso){
+    var ci = document.getElementById('ceDate');
+    if (ci) ci.value = iso;
+    openModal('createEventModal');
+}
+
+function togglePast(){
+    var w = document.getElementById('pastWrap');
+    var t = document.getElementById('pastToggle');
+    w.style.display = (w.style.display === 'none') ? 'block' : 'none';
+    t.classList.toggle('open', w.style.display !== 'none');
+}
+
+// ═══════════ GOOGLE CALENDAR (bouton par evenement) ═══════════
+function gcalUrl(e){
+    var s = e.date.replace(/-/g,'') + 'T' + (e.start || '08:00').replace(':','') + '00';
+    var en = e.date.replace(/-/g,'') + 'T' + (e.end || '17:00').replace(':','') + '00';
+    var assignees = (e.users||[]).map(function(id){ return USER_NAMES[id] || ''; }).filter(Boolean).join(', ');
+    var desc = (e.description || '') + (assignees ? '\nÉquipe: ' + assignees : '') + '\n\nImagine Events Tunisia';
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+        + '&text=' + encodeURIComponent(e.title)
+        + '&dates=' + s + '/' + en
+        + '&ctz=Africa/Tunis'
+        + (e.location ? '&location=' + encodeURIComponent(e.location) : '')
+        + '&details=' + encodeURIComponent(desc);
+}
+
+// ═══════════ SYNCHRONISATION (flux ICS) ═══════════
+function toggleSync(){
+    var b = document.getElementById('syncBody');
+    var h = document.getElementById('syncHead');
+    b.style.display = (b.style.display === 'none') ? 'block' : 'none';
+    h.classList.toggle('open', b.style.display !== 'none');
+}
+function copyIcs(){
+    var i = document.getElementById('icsUrl');
+    i.focus(); i.select(); i.setSelectionRange(0, 99999);
+    function done(){
+        var b = document.getElementById('copyIcsBtn');
+        var old = b.innerHTML; b.innerHTML = '✅ Copié !'; b.disabled = true;
+        setTimeout(function(){ b.innerHTML = old; b.disabled = false; }, 1500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(i.value).then(done).catch(function(){ document.execCommand('copy'); done(); });
+    } else { document.execCommand('copy'); done(); }
+}
+
+// ═══════════ HOTELS (autocomplete) ═══════════
 var HOTELS = ["Hotel Laico Tunis", "Hotel Africa Tunis", "Hotel El Mouradi Gammarth", "Hotel Ramada Plaza Tunis", "Hotel Golden Tulip Carthage", "Hotel Novotel Tunis", "Hotel Ibis Tunis", "Hotel Sheraton Tunis", "Hotel Concorde Les Berges du Lac", "Hotel Belvedere Fourati Tunis", "Hotel Acropole Tunis", "Hotel Carlton Tunis", "Hotel Le Palace Gammarth", "Hotel The Residence Tunis", "Hotel Four Seasons Tunis", "Hotel Movenpick Gammarth", "Hotel Palais Bayram Tunis", "Hotel Dar El Marsa Tunis", "Hotel Le Corail Suites Tunis", "Hotel Tunis Grand Hotel", "Hotel Majestic Tunis", "Hotel Le Pacha Tunis", "Hotel El Hana International Tunis", "Hotel Salammbo Tunis", "Hotel Golf Royal Tunis", "Hotel Campanile Tunis", "Hotel Business Hotel Tunis", "Hotel Samarons Tunis", "Hotel Tiba Tunis", "Hotel Ambassador Tunis", "Hotel Saint Georges Tunis", "Hotel Mechtel Tunis", "Hotel El Mechtel Tunis", "Hotel La Maison Blanche Tunis", "Hotel Dar Said Sidi Bou Said", "Hotel Villa Didon Carthage", "Hotel Dar El Jeld Tunis", "Hotel Royal Victoria Tunis", "Hotel Dar Ben Gacem Tunis", "Hotel Dar Hayet Tunis", "Hotel Dar La Leila Tunis", "Hotel Plaza La Marsa", "Hotel Dar Zitouna Tunis", "Hotel Dar El Medina Tunis", "Hotel El Andalous Tunis", "Hotel Diplomat Tunis", "Hotel Yadis Ibn Khaldoun Tunis", "Hotel Hasdrubal Thalassa Yasmine Hammamet", "Hotel Medina Belisaire Hammamet", "Hotel Royal Azur Hammamet", "Hotel Sentido Phenicia Hammamet", "Hotel Iberostar Averroes Hammamet", "Hotel Vincci Nozha Beach Hammamet", "Hotel Dar Khayam Hammamet", "Hotel Diar Lemdina Hammamet", "Hotel El Mouradi Hammamet", "Hotel Solaria Hammamet", "Hotel Paradis Palace Hammamet", "Hotel Omarit Hammamet", "Hotel Samira Club Hammamet", "Hotel Club President Hammamet", "Hotel La Badira Hammamet", "Hotel Le Sultan Hammamet", "Hotel Nahrawess Hammamet", "Hotel Bel Azur Thalasso Hammamet", "Hotel Marina Palace Hammamet", "Hotel Sol Azur Beach Hammamet", "Hotel TUI Magic Life Africana Hammamet", "Hotel The Russelior Hammamet", "Hotel Steigenberger Marhaba Hammamet", "Hotel Alhambra Thalasso Hammamet", "Hotel Eden Village Hammamet", "Hotel Mediterranee Thalasso Hammamet", "Hotel El Mouradi Port El Kantaoui", "Hotel El Mouradi Sousse", "Hotel Steigenberger Kantaoui Bay Sousse", "Hotel Marhaba Palace Sousse", "Hotel Tej Marhaba Sousse", "Hotel Riu Imperial Marhaba Sousse", "Hotel Movenpick Sousse", "Hotel Sousse Palace", "Hotel Hasdrubal Port El Kantaoui", "Hotel El Ksar Resort Sousse", "Hotel Marhaba Salem Sousse", "Hotel Royal Beach Sousse", "Hotel Thalassa Sousse", "Hotel Jaz Tour Khalef Sousse", "Hotel Marhaba Club Sousse", "Hotel El Mouradi Club Kantaoui", "Hotel Riviera Sousse", "Hotel Abou Nawas Boujaafar Sousse", "Hotel Rosa Beach Sousse", "Hotel Seabel Alhambra Sousse", "Hotel Orient Palace Sousse", "Hotel Scheherazade Sousse", "Hotel Concorde Green Park Sousse", "Hotel El Hana Sousse", "Hotel Monastir Center", "Hotel Skanes Serail Monastir", "Hotel Delphin El Habib Monastir", "Hotel Regency Monastir", "Hotel Marina Cap Monastir", "Hotel Sahara Beach Monastir", "Hotel Rosa Beach Monastir", "Hotel Royal Thalassa Monastir", "Hotel El Mouradi Skanes Monastir", "Hotel Liberty Resort Monastir", "Hotel One Resort Monastir", "Hotel El Mouradi Mahdia", "Hotel Club Thapsus Mahdia", "Hotel Iberostar Royal El Mansour Mahdia", "Hotel Mahdia Palace", "Hotel LTI Mahdia Beach", "Hotel One Resort Mahdia", "Hotel Primasol El Mehdi Mahdia", "Hotel Vincci Nour Palace Mahdia", "Hotel Hasdrubal Prestige Djerba", "Hotel El Mouradi Djerba", "Hotel Cesar Thalasso Djerba", "Hotel Djerba Plaza", "Hotel Radisson Blu Djerba", "Hotel Vincci Helios Djerba", "Hotel Iliade Aqua Park Djerba", "Hotel Ulysse Palace Djerba", "Hotel Seabel Rym Beach Djerba", "Hotel Palm Azur Djerba", "Hotel Dar Jerba Djerba", "Hotel Hotel Meninx Djerba", "Hotel SunConnect Djerba Aqua Resort", "Hotel TUI Magic Life Penelope Djerba", "Hotel Cedriana Djerba", "Hotel Kzar Djerba", "Hotel Yadis Djerba Golf", "Hotel Green Palm Djerba", "Hotel Les Oliviers Djerba", "Hotel Sidi Slim Djerba", "Hotel Calimera Djerba", "Hotel Djerba Aqua Resort", "Hotel Fiesta Beach Djerba", "Hotel Djerba Castille", "Hotel Club Med Djerba La Douce", "Hotel Odyssee Resort Zarzis", "Hotel Zita Beach Zarzis", "Hotel Sangho Privilege Zarzis", "Hotel Palm Beach Tozeur", "Hotel Ras El Ain Tozeur", "Hotel Anantara Tozeur", "Hotel Dar Hi Nefta", "Hotel Diar Abou Habibi Tozeur", "Hotel Ksar Rouge Tozeur", "Hotel El Mouradi Tozeur", "Hotel Oasis Tozeur", "Hotel Dar Cherait Tozeur", "Hotel Laico Sfax", "Hotel Les Oliviers Sfax", "Hotel Borj Dhiafa Sfax", "Hotel Sangho Sfax", "Hotel Business Sfax", "Hotel Syphax Sfax", "Hotel C Club Tabarka", "Hotel Les Mimosas Tabarka", "Hotel Dar Ismail Tabarka", "Hotel La Cigale Tabarka", "Hotel Corail Tabarka", "Hotel Marina Prestige Tabarka", "Hotel Bizerta Resort", "Hotel Corniche Bizerte", "Hotel Nador Bizerte", "Hotel Andalucia Beach Bizerte", "Hotel Sidi Salem Bizerte", "Hotel Khoyol Nabeul", "Hotel Les Jasmins Nabeul", "Hotel Sol Azur Nabeul", "Hotel Turki Nabeul", "Hotel Dar Sabri Nabeul", "Hotel The Residence Gammarth", "Hotel Ramada Gammarth", "Hotel Carthage Thalasso Gammarth", "Hotel El Mouradi Gammarth", "Hotel Plaza La Marsa", "Hotel El Andalous La Marsa", "Hotel La Kasbah Kairouan", "Hotel Continental Kairouan", "Hotel Splendid Kairouan", "Hotel Ksar Ghilane", "Hotel Campement Zmela", "Hotel Sangho Tataouine", "Hotel Dakyanus Tataouine", "Hotel Jerba Sun Club", "Hotel Yadis Jerba", "Hotel Lella Meriem Djerba", "Hotel Houria Djerba", "Hotel Laico Sousse", "Hotel Riadh Palms Sousse", "Hotel Golf Residence Port El Kantaoui", "Hotel Hannibal Palace Hammamet", "Hotel Yasmina Hammamet", "Hotel Le Royal Hammamet", "Hotel Eden Club Hammamet", "Hotel Club Magic Life Manar Hammamet", "Hotel Les Orangers Hammamet", "Hotel Domaine El Fatimi Nabeul"];
 
 function selectHotel(which, value) {
@@ -193,38 +432,21 @@ function selectHotel(which, value) {
 
 function filterHotels(query) {
     var dd = document.getElementById('hotelDropdown');
-    var results = [];
-    if (query.trim()) {
-        var q = query.toLowerCase().trim();
-        results = HOTELS.filter(function(h) { return h.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
-        if (results.length === 0 || results[0].toLowerCase() !== q) {
-            results.push('__CUSTOM__');
-        }
-    } else {
-        results = HOTELS.slice(0, 8);
-        results.push('__CUSTOM__');
-    }
-    var html = '';
-    results.forEach(function(h) {
-        if (h === '__CUSTOM__') {
-            html += '<div class="hotel-option custom" onclick="selectHotel(\'create\',document.getElementById(\'locSearch\').value.trim())">✏️ Utiliser "' + query.trim() + '" (lieu personnalise)</div>';
-        } else {
-            html += '<div class="hotel-option" onclick="selectHotel(\'create\',\'' + h.replace(/'/g,"\\'") + '\')">🏨 ' + h + '</div>';
-        }
-    });
-    dd.innerHTML = html;
-    dd.classList.add('show');
+    buildDropdown(dd, query, 'create');
 }
 
 function filterHotelsEdit(query) {
     var dd = document.getElementById('eeHotelDropdown');
+    buildDropdown(dd, query, 'edit');
+}
+
+function buildDropdown(dd, query, which) {
     var results = [];
+    var inputId = (which === 'create') ? 'locSearch' : 'eeLocSearch';
     if (query.trim()) {
         var q = query.toLowerCase().trim();
         results = HOTELS.filter(function(h) { return h.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
-        if (results.length === 0 || results[0].toLowerCase() !== q) {
-            results.push('__CUSTOM__');
-        }
+        if (results.length === 0 || results[0].toLowerCase() !== q) results.push('__CUSTOM__');
     } else {
         results = HOTELS.slice(0, 8);
         results.push('__CUSTOM__');
@@ -232,16 +454,15 @@ function filterHotelsEdit(query) {
     var html = '';
     results.forEach(function(h) {
         if (h === '__CUSTOM__') {
-            html += '<div class="hotel-option custom" onclick="selectHotel(\'edit\',document.getElementById(\'eeLocSearch\').value.trim())">✏️ Utiliser "' + query.trim() + '" (lieu personnalise)</div>';
+            html += '<div class="hotel-option custom" onclick="selectHotel(\'' + which + '\',document.getElementById(\'' + inputId + '\').value.trim())">✏️ Utiliser « ' + query.trim() + ' » (lieu personnalise)</div>';
         } else {
-            html += '<div class="hotel-option" onclick="selectHotel(\'edit\',\'' + h.replace(/'/g,"\\'") + '\')">🏨 ' + h + '</div>';
+            html += '<div class="hotel-option" onclick="selectHotel(\'' + which + '\',\'' + h.replace(/'/g,"\\'") + '\')">🏨 ' + h + '</div>';
         }
     });
     dd.innerHTML = html;
     dd.classList.add('show');
 }
 
-// Close dropdowns on outside click
 document.addEventListener('click', function(e) {
     var d1 = document.getElementById('hotelDropdown');
     var d2 = document.getElementById('eeHotelDropdown');
@@ -251,27 +472,26 @@ document.addEventListener('click', function(e) {
     if (d2 && s2 && !s2.contains(e.target) && !d2.contains(e.target)) d2.classList.remove('show');
 });
 
-// ── Modals ──
+// ═══════════ MODALS ═══════════
 function openModal(id){document.getElementById(id).classList.add('open')}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 document.querySelectorAll('.modal-overlay').forEach(function(m){m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open')})});
 
-// Edit event buttons use data-event attribute
-document.querySelectorAll('.edit-event-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-        var d = JSON.parse(this.dataset.event);
-        document.getElementById('eeTitle').value = d.title;
-        document.getElementById('eeDesc').value = d.description || '';
-        document.getElementById('eeDate').value = d.date;
-        document.getElementById('eeStart').value = d.start || '08:00';
-        document.getElementById('eeEnd').value = d.end || '17:00';
-        document.getElementById('eeLocSearch').value = d.location || '';
-        document.getElementById('eeLocHidden').value = d.location || '';
-        document.getElementById('eeStatus').value = d.status || 'upcoming';
-        document.querySelectorAll('#eeUsers input[type=checkbox]').forEach(function(cb){cb.checked = d.users.includes(parseInt(cb.value))});
-        document.getElementById('editEventForm').action = '/schedule/' + d.id + '/edit';
-        openModal('editEventModal');
-    });
-});
+function fillEditForm(d) {
+    document.getElementById('eeTitle').value = d.title;
+    document.getElementById('eeDesc').value = d.description || '';
+    document.getElementById('eeDate').value = d.date;
+    document.getElementById('eeStart').value = d.start || '08:00';
+    document.getElementById('eeEnd').value = d.end || '17:00';
+    document.getElementById('eeLocSearch').value = d.location || '';
+    document.getElementById('eeLocHidden').value = d.location || '';
+    document.getElementById('eeStatus').value = d.status || 'upcoming';
+    document.querySelectorAll('#eeUsers input[type=checkbox]').forEach(function(cb){cb.checked = d.users.indexOf(parseInt(cb.value,10)) >= 0});
+    document.getElementById('editEventForm').action = '/schedule/' + d.id + '/edit';
+    openModal('editEventModal');
+}
+
+// ═══════════ INIT ═══════════
+renderMonth();
 </script>
 {% endblock %}
