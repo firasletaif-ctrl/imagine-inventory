@@ -434,7 +434,7 @@ def send_push(uid, title, body, link=''):
         'icon': '/static/icons/icon-192x192.png'
     })
     # 'sub' : adresse mail valide (exigence du protocole VAPID), configurable
-    vapid_sub = os.environ.get('VAPID_SUB', 'info@imagine-events.com')
+    vapid_sub = os.environ.get('VAPID_SUB', 'info@i-maginevents.com')
     if not vapid_sub.startswith('mailto:'):
         vapid_sub = 'mailto:' + vapid_sub
     for s in list(subs):
@@ -552,7 +552,7 @@ def email_template(title, greeting, content, action_link='', action_text=''):
 <tr><td style="background:#0B1D3A;padding:15px 30px;text-align:center">
     <p style="color:rgba(255,255,255,.5);font-size:11px;margin:0">
         Rue du Lac Loch Ness, Imm Neo, 3eme etage, 1053 Les Berges du Lac, Tunis<br>
-        +216 71 656 056 | info@imagine-events.com
+        +216 71 656 056 | info@i-maginevents.com
     </p>
 </td></tr>
 </table>

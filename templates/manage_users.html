@@ -11,7 +11,7 @@
         <form method="POST" action="{{ url_for('create_user') }}">
             <div class="form-row" style="grid-template-columns:1fr 1fr 1fr 1fr">
                 <div class="form-group"><label>Nom complet</label><input type="text" name="full_name" required placeholder="Prenom Nom"></div>
-                <div class="form-group"><label>Email</label><input type="email" name="email" required placeholder="...@imagine-events.com"></div>
+                <div class="form-group"><label>Email</label><input type="email" name="email" required placeholder="...@i-maginevents.com"></div>
                 <div class="form-group"><label>Mot de passe</label><input type="password" name="password" required placeholder="6+ caracteres"></div>
                 <div class="form-group"><label>Role</label><select name="role_id">{% for r in all_roles %}<option value="{{ r.id }}">{{ r.icon }} {{ r.name }}</option>{% endfor %}</select></div>
             </div>
