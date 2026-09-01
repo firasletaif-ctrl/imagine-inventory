@@ -655,6 +655,21 @@ def dashboard():
     inv_done = sum(1 for c in inv_today if c.status == 'verified')
     return render_template('dashboard.html', equipment=eqs, categories=cats, active_borrows=ab, search=search, cat_filter=cat_filter, all_count=Equipment.query.count(), available_count=Equipment.query.filter(Equipment.available_quantity>0).count(), late_count=Borrow.query.filter_by(status='late').count(), repair_count=repair_count, equipment_json=eq_json, today=today, is_pending=is_pending, upcoming_events=upcoming_events, inv_today=inv_today, inv_done=inv_done)
 
+@app.route('/scan/<int:eid>')
+@login_required
+def scan_page(eid):
+    """Page d'actions dediee au scan QR : gros boutons, mobile-first,
+    chargee en 1 clic. (Les etiquettes anciennes pointant vers
+    /equipment/<eid> continuent de fonctionner.)"""
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    eq = db.session.get(Equipment, eid)
+    if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
+    borrows = Borrow.query.filter_by(equipment_id=eid).order_by(Borrow.borrow_date.desc()).all()
+    active_borrows = [b for b in borrows if b.status in ('active', 'late')]
+    upcoming_events = Event.query.filter(Event.end_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
+    return render_template('scan.html', eq=eq, active_borrows=active_borrows, upcoming_events=upcoming_events, today=date.today())
+
+
 @app.route('/equipment/<int:eid>')
 @login_required
 def equipment_detail(eid):
@@ -1404,7 +1419,7 @@ def equipment_qrcode(eid):
     eq = db.session.get(Equipment, eid)
     if not eq:
         return "Introuvable", 404
-    url = request.host_url.rstrip('/') + url_for('equipment_detail', eid=eid)
+    url = request.host_url.rstrip('/') + url_for('scan_page', eid=eid)
     qr = qrcode.QRCode(box_size=6, border=2)
     qr.add_data(url)
     qr.make(fit=True)

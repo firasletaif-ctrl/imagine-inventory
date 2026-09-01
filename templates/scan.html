@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>{{ eq.name }} — Actions</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#F1F5F9;color:#1E293B;min-height:100vh;padding-bottom:2rem}
+.wrap{max-width:480px;margin:0 auto;padding:0 1rem}
+/* Header brand */
+.brand{display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.9rem 0}
+.brand .ic{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#0B1D3A,#13294B);color:#E63946;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800}
+.brand .nm{font-family:Georgia,serif;font-weight:700;font-size:1rem;letter-spacing:1px;color:#0B1D3A}
+.brand .nm span{color:#C41E3A}
+/* Card materiel */
+.card{background:white;border-radius:16px;box-shadow:0 2px 10px rgba(11,29,58,.08);overflow:hidden;margin-bottom:1rem}
+.card .photo{width:100%;height:180px;object-fit:cover;display:block;background:#E2E8F0}
+.card .photo-ph{width:100%;height:110px;background:#E2E8F0;display:flex;align-items:center;justify-content:center;font-size:3rem}
+.card .body{padding:1rem 1.2rem 1.2rem}
+.card .cat{font-size:.75rem;font-weight:700;color:#1E4D8C;text-transform:uppercase;letter-spacing:1px}
+.card h1{font-size:1.35rem;color:#0B1D3A;margin:.25rem 0 .15rem;line-height:1.25}
+.card .ref{font-family:ui-monospace,Menlo,monospace;font-size:.8rem;color:#64748B}
+.card .loc{font-size:.85rem;color:#475569;margin-top:.35rem}
+/* Disponibilite */
+.avail{display:flex;align-items:center;justify-content:space-between;background:#F8FAFC;border-top:1px solid #E2E8F0;padding:.8rem 1.2rem}
+.avail .txt{font-size:.85rem;color:#475569;font-weight:600}
+.avail .pill{font-size:.85rem;font-weight:800;padding:.35rem .9rem;border-radius:100px}
+.avail .pill.ok{background:#DCFCE7;color:#166534}
+.avail .pill.no{background:#FDE8EC;color:#A01830}
+.avail .rep{font-size:.78rem;color:#D97706;font-weight:700}
+/* GROS BOUTONS */
+.actions{display:flex;flex-direction:column;gap:.8rem;margin-bottom:1rem}
+.abtn{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;border:none;border-radius:14px;color:white;font-size:1.15rem;font-weight:800;padding:1.05rem 1rem;cursor:pointer;text-decoration:none;box-shadow:0 3px 10px rgba(11,29,58,.18);transition:transform .1s,filter .15s}
+.abtn:active{transform:scale(.98)}
+.abtn:hover{filter:brightness(1.08)}
+.abtn small{font-weight:600;font-size:.8rem;opacity:.9}
+.abtn.green{background:#16A34A}
+.abtn.blue{background:#1E4D8C}
+.abtn.orange{background:#D97706}
+.abtn.gray{background:#475569;font-size:.95rem;padding:.85rem 1rem}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+/* Emprunts en cours */
+.section-t{font-size:.8rem;font-weight:800;color:#0B1D3A;text-transform:uppercase;letter-spacing:1.5px;margin:1.2rem 0 .6rem;display:flex;justify-content:space-between;align-items:center}
+.brow{background:white;border-radius:12px;box-shadow:0 1px 5px rgba(11,29,58,.07);padding:.8rem 1rem;margin-bottom:.6rem;display:flex;justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap}
+.brow .info{min-width:0}
+.brow .who{font-weight:700;font-size:.95rem;color:#0B1D3A}
+.brow .meta{font-size:.78rem;color:#64748B;margin-top:.15rem}
+.brow .late{color:#C41E3A;font-weight:800}
+.rbtn{border:none;background:#16A34A;color:white;font-weight:800;font-size:.9rem;padding:.6rem 1rem;border-radius:10px;cursor:pointer;white-space:nowrap}
+.rbtn:hover{filter:brightness(1.1)}
+/* Footer */
+.footer{margin-top:1.4rem;text-align:center;font-size:.75rem;color:#94A3B8}
+.footer a{color:#1E4D8C;font-weight:700;text-decoration:none}
+/* Modales */
+.modal-overlay{position:fixed;inset:0;background:rgba(11,29,58,.55);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.modal-overlay.open{display:flex}
+.modal{background:white;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:1.2rem 1.2rem 1.4rem;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:1.05rem;color:#0B1D3A;margin-bottom:.9rem;display:flex;justify-content:space-between;align-items:center}
+.modal h2 .x{border:none;background:#F1F5F9;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;color:#475569}
+.fg{margin-bottom:.9rem}
+.fg label{display:block;font-size:.8rem;font-weight:700;color:#475569;margin-bottom:.35rem}
+.fg input,.fg select,.fg textarea{width:100%;padding:.7rem .8rem;border:1.5px solid #CBD5E1;border-radius:10px;font-size:.95rem;background:white}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#1E4D8C}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.mfoot{display:flex;gap:.6rem;margin-top:1.1rem}
+.mfoot button{flex:1;border:none;border-radius:12px;font-size:1rem;font-weight:800;padding:.85rem;cursor:pointer}
+.mfoot .cancel{background:#F1F5F9;color:#475569}
+.mfoot .go{background:#C41E3A;color:white}
+/* Flash */
+.flash{position:fixed;top:0;left:50%;transform:translateX(-50%);background:#16A34A;color:white;font-size:.88rem;font-weight:700;padding:.7rem 1.3rem;border-radius:0 0 12px 12px;z-index:99;max-width:92vw;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.flash.error{background:#C41E3A}
+.flash.info{background:#1E4D8C}
+@media (min-width:520px){
+  body{padding-top:1rem}
+  .modal-overlay{align-items:center}
+  .modal{border-radius:18px;max-width:440px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><div class="ic">✦</div><div class="nm">IMAGINE<span>EVENTS</span></div></div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}<div class="flash {% for c,m in messages %}{% if c == 'error' %}error{% elif c == 'info' %}info{% endif %}{% endfor %}">{{ messages|map(attribute=1)|first }}</div>{% endif %}
+  {% endwith %}
+
+  <!-- Carte materiel -->
+  <div class="card">
+    {% if eq.primary_image() %}
+    <img class="photo" src="{{ url_for('uploaded_file', fn=eq.primary_image()) }}" alt="{{ eq.name }}">
+    {% else %}
+    <div class="photo-ph">{{ eq.category.icon if eq.category else '📦' }}</div>
+    {% endif %}
+    <div class="body">
+      <div class="cat">{{ eq.category.icon if eq.category else '📦' }} {{ eq.category.name if eq.category else 'Matériel' }}</div>
+      <h1>{{ eq.name }}</h1>
+      <div class="ref">{{ eq.reference or '' }}</div>
+      <div class="loc">📍 {{ eq.location }} · État : {{ eq.condition }}</div>
+    </div>
+    <div class="avail">
+        <div>
+          <div class="txt">{{ eq.available_quantity }} / {{ eq.total_quantity }} disponibles</div>
+          {% if eq.in_repair %}<div class="rep">🔧 {{ eq.in_repair }} en réparation</div>{% endif %}
+        </div>
+        <span class="pill {% if eq.available_quantity > 0 %}ok{% else %}no{% endif %}">{{ '✅ DISPONIBLE' if eq.available_quantity > 0 else '🔴 TOUT SORTI' }}</span>
+    </div>
+  </div>
+
+  <!-- GROS BOUTONS -->
+  <div class="actions">
+    {% if has_perm('borrow_equipment') %}
+    <button class="abtn green" {% if eq.available_quantity <= 0 %}style="opacity:.5;pointer-events:none"{% endif %} onclick="openBorrow()">
+      📤 EMPRUNTER <small>{{ eq.available_quantity }} dispo</small>
+    </button>
+    {% endif %}
+    {% if has_perm('return_equipment') and active_borrows %}
+    <button class="abtn blue" onclick="document.getElementById('borrowsSec').scrollIntoView({behavior:'smooth'})">
+      ✅ RETOURNER <small>{{ active_borrows|length }} emprunt(s) en cours</small>
+    </button>
+    {% endif %}
+    {% if has_perm('repair_stock','manage_equipment') %}
+    <button class="abtn orange" onclick="openRepair()">🔧 SIGNALER EN RÉPARATION</button>
+    {% endif %}
+    <div class="row2">
+      <a class="abtn gray" href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" target="_blank">🔲 ÉTIQUETTE</a>
+      <a class="abtn gray" href="{{ url_for('equipment_detail', eid=eq.id) }}">📄 FICHE</a>
+    </div>
+  </div>
+
+  <!-- Emprunts en cours -->
+  {% if active_borrows and (has_perm('return_equipment')) %}
+  <div id="borrowsSec">
+    <div class="section-t"><span>Emprunts en cours</span><span>{{ active_borrows|length }}</span></div>
+    {% for b in active_borrows %}
+    <div class="brow">
+      <div class="info">
+        <div class="who">{{ b.quantity }}x — {{ b.user.full_name if b.user else '?' }}</div>
+        <div class="meta">{% if b.pickup_date %}📦 {{ b.pickup_date.strftime('%d/%m/%Y') }} · {% endif %}⏰ retour {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.event_name %} · 🎯 {{ b.event_name }}{% endif %}</div>
+      </div>
+      {% if b.user_id == current_user.id or has_perm('manage_users') %}
+      <button class="rbtn" onclick='openReturn({{ b.id }}, {{ b.quantity }}, "{{ b.user.full_name | e }}")'>Retourner</button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    <a href="{{ url_for('equipment_detail', eid=eq.id) }}">Voir la fiche complète →</a><br>
+    Imagine Events Tunisia · +216 71 656 056
+  </div>
+</div>
+
+<!-- Modal emprunter -->
+<div class="modal-overlay" id="borrowModal">
+  <div class="modal">
+    <h2>📤 Emprunter : {{ eq.name }} <button class="x" onclick="closeM('borrowModal')">✕</button></h2>
+    <form method="POST" action="{{ url_for('borrow_equipment', eid=eq.id) }}">
+      <div class="fg">
+        <label>Quantité (max {{ eq.available_quantity }})</label>
+        <input type="number" name="quantity" value="1" min="1" max="{{ eq.available_quantity }}" required>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>📦 Date de prise</label><input type="date" name="pickup_date" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+        <div class="fg"><label>⏰ Retour prévu</label><input type="date" name="return_date" min="{{ today.strftime('%Y-%m-%d') }}" required></div>
+      </div>
+      <div class="fg">
+        <label>🎯 Événement</label>
+        <select name="event_id" onchange="fillEvent(this)">
+          <option value="">— Aucun —</option>
+          {% for ev in upcoming_events %}
+          <option value="{{ ev.id }}" data-title="{{ ev.title | e }}">{{ ev.title }} — {{ ev.event_date.strftime('%d/%m/%Y') }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg"><label>Ou nom d'événement libre</label><input type="text" name="event_name" placeholder="Ex: Congrès Médical 2026"></div>
+      <div class="fg"><label>Notes</label><textarea name="notes" rows="2" placeholder="Détails..."></textarea></div>
+      <div class="mfoot">
+        <button type="button" class="cancel" onclick="closeM('borrowModal')">Annuler</button>
+        <button class="go">✅ Confirmer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal retour -->
+<div class="modal-overlay" id="returnModal">
+  <div class="modal">
+    <h2>✅ Retourner <button class="x" onclick="closeM('returnModal')">✕</button></h2>
+    <form id="returnForm" method="POST" action="">
+      <p id="returnInfo" style="font-size:.9rem;color:#475569;margin-bottom:1rem;line-height:1.6"></p>
+      <div class="fg">
+        <label>🔧 Quantité en réparation (0 si tout est propre)</label>
+        <input type="number" id="repairQty" name="repair_qty" min="0" value="0" required>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="cancel" onclick="closeM('returnModal')">Annuler</button>
+        <button class="go">✅ Confirmer le retour</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal reparation -->
+<div class="modal-overlay" id="repairModal">
+  <div class="modal">
+    <h2>🔧 Signaler en réparation <button class="x" onclick="closeM('repairModal')">✕</button></h2>
+    <form method="POST" action="{{ url_for('report_repair', eid=eq.id) }}">
+      <p style="font-size:.9rem;color:#475569;margin-bottom:1rem">
+        <strong>{{ eq.name }}</strong> — {{ eq.total_quantity - (eq.in_repair or 0) }} unité(s) hors réparation.
+      </p>
+      <div class="fg">
+        <label>Nombre d'unités à mettre en réparation</label>
+        <input type="number" name="qty" min="1" max="{{ eq.total_quantity - (eq.in_repair or 0) }}" value="1" required>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="cancel" onclick="closeM('repairModal')">Annuler</button>
+        <button class="go">🔧 Passer en réparation</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openM(id){document.getElementById(id).classList.add('open')}
+function closeM(id){document.getElementById(id).classList.remove('open')}
+function openBorrow(){openM('borrowModal')}
+function openRepair(){openM('repairModal')}
+function openReturn(bid, qty, user){
+  document.getElementById('returnInfo').innerHTML = 'Emprunt de <strong>'+qty+'x</strong> par <strong>'+user+'</strong>.';
+  document.getElementById('repairQty').max = qty;
+  document.getElementById('returnForm').action = '/return/' + bid;
+  openM('returnModal');
+}
+function fillEvent(sel){
+  var o = sel.options[sel.selectedIndex];
+  if (o && o.dataset.title) { var f = document.querySelector('input[name=event_name]'); if (f) f.value = o.dataset.title; }
+}
+document.querySelectorAll('.modal-overlay').forEach(function(m){
+  m.addEventListener('click', function(e){ if (e.target === this) this.classList.remove('open'); });
+});
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(function(m){ m.classList.remove('open'); });
+});
+// auto-hide flash
+var fl = document.querySelector('.flash');
+if (fl) setTimeout(function(){ fl.remove(); }, 4000);
+</script>
+</body>
+</html>
