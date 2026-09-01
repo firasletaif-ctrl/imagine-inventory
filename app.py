@@ -411,6 +411,43 @@ def is_pending_user():
     """Verifie si l'utilisateur est en attente (aucune permission du tout)"""
     return not current_user.has_any_permission()
 
+
+def daily_db_snapshot():
+    """SQLite uniquement : au 1er chargement de la journee, copie de securite
+    de la base (API backup de SQLite, sure meme en ecriture) comprimee dans
+    instance/backups/ — on garde les 3 dernieres.
+    Sur PostgreSQL : aucun effet (pg_dump externe s'occupe des backups)."""
+    try:
+        if os.environ.get('DATABASE_URL'):
+            return  # base externe : rien a faire ici
+        import sqlite3, glob, gzip, shutil
+        base = os.path.join(os.path.dirname(__file__), 'instance')
+        db_file = os.path.join(base, 'inventory.db')
+        if not os.path.exists(db_file):
+            return
+        bdir = os.path.join(base, 'backups')
+        os.makedirs(bdir, exist_ok=True)
+        today_s = date.today().strftime('%Y%m%d')
+        plain = os.path.join(bdir, f'inventory_{today_s}.db')
+        gz = plain + '.gz'
+        if os.path.exists(gz):
+            return  # snapshot du jour deja fait
+        src = sqlite3.connect(f'file:{db_file}?mode=ro', uri=True)
+        dst = sqlite3.connect(plain)
+        src.backup(dst)
+        dst.close()
+        src.close()
+        with open(plain, 'rb') as fsrc, gzip.open(gz, 'wb') as fdst:
+            shutil.copyfileobj(fsrc, fdst)
+        os.remove(plain)
+        # retention : 3 snapshots
+        olds = sorted(glob.glob(os.path.join(bdir, 'inventory_*.db.gz')))
+        for old in olds[:-3]:
+            os.remove(old)
+        print(f'[SNAPSHOT] base sauvegardee : {os.path.basename(gz)}')
+    except Exception as e:
+        print(f'[SNAPSHOT] ignore: {type(e).__name__}: {str(e)[:120]}')
+
 def log_action(action, description='', equipment_name='', quantity=0):
     """Enregistre une action. Si l'utilisateur n'est pas connecte, user_id = None."""
     uid = current_user.id if current_user.is_authenticated else None
@@ -768,6 +805,7 @@ def logout():
 @login_required
 def dashboard():
     search = request.args.get('search','').strip(); cat_filter = request.args.get('category','')
+    daily_db_snapshot()  # copie de securite quotidienne (SQLite)
     check_due_alerts()  # rappels automatiques (J-3/J-1 evenements, retards)
     q = Equipment.query
     if search: q = q.filter(db.or_(Equipment.name.ilike(f'%{search}%'),Equipment.description.ilike(f'%{search}%'),Equipment.reference.ilike(f'%{search}%'),Equipment.specifications.ilike(f'%{search}%'),Equipment.location.ilike(f'%{search}%')))
@@ -1417,6 +1455,9 @@ def import_csv():
                             existing = model.query.filter_by(name=row.get('name','').strip()).first()
                         elif table == 'equipment' and row.get('reference','').strip():
                             existing = model.query.filter_by(reference=row.get('reference','').strip()).first()
+                        elif table == 'app_settings' and row.get('key','').strip():
+                            # cles (ex: VAPID push) -> match sur la cle primaire 'key'
+                            existing = db.session.get(AppSetting, row.get('key','').strip())
 
                     obj = existing if existing else model()
                     plain_pw = None
