@@ -19,12 +19,17 @@
 set -e
 
 # ═══════════════════ C O N F I G ═══════════════════
-DOMAIN="depot.i-maginevents.com"   # votre sous-domaine (creer un enregistrement DNS A vers l'IP Oracle)
+DOMAIN="depot.i-maginevents.com"   # votre sous-domaine (creer un enregistrement DNS A vers l'IP publique)
 GIT_REPO="https://github.com/firasletaif-ctrl/imagine-inventory.git"
 APP_DIR="/opt/imagine-inventory"
 DB_NAME="imagine_inventory"
 DB_USER="imagine"
 APP_USER="imagine"
+NOTIFY_EMAIL="info@i-maginevents.com"  # email pour les certificats Let's Encrypt
+# Mode "tunnel" (vieux PC derriere une box sans ports ouverts) :
+#   no  = HTTPS direct par Let's Encrypt (IP publique + ports 80/443 ouverts)
+#   yes = Cloudflare Tunnel (AUCUN port a ouvrir, HTTPS fourni par Cloudflare)
+USE_TUNNEL="no"
 # ═══════════════════════════════════════════════════
 
 APP_PORT=8000
@@ -135,19 +140,59 @@ ufw allow 443
 ufw --force enable > /dev/null
 echo "  OK"
 
-echo "[7/8] HTTPS (Let's Encrypt)..."
+echo "[7/8] HTTPS / tunnel..."
 PUBLIC_IP=$(curl -s --max-time 5 ifconfig.me || true)
-if getent hosts ${DOMAIN} > /dev/null 2>&1; then
-  if certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m root@${DOMAIN#*.} --redirect; then
-    echo "  HTTPS active"
-  else
-    echo "  !! certbot a echoue (le DNS pointe-t-il deja vers ${PUBLIC_IP} ?)"
-    echo "     A refaire apres propagation DNS :  sudo certbot --nginx -d ${DOMAIN} -m vous@email.com --redirect"
-  fi
+
+# --- Cloudflare Tunnel : aucun port a ouvrir (recommande vieux PC / box) ---
+if [ "${USE_TUNNEL}" = "yes" ]; then
+  echo "  [tunnel] installation de cloudflared..."
+  curl -sL --output /usr/local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+  chmod +x /usr/local/bin/cloudflared
+  mkdir -p /etc/cloudflared && chmod 755 /etc/cloudflared
+  cat > /etc/cloudflared/config.yml <<TUNNEL
+tunnel: VOTRE_TUNNEL_ID
+credentials-file: /etc/cloudflared/imagine-depot.json
+ingress:
+  - hostname: ${DOMAIN}
+    service: http://127.0.0.1:${APP_PORT}
+  - service: http_status:404
+TUNNEL
+  cat > /etc/systemd/system/cloudflared-tunnel.service <<SVC
+[Unit]
+Description=Cloudflare Tunnel (Imagine Inventory)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SVC
+  systemctl daemon-reload
+  echo "  [tunnel] cloudflared installe. A FAIRE A LA MAIN (3 commandes) :"
+  echo "    1. sudo cloudflared tunnel login"
+  echo "    2. sudo cloudflared tunnel create imagine-depot  (notez le TUNNEL ID)"
+  echo "    3. sudo cloudflared tunnel route dns imagine-depot ${DOMAIN}"
+  echo "    puis : remplacez VOTRE_TUNNEL_ID dans /etc/cloudflared/config.yml,"
+  echo "    cp /root/.cloudflared/imagine-depot.json /etc/cloudflared/ && sudo systemctl enable --now cloudflared-tunnel"
+  echo "  [tunnel] HTTPS sera alors fourni par Cloudflare (cadre vert automatique)"
 else
-  echo "  Domaine ${DOMAIN} pas encore resolu -> HTTP pour l'instant."
-  echo "  Creer l'enregistrement DNS A :  ${DOMAIN} -> ${PUBLIC_IP}"
-  echo "  Puis : sudo certbot --nginx -d ${DOMAIN} -m vous@email.com --redirect"
+  # --- HTTPS direct (IP publique, ports 80/443 ouverts) ---
+  if getent hosts ${DOMAIN} > /dev/null 2>&1; then
+    if certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m ${NOTIFY_EMAIL} --redirect; then
+      echo "  HTTPS active"
+    else
+      echo "  !! certbot a echoue (le DNS pointe-t-il deja vers ${PUBLIC_IP} ?)"
+      echo "     A refaire apres propagation DNS :  sudo certbot --nginx -d ${DOMAIN} -m ${NOTIFY_EMAIL} --redirect"
+    fi
+  else
+    echo "  Domaine ${DOMAIN} pas encore resolu -> HTTP pour l'instant."
+    echo "  Creer l'enregistrement DNS A :  ${DOMAIN} -> ${PUBLIC_IP}"
+    echo "  Puis : sudo certbot --nginx -d ${DOMAIN} -m ${NOTIFY_EMAIL} --redirect"
+  fi
 fi
 
 echo "[8/8] Sauvegarde automatique quotidienne de la base..."
