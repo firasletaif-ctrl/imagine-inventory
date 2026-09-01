@@ -1,13 +1,18 @@
 {
+  "id": "/dashboard",
   "name": "Imagine Inventory",
   "short_name": "Inventory",
   "description": "Gestion de depot evenementiel — Imagine Events Tunisia",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0B1D3A",
   "theme_color": "#0B1D3A",
   "lang": "fr",
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity"],
   "icons": [
     {"src": "/static/icons/icon-72x72.png", "sizes": "72x72", "type": "image/png"},
     {"src": "/static/icons/icon-96x96.png", "sizes": "96x96", "type": "image/png"},
@@ -19,5 +24,11 @@
     {"src": "/static/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
     {"src": "/static/icons/maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
     {"src": "/static/icons/maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Depot", "url": "/dashboard", "icons": [{"src": "/static/icons/icon-96x96.png", "sizes": "96x96"}]},
+    {"name": "Planning", "url": "/schedule", "icons": [{"src": "/static/icons/icon-96x96.png", "sizes": "96x96"}]},
+    {"name": "Emprunts", "url": "/borrows", "icons": [{"src": "/static/icons/icon-96x96.png", "sizes": "96x96"}]},
+    {"name": "Inventaire", "url": "/inventory", "icons": [{"src": "/static/icons/icon-96x96.png", "sizes": "96x96"}]}
   ]
 }

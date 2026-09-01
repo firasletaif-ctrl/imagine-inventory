@@ -132,6 +132,7 @@ class Borrow(db.Model):
     status = db.Column(db.String(50), default='active'); notes = db.Column(db.Text, default='')
     event_name = db.Column(db.String(200), default='')
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=True)  # lien vers un evenement
+    last_late_alert = db.Column(db.Date, nullable=True)  # dernier rappel de retard envoye
 
 class ActivityLog(db.Model):
     __tablename__ = 'activity_logs'
@@ -194,6 +195,47 @@ class MaterialOrder(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=tunisia_now)
     updated_at = db.Column(db.DateTime, default=tunisia_now, onupdate=tunisia_now)
+
+# ── PWA: parametres de l'application (cles VAPID pour push) ──
+class AppSetting(db.Model):
+    __tablename__ = 'app_settings'
+    key = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.Text)
+
+
+def get_app_setting(key, default=None):
+    row = db.session.get(AppSetting, key)
+    return row.value if row else default
+
+
+def set_app_setting(key, value):
+    row = db.session.get(AppSetting, key)
+    if row:
+        row.value = value
+    else:
+        db.session.add(AppSetting(key=key, value=value))
+    db.session.commit()
+
+
+# ── PWA: subscriptions push web (une par appareil) ──
+class PushSubscription(db.Model):
+    __tablename__ = 'push_subscriptions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    endpoint = db.Column(db.Text, unique=True, nullable=False)
+    p256dh = db.Column(db.String(300), nullable=False)
+    auth = db.Column(db.String(300), nullable=False)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+
+
+# ── Rappels automatiques (J-3 / J-1 avant evenement) ──
+class EventReminder(db.Model):
+    __tablename__ = 'event_reminders'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    type = db.Column(db.String(20), nullable=False)  # j-3 / j-1
+    sent_at = db.Column(db.DateTime, default=tunisia_now)
+    __table_args__ = (db.UniqueConstraint('event_id', 'type', name='uq_event_reminder_type'),)
 
 # ── NEW: Inventaire permanent (controle tournant : 5 materiels tires au hasard par jour) ──
 class InventoryCheck(db.Model):
@@ -375,6 +417,44 @@ def log_action(action, description='', equipment_name='', quantity=0):
     log = ActivityLog(user_id=uid, action=action, description=description, equipment_name=equipment_name, quantity=quantity)
     db.session.add(log); db.session.commit()
 
+def send_push(uid, title, body, link=''):
+    """Notification push Web (PWA) : envoyee a TOUTES les appareils de
+    l'utilisateur qui ont active les notifications. Silencieux sinon."""
+    subs = PushSubscription.query.filter_by(user_id=uid).all()
+    if not subs:
+        return
+    vapid_private = get_app_setting('vapid_private')
+    if not vapid_private:
+        return
+    from pywebpush import webpush, WebPushException
+    payload = json.dumps({
+        'title': title,
+        'body': body or '',
+        'url': absolute_link(link) if link else absolute_link('/dashboard'),
+        'icon': '/static/icons/icon-192x192.png'
+    })
+    # 'sub' : adresse mail valide (exigence du protocole VAPID), configurable
+    vapid_sub = os.environ.get('VAPID_SUB', 'info@imagine-events.com')
+    if not vapid_sub.startswith('mailto:'):
+        vapid_sub = 'mailto:' + vapid_sub
+    for s in list(subs):
+        try:
+            webpush(
+                subscription_info={'endpoint': s.endpoint, 'keys': {'p256dh': s.p256dh, 'auth': s.auth}},
+                data=payload,
+                vapid_private_key=vapid_private,
+                vapid_claims={'sub': vapid_sub}
+            )
+        except WebPushException as e:
+            code = getattr(getattr(e, 'response', None), 'status_code', None)
+            if code in (404, 410):
+                db.session.delete(s); db.session.commit()  # appareil desinstalle
+            else:
+                print(f'[PUSH] echec sub: {code}')
+        except Exception as e:
+            print(f'[PUSH] erreur: {type(e).__name__}: {str(e)[:120]}')
+
+
 def notify_user(uid, title, message, link=''):
     n = Notification(user_id=uid, title=title, message=message, link=link)
     db.session.add(n); db.session.commit()
@@ -386,6 +466,11 @@ def notify_user(uid, title, message, link=''):
             send_email(u.email, title, html, message)
     except Exception as e:
         print(f'[EMAIL ERROR] {type(e).__name__}: {e}')
+    # Envoi push (PWA) — chaque notification in-app devient une push
+    try:
+        send_push(uid, title, message, link)
+    except Exception as e:
+        print(f'[PUSH ERROR] {type(e).__name__}: {str(e)[:120]}')
 
 
 def send_email(to, subject, body_html, body_text=''):
@@ -480,6 +565,52 @@ def notify_admins(title, message, link=''):
     if admin_role:
         for a in User.query.filter_by(role_id=admin_role.id).all():
             notify_user(a.id, title, message, link)
+
+
+def check_due_alerts():
+    """Verifie a chaque chargement du dashboard les rappels a envoyer
+    (silencieux, ne bloque jamais la page) :
+    - ⏰ J-3 / J-1 avant un evenement -> aux membres assignes (1x par rappel)
+    - ⚠️ Emprunts en retard -> a l'emprunteur (1x par jour)"""
+    today = date.today()
+    try:
+        # ── Rappels evenements J-3 et J-1 ──
+        upcoming = Event.query.filter(Event.event_date >= today,
+                                      Event.event_date <= today + timedelta(days=3),
+                                      Event.status.in_(['upcoming', 'ongoing'])).all()
+        for evt in upcoming:
+            days_left = (evt.event_date - today).days
+            if days_left not in (3, 1):
+                continue
+            rtype = f'j-{4 - days_left}'  # 'j-3' ou 'j-1'
+            if EventReminder.query.filter_by(event_id=evt.id, type=rtype).first():
+                continue
+            db.session.add(EventReminder(event_id=evt.id, type=rtype))
+            db.session.commit()
+            need = []
+            for b in Borrow.query.filter_by(event_id=evt.id).filter(Borrow.status.in_(['active', 'late'])).all():
+                need.append(f"{b.quantity}x {b.equipment.name}" if b.equipment else f"{b.quantity}x ?")
+            need_txt = ', '.join(need[:8]) + ('...' if len(need) > 8 else '') if need else 'a verifier sur la fiche'
+            for a in evt.assignments:
+                u = db.session.get(User, a.user_id)
+                if u:
+                    msg = f"\"{evt.title}\" le {evt.event_date.strftime('%d/%m/%Y')} ({evt.start_time}-{evt.end_time}){', ' + (evt.location or '') if evt.location else ''}. Matériel lie : {need_txt}."
+                    notify_user(u.id, f'⏰ J-{days_left} : {evt.title}', msg, '/schedule')
+            log_action('event_reminder', f'Rappel {rtype} envoye pour "{evt.title}"')
+        # ── Emprunts en retard : 1 rappel par jour a l'emprunteur ──
+        for b in Borrow.query.filter_by(status='late').all():
+            if b.last_late_alert == today:
+                continue
+            b.last_late_alert = today
+            u = db.session.get(User, b.user_id) if b.user_id else None
+            if u:
+                eqname = b.equipment.name if b.equipment else 'materiel'
+                msg = f"{b.quantity}x {eqname} — retour prevu le {b.expected_return_date.strftime('%d/%m/%Y')}, toujours non retourne."
+                notify_user(u.id, '⚠️ Retour en retard', msg, f'/equipment/{b.equipment_id}')
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f'[ALERTS] ignore: {type(e).__name__}: {str(e)[:150]}')
 
 ALL_PERMISSIONS = [
     # ── 📦 Matériel & Stock ──
@@ -637,6 +768,7 @@ def logout():
 @login_required
 def dashboard():
     search = request.args.get('search','').strip(); cat_filter = request.args.get('category','')
+    check_due_alerts()  # rappels automatiques (J-3/J-1 evenements, retards)
     q = Equipment.query
     if search: q = q.filter(db.or_(Equipment.name.ilike(f'%{search}%'),Equipment.description.ilike(f'%{search}%'),Equipment.reference.ilike(f'%{search}%'),Equipment.specifications.ilike(f'%{search}%'),Equipment.location.ilike(f'%{search}%')))
     if cat_filter: q = q.filter_by(category_id=int(cat_filter))
@@ -815,6 +947,7 @@ def borrow_equipment(eid):
     b = Borrow(user_id=current_user.id, equipment_id=eid, quantity=qty, expected_return_date=return_date, pickup_date=pickup_date, event_name=event_name, event_id=evt.id if evt else None, notes=request.form.get('notes','').strip())
     db.session.add(b); db.session.commit(); update_availability(eid)
     log_action('borrow', f'Emprunt de {qty}x {eq.name}', eq.name, qty)
+    notify_user(current_user.id, '📤 Emprunt enregistre', f'{qty}x {eq.name} — prise le {pickup_date.strftime("%d/%m/%Y")}, retour le {return_date.strftime("%d/%m/%Y")}.', f'/equipment/{eid}')
     flash(f'{qty} x {eq.name} emprunte(s). Prise le {pickup_date.strftime("%d/%m/%Y")}, retour le {return_date.strftime("%d/%m/%Y")}.','success')
     return redirect(url_for('dashboard'))
 
@@ -1952,6 +2085,45 @@ def clear_all_notifications():
     return redirect(url_for('notifications'))
 
 
+# ═══════════ P U S H   W E B   (PWA) ═══════════
+@app.route('/push/vapid-public')
+def push_vapid_public():
+    return Response(get_app_setting('vapid_public') or '', mimetype='text/plain')
+
+
+@app.route('/push/subscribe', methods=['POST'])
+@login_required
+def push_subscribe():
+    data = request.get_json(silent=True) or {}
+    sub = data.get('subscription') or {}
+    ep = sub.get('endpoint')
+    keys = sub.get('keys') or {}
+    p256 = keys.get('p256dh')
+    auth = keys.get('auth')
+    if not (ep and p256 and auth):
+        return {'ok': False, 'error': 'subscription incomplete'}, 400
+    existing = PushSubscription.query.filter_by(endpoint=ep).first()
+    if existing:
+        existing.user_id = current_user.id
+        existing.p256dh = p256
+        existing.auth = auth
+    else:
+        db.session.add(PushSubscription(user_id=current_user.id, endpoint=ep, p256dh=p256, auth=auth))
+    db.session.commit()
+    return {'ok': True}
+
+
+@app.route('/push/unsubscribe', methods=['POST'])
+@login_required
+def push_unsubscribe():
+    data = request.get_json(silent=True) or {}
+    ep = (data.get('subscription') or {}).get('endpoint')
+    if ep:
+        PushSubscription.query.filter_by(user_id=current_user.id, endpoint=ep).delete()
+        db.session.commit()
+    return {'ok': True}
+
+
 # ═══════════ N E W :  E X P O R T S ═══════════
 @app.route('/export/photos-zip')
 @permission_required_any('photo_backup', 'manage_database')
@@ -2102,6 +2274,31 @@ def init_db():
             ensure_column('borrows', 'pickup_date', 'ALTER TABLE borrows ADD COLUMN pickup_date DATE')
             ensure_column('events', 'end_date', 'ALTER TABLE events ADD COLUMN end_date DATE')
             ensure_column('inventory_checks', 'in_repair_qty', 'ALTER TABLE inventory_checks ADD COLUMN in_repair_qty INTEGER DEFAULT 0')
+            ensure_column('borrows', 'last_late_alert', 'ALTER TABLE borrows ADD COLUMN last_late_alert DATE')
+            # ── Cles VAPID pour les notifications push (generees une fois, en base) ──
+            if not get_app_setting('vapid_private'):
+                try:
+                    from py_vapid import Vapid
+                    from cryptography.hazmat.primitives import serialization
+                    import base64
+                    v = Vapid()
+                    v.generate_keys()  # pose les cles dans v.private_key / v.public_key
+                    priv, pub = v.private_key, v.public_key
+                    n = pub.public_numbers()
+                    raw = b'\x04' + n.x.to_bytes(32, 'big') + n.y.to_bytes(32, 'big')
+                    pub_b64 = base64.urlsafe_b64encode(raw).rstrip(b'=').decode('ascii')
+                    # privee en base64url(DER) : c'est le format que lit pywebpush (Vapid.from_string)
+                    raw_der = priv.private_bytes(
+                        encoding=serialization.Encoding.DER,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    )
+                    priv_b64 = base64.urlsafe_b64encode(raw_der).rstrip(b'=').decode('ascii')
+                    set_app_setting('vapid_private', priv_b64)
+                    set_app_setting('vapid_public', pub_b64)
+                    print('[INIT] cles VAPID generees (push web)')
+                except Exception as e:
+                    print('[INIT] VAPID ignoree:', str(e)[:150])
             # Backfill : les evenements existants (1 jour) -> end_date = event_date
             # (les requetes filtrent ensuite simplement sur end_date)
             try:
