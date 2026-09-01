@@ -36,6 +36,12 @@
 .avail-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
 .eqday-row{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;padding:.55rem .7rem;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:.5rem;font-size:.88rem;background:var(--gray-50)}
 .eqday-row .muted{color:var(--gray-400);font-size:.8rem}
+/* Hub d'actions rapides (page destinee au scan QR) */
+.hub-actions{background:linear-gradient(135deg,#0B1D3A,#13294B);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1.5rem;box-shadow:var(--shadow-md)}
+.hub-btn{display:inline-flex;align-items:center;gap:.45rem;border:none;color:white;font-weight:700;font-size:.9rem;padding:.75rem 1.15rem;border-radius:10px;cursor:pointer;text-decoration:none;transition:filter .15s,transform .1s}
+.hub-btn:hover{filter:brightness(1.12)}
+.hub-btn:active{transform:scale(.98)}
+.hub-btn small{font-weight:500;opacity:.85}
 </style>
 {% endblock %}
 
@@ -168,6 +174,28 @@
         </div>
     </div>
 
+    <!-- ⚡ Actions rapides (hub du scan QR) -->
+    <div class="hub-actions">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
+            <div style="color:white;min-width:0">
+                <div style="font-size:.68rem;letter-spacing:2px;text-transform:uppercase;opacity:.6">⚡ Actions rapides</div>
+                <div style="font-weight:700;font-size:1.05rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45vw">{{ eq.name }}</div>
+            </div>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+                {% if has_perm('borrow_equipment') and eq.available_quantity > 0 %}
+                <button class="hub-btn" style="background:#22C55E" onclick="openDetailBorrow()">📤 Emprunter <small>{{ eq.available_quantity }} dispo</small></button>
+                {% endif %}
+                {% if has_perm('return_equipment') and active_borrows %}
+                <button class="hub-btn" style="background:#3A7BD5" onclick="document.getElementById('activeBorrows').scrollIntoView({behavior:'smooth',block:'center'})">✅ Retourner <small>{{ active_borrows|length }} en cours</small></button>
+                {% endif %}
+                {% if has_perm('repair_stock','manage_equipment') %}
+                <button class="hub-btn" style="background:#F59E0B" onclick="openReportRepairModal()">🔧 Signaler en réparation</button>
+                {% endif %}
+                <a class="hub-btn" style="background:#C41E3A" href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" target="_blank">🔲 Étiquette</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Specifications -->
     {% if eq.specifications %}
     <div class="detail-section">
@@ -252,7 +280,7 @@
     </div>
 
     <!-- Borrow History -->
-    <div class="detail-section">
+    <div class="detail-section" id="activeBorrows">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
             <h2 style="margin:0">📜 Historique des emprunts</h2>
             {% if has_perm('clear_borrow_history','clear_history') and borrows | selectattr('status','eq','returned') | list | length > 0 %}
@@ -270,6 +298,7 @@
                         <th>Date emprunt</th>
                         <th>Retour prévu</th>
                         <th>Statut</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -287,6 +316,11 @@
                             <span class="status-badge status-late">⚠️ En retard</span>
                             {% else %}
                             <span class="status-badge status-returned">✅ Retourné</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if b.status in ('active','late') and (b.user_id == current_user.id or has_perm('manage_users')) %}
+                            <button class="btn btn-sm btn-success" onclick='openReturnModal({{ b.id }}, {{ b.quantity }}, "{{ b.user.full_name | e }}", "{{ b.expected_return_date.strftime("%d/%m/%Y") }}")'>✅ Retourner</button>
                             {% endif %}
                         </td>
                     </tr>
@@ -370,6 +404,50 @@
             <button type="submit" class="btn btn-primary">Confirmer</button>
         </div>
     </form>
+    </div>
+</div>
+
+<!-- Return Modal (retour avec unites en reparation) -->
+<div class="modal-overlay" id="returnBorrowModal">
+    <div class="modal">
+        <div class="modal-header"><h2>✅ Retourner : {{ eq.name }}</h2><button class="modal-close" onclick="closeReturnModal()">✕</button></div>
+        <form id="returnBorrowForm" method="POST" action="">
+            <div class="modal-body">
+                <p id="returnBorrowInfo" style="font-size:.9rem;color:var(--gray-600);margin-bottom:1rem;line-height:1.6"></p>
+                <div class="form-group">
+                    <label>🔧 Quantité en réparation (0 si tout est propre)</label>
+                    <input type="number" id="returnRepairQty" name="repair_qty" min="0" value="0" required>
+                    <small id="returnRepairMax" style="color:var(--gray-400)"></small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeReturnModal()">Annuler</button>
+                <button class="btn btn-accent">✅ Confirmer le retour</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Report Repair Modal (signaler des unites casseees) -->
+<div class="modal-overlay" id="reportRepairModal">
+    <div class="modal">
+        <div class="modal-header"><h2>🔧 Signaler en réparation</h2><button class="modal-close" onclick="closeReportRepairModal()">✕</button></div>
+        <form method="POST" action="{{ url_for('report_repair', eid=eq.id) }}">
+            <div class="modal-body">
+                <p style="font-size:.9rem;color:var(--gray-600);margin-bottom:1rem;line-height:1.6">
+                    <strong>{{ eq.name }}</strong> — {{ eq.total_quantity - (eq.in_repair or 0) }} unité(s) actuellement hors réparation.
+                    Les unités signalées seront retirées de la disponibilité.
+                </p>
+                <div class="form-group">
+                    <label>Nombre d'unités à mettre en réparation</label>
+                    <input type="number" name="qty" min="1" max="{{ eq.total_quantity - (eq.in_repair or 0) }}" value="1" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeReportRepairModal()">Annuler</button>
+                <button class="btn btn-accent">🔧 Passer en réparation</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -489,8 +567,25 @@ document.getElementById('detailBorrowModal').addEventListener('click', function(
 });
 var chm = document.getElementById('clearEqHistoryModal');
 if (chm) { chm.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); }); }
+
+// ── Hub : retour + reparation ──
+function openReturnModal(bid, qty, user, retDate){
+    document.getElementById('returnBorrowInfo').innerHTML =
+        'Emprunt de <strong>' + qty + 'x</strong> par <strong>' + user + '</strong> — retour prévu le <strong>' + retDate + '</strong>.';
+    var inp = document.getElementById('returnRepairQty');
+    inp.max = qty; inp.value = 0;
+    document.getElementById('returnRepairMax').textContent = 'Max : ' + qty + ' (toute la quantité)';
+    document.getElementById('returnBorrowForm').action = '/return/' + bid;
+    document.getElementById('returnBorrowModal').classList.add('open');
+}
+function closeReturnModal(){ document.getElementById('returnBorrowModal').classList.remove('open'); }
+function openReportRepairModal(){ document.getElementById('reportRepairModal').classList.add('open'); }
+function closeReportRepairModal(){ document.getElementById('reportRepairModal').classList.remove('open'); }
+document.getElementById('returnBorrowModal').addEventListener('click', function(e){ if (e.target === this) closeReturnModal(); });
+document.getElementById('reportRepairModal').addEventListener('click', function(e){ if (e.target === this) closeReportRepairModal(); });
+
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeDetailBorrow(); closeEqDay(); if (chm) chm.classList.remove('open'); }
+    if (e.key === 'Escape') { closeDetailBorrow(); closeEqDay(); closeReturnModal(); closeReportRepairModal(); if (chm) chm.classList.remove('open'); }
 });
 </script>
 {% endblock %}

@@ -662,6 +662,7 @@ def equipment_detail(eid):
     eq = db.session.get(Equipment, eid)
     if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
     borrows = Borrow.query.filter_by(equipment_id=eid).order_by(Borrow.borrow_date.desc()).all()
+    active_borrows = [b for b in borrows if b.status in ('active', 'late')]
     upcoming_events = Event.query.filter(Event.end_date >= date.today()).order_by(Event.event_date, Event.start_time).all()
     # ── Donnees du calendrier de disponibilite (emprunts en cours / en retard) ──
     cal_borrows = []
@@ -681,7 +682,7 @@ def equipment_detail(eid):
             'status': b.status,
             'event': b.event_name or ''
         })
-    return render_template('equipment_detail.html', eq=eq, borrows=borrows, today=date.today(), upcoming_events=upcoming_events, cal_borrows=cal_borrows, cal_borrows_json=json.dumps(cal_borrows), today_str=date.today().strftime('%Y-%m-%d'))
+    return render_template('equipment_detail.html', eq=eq, borrows=borrows, active_borrows=active_borrows, today=date.today(), upcoming_events=upcoming_events, cal_borrows=cal_borrows, cal_borrows_json=json.dumps(cal_borrows), today_str=date.today().strftime('%Y-%m-%d'))
 
 # ═══════════ N E W :  I N V E N T A I R E   P E R M A N E N T ═══════════
 @app.route('/inventory')
@@ -843,6 +844,29 @@ def mark_repaired(eid):
     db.session.commit(); update_availability(eid)
     log_action('return', f'{qty}x {eq.name} repare(s) et remis en stock', eq.name, qty)
     flash(f'{qty} unite(s) de {eq.name} reparee(s) et remise(s) en stock.','success')
+    return redirect(url_for('equipment_detail', eid=eid))
+
+
+@app.route('/equipment/<int:eid>/report-repair', methods=['POST'])
+@permission_required_any('repair_stock', 'manage_equipment')
+def report_repair(eid):
+    """Signaler des unites casseees / a reparer directement depuis la fiche
+    (ex: apres scan du QR code au depot)."""
+    eq = db.session.get(Equipment, eid)
+    if not eq: flash('Introuvable.','error'); return redirect(url_for('dashboard'))
+    try:
+        qty = int(request.form.get('qty','') or 0)
+    except (TypeError, ValueError):
+        qty = 0
+    if qty < 1:
+        flash('Indiquez le nombre d\'unites a reparer.','error')
+        return redirect(url_for('equipment_detail', eid=eid))
+    if qty > (eq.total_quantity or 0):
+        qty = eq.total_quantity or 1
+    eq.in_repair = (eq.in_repair or 0) + qty
+    db.session.commit(); update_availability(eid)
+    log_action('report_repair', f'{qty}x {eq.name} signale(s) en reparation', eq.name, qty)
+    flash(f'🔧 {qty} unite(s) de {eq.name} passe(s) en reparation.','success')
     return redirect(url_for('equipment_detail', eid=eid))
 
 # ═══════ E M P R U N T S  (preparation par evenement) ═══════
