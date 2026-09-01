@@ -69,6 +69,9 @@
                 </a>
                 {% endif %}
                 {% if has_perm('photo_backup','manage_database') %}
+                <a href="{{ url_for('full_backup') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem" title="Tout le site en un fichier (données + photos) — migration / sauvegarde">
+                    <span class="nav-icon">💾</span><span>Sauvegarde complète</span>
+                </a>
                 <a href="{{ url_for('export_photos_zip') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
                     <span class="nav-icon">📸</span><span>Photos (ZIP)</span>
                 </a>

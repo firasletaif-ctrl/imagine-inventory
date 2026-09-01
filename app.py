@@ -1381,6 +1381,10 @@ def import_csv():
             'event_assignments': EventAssignment,
             'activity_logs': ActivityLog,
             'notifications': Notification,
+            'material_orders': MaterialOrder,
+            'inventory_checks': InventoryCheck,
+            'event_reminders': EventReminder,
+            'app_settings': AppSetting,
         }
         
         model = model_map.get(table)
@@ -1432,13 +1436,13 @@ def import_csv():
                             try: val = int(val)
                             except: pass
                         # Handle date/datetime columns
-                        if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp'):
+                        if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at'):
                             parsed = None
                             for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
                                 try: parsed = datetime.strptime(val, fmt); break
                                 except: pass
                             val = parsed
-                        if col in ('expected_return_date', 'pickup_date') and val:
+                        if col in ('expected_return_date', 'pickup_date', 'check_date', 'last_late_alert', 'event_date', 'end_date') and val:
                             try: val = datetime.strptime(val, '%Y-%m-%d').date()
                             except:
                                 for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
@@ -1504,7 +1508,7 @@ def import_csv():
             flash(f'{len(erreurs)} ligne(s) ignoree(s): ' + ' | '.join(erreurs[:5]), 'warning')
         return redirect(url_for('import_csv'))
     
-    tables = ['roles','users','categories','equipment','equipment_images','borrows','events','event_assignments','activity_logs','notifications']
+    tables = ['roles','users','categories','equipment','equipment_images','borrows','events','event_assignments','activity_logs','notifications','material_orders','inventory_checks','event_reminders','app_settings']
     return render_template('import_csv.html', tables=tables)
 
 
@@ -2122,6 +2126,105 @@ def push_unsubscribe():
         PushSubscription.query.filter_by(user_id=current_user.id, endpoint=ep).delete()
         db.session.commit()
     return {'ok': True}
+
+
+# ═══════════ S A U V E G A R D E   C O M P L E T E  (migration en 1 clic) ═══════════
+BACKUP_INSTRUCTIONS = """SAUVEGARDE COMPLETE — Imagine Inventory
+========================================
+Ce ZIP contient TOUT le site : donnees + photos + cles.
+
+POUR RESTAURER SUR UN NOUVEL HEBERGEUR
+--------------------------------------
+1. Installer le code (git clone + pip install -r requirements.txt)
+   et la base de donnees vide (PostgreSQL ou SQLite).
+2. Sur le site : menu latéral -> "Importer CSV" (onglet Migration DB).
+   Importer les fichiers CSV dans CET ORDRE (le plus important) :
+     01_roles.csv        -> table "roles"
+     02_categories.csv   -> table "categories"
+     03_users.csv        -> table "users"
+     04_events.csv       -> table "events"
+     05_event_assignments.csv -> table "event_assignments"
+     06_equipment.csv    -> table "equipment"
+     07_equipment_images.csv  -> table "equipment_images"
+     08_borrows.csv      -> table "borrows"
+     09_activity_logs.csv -> table "activity_logs"
+     10_notifications.csv -> table "notifications"
+     11_material_orders.csv -> table "material_orders"
+     12_inventory_checks.csv -> table "inventory_checks"
+     13_event_reminders.csv  -> table "event_reminders"
+     14_app_settings.csv -> table "app_settings"  (cles des notifications
+       push : a importer pour que les telephones deja abonnes continuent
+       a recevoir les notifications)
+   -> valider avec votre mot de passe a chaque import.
+3. Toujours sur le site : "Restaurer photos" (onglet Migration DB)
+   et envoyer le dossier "photos/" (ou le re-zipper). Les photos sont
+   alors recopiees sur le disque ET en base.
+4. Verifier : le depot, les emprunts, le planning, les comptes.
+
+C'est tout. Les comptes et mots de passe sont preserves (hashs
+recopies tels quels).
+"""
+
+
+@app.route('/admin/backup')
+@permission_required_any('photo_backup', 'manage_database')
+def full_backup():
+    """Sauvegarde complete en 1 clic : ZIP avec tous les CSV + photos.
+    Pensé pour la migration : un seul fichier contient tout le site."""
+    import zipfile, csv as csv_module
+    buf = io.BytesIO()
+    tables = [
+        ('01_roles', CustomRole),
+        ('02_categories', Category),
+        ('03_users', User),
+        ('04_events', Event),
+        ('05_event_assignments', EventAssignment),
+        ('06_equipment', Equipment),
+        ('07_equipment_images', EquipmentImage),
+        ('08_borrows', Borrow),
+        ('09_activity_logs', ActivityLog),
+        ('10_notifications', Notification),
+        ('11_material_orders', MaterialOrder),
+        ('12_inventory_checks', InventoryCheck),
+        ('13_event_reminders', EventReminder),
+        ('14_app_settings', AppSetting),
+    ]
+
+    def fmt(v):
+        if v is None:
+            return ''
+        if isinstance(v, bool):
+            return 'true' if v else 'false'
+        if isinstance(v, datetime):
+            return v.strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(v, date):
+            return v.strftime('%Y-%m-%d')
+        return str(v)
+
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for name, model in tables:
+            rows = model.query.all()
+            cols = [c.name for c in model.__table__.columns]
+            out = io.StringIO()
+            w = csv_module.writer(out, delimiter=';')
+            w.writerow(cols)
+            for r in rows:
+                w.writerow([fmt(getattr(r, c)) for c in cols])
+            zf.writestr(f'{name}.csv', out.getvalue())
+        # Photos : la base est la source de verite
+        for b in ImageBlob.query.all():
+            zf.writestr(f'photos/{b.filename}', b.data or b'')
+        # + eventuelles photos seulement sur le disque
+        for fn in os.listdir(app.config['UPLOAD_FOLDER']):
+            fp = os.path.join(app.config['UPLOAD_FOLDER'], fn)
+            if os.path.isfile(fp) and not ImageBlob.query.filter_by(filename=fn).first():
+                with open(fp, 'rb') as fh:
+                    zf.writestr(f'photos/{fn}', fh.read())
+        zf.writestr('INSTRUCTIONS.txt', BACKUP_INSTRUCTIONS)
+    buf.seek(0)
+    log_action('full_backup', f'Sauvegarde complete telechargee par {current_user.full_name}')
+    return send_file(buf, mimetype='application/zip', as_attachment=True,
+                     download_name=f'imagine_backup_{date.today().strftime("%Y%m%d")}.zip')
 
 
 # ═══════════ N E W :  E X P O R T S ═══════════
