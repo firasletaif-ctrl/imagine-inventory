@@ -1241,9 +1241,14 @@ def delete_equipment(eid):
             if os.path.exists(fp): os.remove(fp)
             blob = ImageBlob.query.filter_by(filename=img.filename).first()
             if blob: db.session.delete(blob)
+        # Supprimer d'abord les enregistrements dependants (sinon erreur
+        # NOT NULL : emprunts et controles d'inventaire qui pointent vers
+        # ce materiel). Historique de ces emprunts : conserve dans les logs.
+        Borrow.query.filter_by(equipment_id=eid).delete()
+        InventoryCheck.query.filter_by(equipment_id=eid).delete()
         db.session.delete(eq); db.session.commit()
-        log_action('delete_equipment', f'Suppression de {eq.name}', eq.name)
-        flash(f'"{eq.name}" supprime.','info')
+        log_action('delete_equipment', f'Suppression de {eq.name} (emprunts et controles lies egalement supprimes)', eq.name)
+        flash(f'"{eq.name}" supprimee.','info')
     return redirect(url_for('dashboard'))
 
 @app.route('/uploads/<fn>')

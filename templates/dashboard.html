@@ -196,11 +196,11 @@
     <div class="borrows-list">
         {% for b in active_borrows %}
         <div class="borrow-row {% if b.status == 'late' %}borrow-late{% endif %}">
-            <div class="borrow-info"><strong>{{ b.equipment.name }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event">🎯 {{ b.event_name }}</span>{% endif %}</div>
+            <div class="borrow-info"><strong>{{ b.equipment.name if b.equipment else 'Matériel supprimé' }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event">🎯 {{ b.event_name }}</span>{% endif %}</div>
             <div class="borrow-dates">{% if b.pickup_date %}<span class="borrow-return">📦 Prise: {{ b.pickup_date.strftime('%d/%m/%Y') }}</span>{% endif %}<span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️ EN RETARD{% endif %}</span></div>
             <div class="borrow-action">
                 {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
-                <button class="btn btn-sm btn-success" onclick="openReturnModal('{{ b.id }}','{{ b.equipment.name | escape }}',{{ b.quantity }})">✅ Retourner</button>
+                <button class="btn btn-sm btn-success" onclick="openReturnModal('{{ b.id }}','{{ (b.equipment.name if b.equipment else 'Supprimé') | escape }}',{{ b.quantity }})">✅ Retourner</button>
                 {% else %}
                 <span style="color:var(--gray-400);font-size:.75rem;padding:.25rem .5rem">🔒 {{ b.user.full_name }} uniquement</span>
                 {% endif %}
