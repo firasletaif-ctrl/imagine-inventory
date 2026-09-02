@@ -76,9 +76,9 @@ os.environ['SITE_URL'] = 'https://imagineinventory.pythonanywhere.com'
 
 1. Connectez-vous : `admin@imagine-events.com / admin123`
 2. **Uploader le ZIP** : onglet **Files** → upload de
-   `imagine_backup_AAAAMMJJ.zip`, puis dans l'onglet **Bash** :
+   `imagine_backup_AAAAMMJJ.zip` (il arrive à la racine de Files), puis dans
+   l'onglet **Bash** (déjà à la racine `/home/imagineinventory`) :
    ```bash
-   cd imagineinventory
    unzip imagine_backup_*.zip
    ```
 3. Sur le site → menu latéral → **🔄 Migration DB** → **📥 Importer CSV** :
