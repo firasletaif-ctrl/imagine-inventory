@@ -1,0 +1,23 @@
+name: Keep alive site (07h - 01h Tunis)
+
+# Pinge le site toutes les 5 min de 07h00 a 00h55 (heure de Tunis).
+# De 01h00 a 07h00 : plus de ping, le site peut s'endormir.
+
+on:
+  schedule:
+    # Le cron de GitHub est en UTC (Tunis = UTC+1)
+    # */5 6-23 UTC = 07:00 a 00:55 heure de Tunis
+    - cron: '*/5 6-23 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pinger le site
+        run: |
+          # ═══ SI L'URL DE TON SITE CHANGE, MODIFIE CETTE LIGNE ═══
+          URL="https://imagine-inventory.onrender.com/dashboard"
+          curl -sf -o /dev/null --max-time 45 "$URL" || \
+          curl -sf -o /dev/null --max-time 45 "$URL" || \
+          echo "Le site n'a pas repondu (nouvelle tentative dans 5 min)"
