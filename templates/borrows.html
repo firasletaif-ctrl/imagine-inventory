@@ -31,7 +31,7 @@
             <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Prise → Retour</span><span>Retour (réparation)</span></div>
             {% for b in grp.borrows %}
             <div class="bt-row {% if b.status == 'late' %}late{% endif %}">
-                <span class="bt-name">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></span>
+                <a class="bt-name bt-link" href="{{ url_for('equipment_detail', eid=b.equipment_id) }}" title="Voir la fiche materiel">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></a>
                 <span class="bt-qty">×{{ b.quantity }}</span>
                 <span class="bt-user">{{ b.user.full_name }}</span>
                 <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}📦 Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}⏰ Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
@@ -64,7 +64,7 @@
             <div class="bt-head"><span>Matériel</span><span>Qté</span><span>Emprunteur</span><span>Prise → Retour</span><span>Actions</span></div>
             {% for b in no_event %}
             <div class="bt-row {% if b.status == 'late' %}late{% endif %}">
-                <span class="bt-name">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></span>
+                <a class="bt-name bt-link" href="{{ url_for('equipment_detail', eid=b.equipment_id) }}" title="Voir la fiche materiel">{{ b.equipment.name }} <em>{{ b.equipment.reference }}</em></a>
                 <span class="bt-qty">×{{ b.quantity }}</span>
                 <span class="bt-user">{{ b.user.full_name }}</span>
                 <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}📦 Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}⏰ Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>

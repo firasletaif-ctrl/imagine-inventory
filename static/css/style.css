@@ -1253,6 +1253,9 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
 .bt-row.late{background:#FFF7F7}
 .bt-name{font-weight:600;color:#1E293B}
 .bt-name em{display:block;font-style:normal;font-size:.68rem;color:#94A3B8;font-family:monospace}
+.bt-name.bt-link{text-decoration:none}
+.bt-name.bt-link:hover{color:var(--blue)}
+.bt-name.bt-link:hover em{color:var(--blue-light)}
 .bt-qty{font-weight:700;color:var(--blue)}
 .bt-qty.red{color:var(--red)}
 .bt-user{color:#475569;font-size:.78rem}
