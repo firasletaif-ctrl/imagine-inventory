@@ -7,12 +7,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=5">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#0B1D3A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Inventory">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+    <style>
+      .brand-logo{height:52px;width:auto;display:block;margin:0 auto;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+    </style>
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -20,11 +24,7 @@
     {% if current_user.has_any_permission() %}
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <div class="brand-icon">✦</div>
-            <div class="brand-text">
-                <span class="brand-name">IMAGINE</span>
-                <span class="brand-sub">Inventory</span>
-            </div>
+            <img src="{{ url_for('static', filename='img/logo-chip.png') }}" alt="Imagine Events Tunisia" class="brand-logo">
         </div>
         <nav class="sidebar-nav">
             <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
@@ -157,8 +157,7 @@
             <span style="position:absolute;top:-8px;right:-10px;background:var(--red);color:white;padding:0 .25rem;border-radius:100px;font-size:.6rem;font-weight:700">{{ current_user.unread_notifications }}</span>
             {% endif %}
         </a>
-        <div class="brand-icon" style="width:30px;height:30px;font-size:1rem">✦</div>
-        <span class="brand-name">IMAGINE</span>
+        <img src="{{ url_for('static', filename='img/logo-chip.png') }}" alt="Imagine Events" style="height:30px;width:auto;border-radius:6px">
     </header>
     {% endif %}
     {% endif %}
@@ -183,9 +182,8 @@
         <footer class="app-footer">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <div class="footer-logo">✦</div>
+                    <img src="{{ url_for('static', filename='img/logo-chip.png') }}" alt="Imagine Events Tunisia" style="height:48px;width:auto;border-radius:10px">
                     <div>
-                        <span class="footer-name">IMAGINE EVENTS</span>
                         <span class="footer-sub">Tunisia · Excellence Evenementielle</span>
                     </div>
                 </div>

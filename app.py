@@ -563,9 +563,27 @@ def absolute_link(path):
     return path
 
 
+def _site_base():
+    """URL de base absolue du site (pour les images dans les emails)."""
+    site = os.environ.get('SITE_URL', '').strip().rstrip('/')
+    if not site:
+        try:
+            if has_request_context():
+                site = request.host_url.rstrip('/')
+                if not site.startswith('http://localhost') and not site.startswith('http://127.0.0.1'):
+                    site = site.replace('http://', 'https://', 1)
+        except Exception:
+            site = ''
+    return site
+
+
 def email_template(title, greeting, content, action_link='', action_text=''):
     """Template HTML pour les emails Imagine Events"""
     action_btn = f'<a href="{action_link}" style="display:inline-block;background:#C41E3A;color:white;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:bold;margin:15px 0;font-size:14px">{action_text}</a>' if action_link else ''
+    _site = _site_base()
+    _logo_html = (f'<img src="{_site}/static/img/logo-chip.png" width="230" alt="Imagine Events Tunisia" style="display:block;margin:0 auto;background:#ffffff;padding:8px 14px;border-radius:10px">'
+                  if _site else
+                  '<div style="font-size:32px;margin-bottom:8px">\u2726</div><div style="font-family:Georgia,serif;font-size:20px;font-weight:bold;color:white;letter-spacing:2px">IMAGINE<span style="color:#E63946"> EVENTS</span></div>')
     return f'''<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#F8FAFC">
@@ -573,9 +591,8 @@ def email_template(title, greeting, content, action_link='', action_text=''):
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08)">
 <tr><td style="background:linear-gradient(135deg,#0B1D3A,#13294B);padding:25px 30px;text-align:center">
-    <div style="font-size:32px;margin-bottom:8px">\u2726</div>
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:bold;color:white;letter-spacing:2px">IMAGINE<span style="color:#E63946"> EVENTS</span></div>
-    <div style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;margin-top:4px">TUNISIA · EXCELLENCE EVENEMENTIELLE</div>
+    {_logo_html}
+    <div style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;margin-top:6px">TUNISIA · EXCELLENCE EVENEMENTIELLE</div>
 </td></tr>
 <tr><td style="padding:30px">
     <h2 style="color:#0B1D3A;font-size:18px;margin:0 0 10px">{title}</h2>
