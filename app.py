@@ -709,6 +709,23 @@ def cron_daily():
     return report
 
 
+@app.route('/ping')
+def ping():
+    """Point de passage 'keep alive' : reponse immediate, garde l'instance
+    Render eveillee (le ping arrive toutes les 5 min de 07h a 01h).
+    Au 1er ping de la journee, lance aussi les taches du matin
+    (sauvegarde + inventaire + rappels) — idempotent, aucun effet ensuite."""
+    today_s = date.today().strftime('%Y-%m-%d')
+    try:
+        if get_app_setting('daily_tasks_date') != today_s:
+            set_app_setting('daily_tasks_date', today_s)
+            run_daily_tasks()
+            log_action('cron_daily', 'Taches journalieres lancees via ping (1er ping de la journee)')
+    except Exception as e:
+        print(f'[PING] taches du jour ignorees: {type(e).__name__}: {str(e)[:120]}')
+    return 'ok', 200
+
+
 ALL_PERMISSIONS = [
     # ── 📦 Matériel & Stock ──
     {"key":"add_equipment","label":"Ajouter du matériel","desc":"Créer de nouveaux articles au dépôt","icon":"➕","group":"Matériel & Stock"},

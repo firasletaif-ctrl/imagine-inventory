@@ -1,7 +1,12 @@
 name: Keep alive site (07h - 01h Tunis)
 
 # Pinge le site toutes les 5 min de 07h00 a 00h55 (heure de Tunis).
-# De 01h00 a 07h00 : plus de ping, le site peut s'endormir.
+# De 01h00 a 07h00 : plus de ping, le site peut s'endormir ( economie d'heures ).
+#
+# NB 1 : GitHub retarde parfois ses cron (charge) — chaque run pinge donc
+#       3 fois (t+0, t+2, t+4 min) pour reduire les trous.
+# NB 2 : le run precedent est annule quand le suivant debute (pas de file).
+# NB 3 : /ping lance aussi les taches du matin au 1er ping de la journee.
 
 on:
   schedule:
@@ -10,14 +15,19 @@ on:
     - cron: '*/5 6-23 * * *'
   workflow_dispatch: {}
 
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Pinger le site
+      - name: Pinger le site (3 pings espaces de 2 min)
         run: |
           # ═══ SI L'URL DE TON SITE CHANGE, MODIFIE CETTE LIGNE ═══
-          URL="https://imagine-inventory.onrender.com/dashboard"
-          curl -sf -o /dev/null --max-time 45 "$URL" || \
-          curl -sf -o /dev/null --max-time 45 "$URL" || \
-          exit 1
+          URL="https://imagine-inventory.onrender.com/ping"
+          for i in 1 2 3; do
+            curl -sf -o /dev/null --max-time 60 "$URL" || true
+            if [ "$i" -lt 3 ]; then sleep 120; fi
+          done
