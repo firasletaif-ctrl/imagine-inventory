@@ -25,25 +25,44 @@
      - `DATABASE_URL` = l'URL de la base PostgreSQL (étape 2)
      - `SECRET_KEY` = un mot de passe complexe (ex: `imagine2026!SuperSecret`)
 4. Cliquez **"Create Web Service"** → Votre site est en ligne !
-5. **Cron journalier (gratuit)** — voir section « ⏰ Cron job » plus bas.
+5. **Keep-alive + tâches du matin (100% gratuit)** — voir section « ⏰ Keep-alive » plus bas.
 
 ---
 
-## ⏰ Cron job : tâches automatiques du matin (gratuit sur Render)
+## ⏰ Keep-alive + tâches du matin (100% gratuit, via cron-job.org)
 
-Chaque matin à 08h00 (heure de Tunis), le site lance tout seul :
-- 💾 la sauvegarde quotidienne de la base (les 3 dernières conservées)
-- 🎲 le tirage des 5 matériels d'inventaire du jour
-- ⏰ les rappels événements J-3 / J-1 + retours en retard
+Le plan gratuit de Render met le site « en sommeil » après 15 minutes sans visite
+(1ʳᵉ page lente, 30-60 sec à se réveiller). Pour garder le site **éveillé de 7h00 à
+1h00** (heure de Tunis) et lancer les tâches du matin automatiquement :
 
-**Mise en place (une seule fois) :**
-1. Dans votre service Render → onglet **Cron Jobs** → **New Cron Job**
-2. Command : `curl -s "https://i-maginevents.com/cron/daily?key=VOTRE_CLE"`
-   (la clé est affichée dans le site, menu **⏰ Tâches auto (Cron)**)
-3. Schedule : `0 7 * * *` (= tous les jours, 07h00 UTC = 08h00 Tunis)
-4. **Create** → terminé. Le cron réveille le site automatiquement.
+**1. Keep-alive — le site reste ouvert de 7h à 1h**
 
-> La clé est secrète : ne la partagez avec personne.
+Service gratuit [cron-job.org](https://cron-job.org) (compte par email, **sans carte
+bancaire**) qui ping le site toutes les 5 minutes :
+1. Créez un compte gratuit sur cron-job.org
+2. Créez un nouveau Cronjob avec :
+   - **URL** : `https://imagine-inventory.onrender.com/ping`
+   - **Timezone** : `Africa/Tunis` (sinon UTC, avec les heures 6 à 23)
+   - **Minutes** : `0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55` (= toutes les 5 min)
+   - **Heures** : `7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0`
+   - Jours / mois : tous
+3. Save → le ping tourne 365 jours par an (et le site dort de 1h à 7h, ce qui
+   économise vos heures gratuites Render).
+
+**2. Tâches du matin — lancées par le 1er ping de la journée (à 7h00)**
+- 💾 sauvegarde quotidienne de la base (les 3 dernières conservées)
+- 🎲 tirage des 5 matériels d'inventaire du jour
+- ⏰ rappels événements J-3 / J-1 + retours en retard
+
+Aucun cron Render payant n'est nécessaire : le premier ping de `/ping` chaque matin
+déclenche automatiquement ces tâches (idempotent, pas de double exécution).
+
+> Un backup GitHub Actions (`.github/workflows/keepalive.yml`) ping aussi le site
+> de 7h à 1h en renfort.
+
+**Lancer les tâches à la main** : menu « ⏰ Tâches auto » du site (bouton « Lancer
+maintenant »), ou `curl "https://VOTRE-SITE/cron/daily?key=VOTRE_CLE"` (la clé est
+affichée dans la page ⏰ Tâches auto — ne la partagez pas).
 
 ---
 

@@ -2353,13 +2353,16 @@ def full_backup():
 @app.route('/admin/cron')
 @permission_required_any('manage_database')
 def admin_cron():
-    """Page d'info : cron journalier (a connecter une fois sur Render, 0 euro)."""
-    site = (os.environ.get('SITE_URL') or 'https://i-maginevents.com').strip().rstrip('/')
-    if site.startswith('http://localhost') or site.startswith('http://127.0.0.1'):
-        site = 'https://i-maginevents.com'
+    """Page d'info : keep-alive (cron-job.org, gratuit) + taches du matin."""
+    if request.host.startswith('localhost') or request.host.startswith('127.0.0.1'):
+        site = 'https://imagine-inventory.onrender.com'
+    else:
+        site = 'https://' + request.host
+    site = site.rstrip('/')
     cmd = f'curl -s "{site}/cron/daily?key={CRON_KEY}"'
+    ping_url = site + '/ping'
     last_run = get_app_setting('cron_last_run')
-    return render_template('admin_cron.html', cmd=cmd, last_run=last_run)
+    return render_template('admin_cron.html', cmd=cmd, ping_url=ping_url, last_run=last_run)
 
 
 @app.route('/admin/cron/run', methods=['POST'])
