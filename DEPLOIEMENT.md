@@ -25,6 +25,25 @@
      - `DATABASE_URL` = l'URL de la base PostgreSQL (étape 2)
      - `SECRET_KEY` = un mot de passe complexe (ex: `imagine2026!SuperSecret`)
 4. Cliquez **"Create Web Service"** → Votre site est en ligne !
+5. **Cron journalier (gratuit)** — voir section « ⏰ Cron job » plus bas.
+
+---
+
+## ⏰ Cron job : tâches automatiques du matin (gratuit sur Render)
+
+Chaque matin à 08h00 (heure de Tunis), le site lance tout seul :
+- 💾 la sauvegarde quotidienne de la base (les 3 dernières conservées)
+- 🎲 le tirage des 5 matériels d'inventaire du jour
+- ⏰ les rappels événements J-3 / J-1 + retours en retard
+
+**Mise en place (une seule fois) :**
+1. Dans votre service Render → onglet **Cron Jobs** → **New Cron Job**
+2. Command : `curl -s "https://i-maginevents.com/cron/daily?key=VOTRE_CLE"`
+   (la clé est affichée dans le site, menu **⏰ Tâches auto (Cron)**)
+3. Schedule : `0 7 * * *` (= tous les jours, 07h00 UTC = 08h00 Tunis)
+4. **Create** → terminé. Le cron réveille le site automatiquement.
+
+> La clé est secrète : ne la partagez avec personne.
 
 ---
 

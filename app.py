@@ -24,6 +24,8 @@ app.secret_key = os.environ.get('SECRET_KEY', 'imagine-events-tunisia-secret-202
 # ── Cle du flux ICS (synchronisation Google/Apple/Outlook).
 #    Derivee de SECRET_KEY : stable, unique par installation, pas de base de donnees. ──
 ICS_KEY = hashlib.sha256((app.secret_key + ':ics-feed').encode('utf-8')).hexdigest()[:16]
+# ── Cle du cron journalier (taches du matin lancees par Render, gratuit). ──
+CRON_KEY = hashlib.sha256((app.secret_key + ':cron-daily').encode('utf-8')).hexdigest()[:16]
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
@@ -665,6 +667,47 @@ def check_due_alerts():
     except Exception as e:
         db.session.rollback()
         print(f'[ALERTS] ignore: {type(e).__name__}: {str(e)[:150]}')
+
+
+def run_daily_tasks():
+    """Lance les taches automatiques du jour (idempotent : 2 fois dans la
+    meme journee = pas de double emploi). Retourne un rapport (dict)."""
+    today = date.today()
+    report = {}
+    try:
+        daily_db_snapshot()
+        report['sauvegarde'] = 'Sauvegarde quotidienne a jour (base SQLite) — inactif sur PostgreSQL'
+    except Exception as e:
+        report['sauvegarde'] = f'erreur : {e}'
+    try:
+        checks = generate_daily_checks(today)
+        report['inventaire'] = f'{len(checks)} materiels tires au hasard pour le {today.strftime("%d/%m/%Y")}'
+    except Exception as e:
+        report['inventaire'] = f'erreur : {e}'
+    try:
+        check_due_alerts()
+        report['rappels'] = 'Rappels J-3 / J-1 (evenements) + retours en retard verifies'
+    except Exception as e:
+        report['rappels'] = f'erreur : {e}'
+    try:
+        set_app_setting('cron_last_run', tunisia_now().strftime('%d/%m/%Y %H:%M'))
+    except Exception:
+        pass
+    return report
+
+
+@app.route('/cron/daily', methods=['GET'])
+def cron_daily():
+    """Cron journalier (gratuit sur Render) : lance les taches du matin
+    meme si personne n'ouvre le site. Protege par cle — ne pas partager."""
+    if request.args.get('key') != CRON_KEY:
+        return {'error': 'cle invalide'}, 403
+    report = run_daily_tasks()
+    log_action('cron_daily', 'Taches journalieres lancees via cron')
+    report['status'] = 'ok'
+    report['heure'] = tunisia_now().strftime('%d/%m/%Y %H:%M (Tunis)')
+    return report
+
 
 ALL_PERMISSIONS = [
     # ── 📦 Matériel & Stock ──
@@ -2288,6 +2331,28 @@ def full_backup():
     log_action('full_backup', f'Sauvegarde complete telechargee par {current_user.full_name}')
     return send_file(buf, mimetype='application/zip', as_attachment=True,
                      download_name=f'imagine_backup_{date.today().strftime("%Y%m%d")}.zip')
+
+
+@app.route('/admin/cron')
+@permission_required_any('manage_database')
+def admin_cron():
+    """Page d'info : cron journalier (a connecter une fois sur Render, 0 euro)."""
+    site = (os.environ.get('SITE_URL') or 'https://i-maginevents.com').strip().rstrip('/')
+    if site.startswith('http://localhost') or site.startswith('http://127.0.0.1'):
+        site = 'https://i-maginevents.com'
+    cmd = f'curl -s "{site}/cron/daily?key={CRON_KEY}"'
+    last_run = get_app_setting('cron_last_run')
+    return render_template('admin_cron.html', cmd=cmd, last_run=last_run)
+
+
+@app.route('/admin/cron/run', methods=['POST'])
+@permission_required_any('manage_database')
+def admin_cron_run():
+    """Lance les taches du jour a la main (test) depuis la page admin."""
+    report = run_daily_tasks()
+    log_action('cron_daily', 'Taches journalieres lancees a la main (page admin)')
+    flash('⏰ Tâches du jour exécutées — ' + ' | '.join(str(v) for v in report.values()), 'success')
+    return redirect(url_for('admin_cron'))
 
 
 # ═══════════ N E W :  E X P O R T S ═══════════

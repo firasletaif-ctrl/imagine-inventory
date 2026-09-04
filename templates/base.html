@@ -104,6 +104,11 @@
                     <span class="nav-icon">📜</span><span>Logs d'activite</span>
                 </a>
                 {% endif %}
+                {% if has_perm('manage_database') %}
+                <a href="{{ url_for('admin_cron') }}" class="nav-item {% if request.endpoint == 'admin_cron' %}active{% endif %}" title="Tâches du matin : sauvegarde + inventaire + rappels (cron Render gratuit)">
+                    <span class="nav-icon">⏰</span><span>Tâches auto (Cron)</span>
+                </a>
+                {% endif %}
                 {% if has_perm('clear_borrow_history','clear_history') %}
                 <a href="#" class="nav-item nav-danger" onclick="openClearHistoryModal();return false" title="⚠️ A utiliser avec precaution">
                     <span class="nav-icon">⚠️</span><span>Effacer l'historique</span>
