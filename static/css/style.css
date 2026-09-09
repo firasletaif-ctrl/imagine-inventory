@@ -280,6 +280,7 @@ code { background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 3px; 
 .flash-success { background: #16A34A; }
 .flash-error { background: var(--red); }
 .flash-info { background: var(--blue); }
+.flash-warning { background: #D97706; }
 .flash-icon { font-size: 1.1rem; }
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }

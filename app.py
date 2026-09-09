@@ -1646,14 +1646,21 @@ def reset_all_tables():
         # Keep current admin
         aid = current_user.id
         rid = current_user.role_id
+        # Ordre importe sur PostgreSQL (contraintes de cle étrangere) :
+        # enfants d'abord, parents ensuite. (Sur SQLite ca passait sans
+        # l'ordre, d'ou le bug invisible jusqu'a la migration.)
         Notification.query.delete()
+        EventReminder.query.delete()
         EventAssignment.query.delete()
         Event.query.delete()
         ActivityLog.query.delete()
+        InventoryCheck.query.delete()
+        MaterialOrder.query.delete()
         Borrow.query.delete()
         EquipmentImage.query.delete()
         Equipment.query.delete()
         Category.query.delete()
+        PushSubscription.query.delete()
         User.query.filter(User.id != aid).delete()
         CustomRole.query.filter(CustomRole.id != rid).delete()
         db.session.commit()
