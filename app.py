@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta, timezone
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, send_from_directory, has_request_context
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, send_from_directory, has_request_context, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
 from PIL import Image, ImageOps, ImageFile
@@ -2176,6 +2176,186 @@ def recap_ai(evid):
         else:
             ctx.update({'ai_text': None, 'ai_error': "L'IA (Groq) n'a pas répondu. Vérifie la clé GROQ_API_KEY, ou change le modèle via la variable GROQ_MODEL, puis réessaie."})
     return render_template('recap.html', **ctx)
+
+
+# ═══════════ I A :  D E T E C T I O N   D E S   B E S O I N S ═══════════
+def _ai_chat(prompt, system='Tu es un assistant interne.', temperature=0.2):
+    """Appel IA genere (OpenAI si cle, sinon Groq — gratuit). Retourne le texte.
+    Lève RuntimeError('not_configured') si aucune cle, sinon l'exception brute."""
+    import urllib.request
+    url = api_key = model = None
+    openai_key = os.environ.get('OPENAI_API_KEY', '').strip()
+    groq_key = os.environ.get('GROQ_API_KEY', '').strip()
+    if openai_key:
+        url, api_key = 'https://api.openai.com/v1/chat/completions', openai_key
+        model = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+    elif groq_key:
+        url, api_key = 'https://api.groq.com/openai/v1/chat/completions', groq_key
+        model = os.environ.get('GROQ_MODEL', 'qwen/qwen3.8-27b')
+    if not api_key:
+        raise RuntimeError('not_configured')
+    data = json.dumps({
+        "model": model, "temperature": temperature,
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        url, data=data,
+        headers={
+            'Authorization': 'Bearer ' + api_key,
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+        },
+        method='POST'
+    )
+    with urllib.request.urlopen(req, timeout=90) as resp:
+        return json.loads(resp.read().decode('utf-8'))['choices'][0]['message']['content'].strip()
+
+
+def _extract_json_array(text):
+    """Extraite un tableau JSON d'une reponse IA (tolere markdown/texte autour)."""
+    t = (text or '').strip()
+    if t.startswith('```'):
+        t = t.strip('`').strip()
+        if t.lower().startswith('json'):
+            t = t[4:]
+    i, j = t.find('['), t.rfind(']')
+    if i == -1 or j <= i:
+        return None
+    try:
+        return json.loads(t[i:j + 1])
+    except Exception:
+        return None
+
+
+def ai_detect_event_needs(evt, eqs):
+    """L'IA lit les notes de l'evenement et detecte le materiel demande dans le stock.
+    Retourne (liste [{equipment_id, quantity, reason}], None) ou (None, erreur)."""
+    if not ai_provider():
+        return None, "IA non configurée : ajoute la variable GROQ_API_KEY (gratuite, sans carte — console.groq.com/keys) dans les Environment variables de Render, puis réessaie."
+    if not (evt.description or '').strip():
+        return None, "Cet événement n'a aucune note. L'équipe doit d'abord écrire ce dont elle a besoin dans « Description » (Emploi du temps → modifier l'événement)."
+    lines = []
+    for e in eqs:
+        cat = e.category.name if e.category else ''
+        lines.append(f"{e.id} | {e.name} | {cat}")
+    prompt = f"""On te donne la liste exacte du stock du depot (format : id | nom | categorie)
+et les notes ecrites par l'equipe pour un evenement.
+Detecte quel materiel l'equipe demande explicitement ou implique clairement, avec les quantites.
+
+REGLES STRICTES :
+- Ne propose QUE des articles qui existent dans la liste (retourne leur id EXACT)
+- Quantite : utilise-la si l'equipe en donne une, sinon mets 1
+- Synonymes courants : "un son / de la sono / sono" = Enceintes/Sonorisation, "tables" = Tables, "chaises" = Chaises, "ecran" = Ecrans, "lumiere / eclairage" = Eclairage, "scene" = Scenes
+- Ignore tout ce qui n'est PAS du materiel du depot (nourriture, boissons, personnel, transport, decoration non en stock, logistique...)
+- Un article mentionne plusieurs fois = UNE seule ligne (quantites additionnees)
+- Si rien n'est demande : retourne le tableau vide []
+
+EVENEMENT : {evt.title} — {evt.date_label()} — {evt.location or 'lieu non precise'}
+NOTES DE L'EQUIPE :
+{evt.description}
+
+STOCK DU DEPOT (id | nom | categorie) :
+{chr(10).join(lines)}
+
+Reponds UNIQUEMENT avec un tableau JSON valide, sans aucun texte avant ou apres, au format :
+[{{"equipment_id": 12, "name": "Tables", "quantity": 10, "reason": "notes : '10 tables'"}}]"""
+    try:
+        text = _ai_chat(prompt, system="Tu es l'assistant du depot de materiel d'Imagine Events Tunisia. Tu reponds en francais, uniquement avec du JSON valide.")
+    except RuntimeError:
+        return None, "Erreur IA : service indisponible. Reessaie dans quelques secondes."
+    except Exception as e:
+        return None, f"Erreur IA : {str(e)[:150]}"
+    arr = _extract_json_array(text)
+    if arr is None:
+        return None, "L'IA n'a pas renvoyé de liste lisible. Réessaie dans quelques secondes."
+    valid_ids = set(e.id for e in eqs)
+    out, seen = [], set()
+    for item in arr:
+        if not isinstance(item, dict):
+            continue
+        try:
+            eid = int(item.get('equipment_id'))
+        except (TypeError, ValueError):
+            continue
+        if eid not in valid_ids or eid in seen:
+            continue
+        try:
+            qty = max(1, min(int(item.get('quantity', 1) or 1), 999))
+        except (TypeError, ValueError):
+            qty = 1
+        seen.add(eid)
+        out.append({'equipment_id': eid, 'quantity': qty, 'reason': str(item.get('reason', ''))[:140]})
+    return out, None
+
+
+@app.route('/schedule/<int:evid>/ai-detect-needs', methods=['POST'])
+@login_required
+def ai_detect_needs_route(evid):
+    """IA : detecte le materiel demande dans les notes de l'evenement."""
+    if is_pending_user():
+        return jsonify({'error': 'Compte en attente.'}), 403
+    if not (current_user.has_permission('borrow_equipment') or current_user.has_permission('manage_schedule')):
+        return jsonify({'error': 'Permission requise pour cette action.'}), 403
+    evt = db.session.get(Event, evid)
+    if not evt:
+        return jsonify({'error': 'Evenement introuvable.'}), 404
+    eqs = Equipment.query.order_by(Equipment.name).all()
+    result, err = ai_detect_event_needs(evt, eqs)
+    if err:
+        return jsonify({'error': err}), 200
+    out = []
+    for s in result:
+        eq = db.session.get(Equipment, s['equipment_id'])
+        if not eq:
+            continue
+        out.append({
+            'equipment_id': eq.id, 'name': eq.name, 'quantity': s['quantity'],
+            'reason': s['reason'], 'available': eq.available_quantity, 'total': eq.total_quantity
+        })
+    log_action('ai_detect_needs', f"Besoins detectes par IA pour \"{evt.title}\" : {len(out)} article(s)", evt.title)
+    return jsonify({'suggestions': out})
+
+
+@app.route('/schedule/<int:evid>/ai-confirm-borrow', methods=['POST'])
+@permission_required('borrow_equipment')
+def ai_confirm_borrow(evid):
+    """Confirme d'un clic un emprunt detecte par IA : cree l'emprunt lie a l'evenement
+    (prise le jour de l'evenement, retour le lendemain de la derniere journee)."""
+    evt = db.session.get(Event, evid)
+    if not evt:
+        return jsonify({'ok': False, 'error': 'Evenement introuvable.'}), 404
+    try:
+        eid = int(request.form.get('equipment_id') or 0)
+        qty = int(request.form.get('quantity') or 1)
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Valeurs invalides.'}), 400
+    eq = db.session.get(Equipment, eid)
+    if not eq:
+        return jsonify({'ok': False, 'error': 'Matériel introuvable.'}), 400
+    if qty < 1 or qty > 999:
+        return jsonify({'ok': False, 'error': 'Quantité invalide.'}), 400
+    pickup = evt.event_date if evt.event_date >= date.today() else date.today()
+    rd = evt.date_end() + timedelta(days=1)
+    if rd < date.today():
+        rd = date.today()
+    min_avail = min_availability_range(eq, pickup, rd)
+    if qty > min_avail:
+        return jsonify({'ok': False, 'error': f"Stock insuffisant : il ne reste que {min_avail} disponible(s) du {pickup.strftime('%d/%m')} au {rd.strftime('%d/%m')}."}), 400
+    b = Borrow(user_id=current_user.id, equipment_id=eq.id, quantity=qty,
+               expected_return_date=rd, pickup_date=pickup,
+               event_id=evt.id, event_name=evt.title,
+               notes='Detecte par IA dans les notes de l evenement (confirme manuellement)')
+    db.session.add(b)
+    db.session.commit()
+    update_availability(eq.id)
+    log_action('borrow_ai', f'IA : emprunt confirme {qty}x {eq.name} pour "{evt.title}"', eq.name, qty)
+    try:
+        notify_user(current_user.id, '🤖 Emprunt IA confirmé',
+                    f'{qty}x {eq.name} — "{evt.title}" (prise {pickup.strftime("%d/%m")}, retour {rd.strftime("%d/%m")}).',
+                    f'/equipment/{eq.id}')
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'msg': f'{qty} x {eq.name} emprunté (prise le {pickup.strftime("%d/%m")}, retour le {rd.strftime("%d/%m")})'})
 
 
 # ═══════════ N E W :  N O T I F I C A T I O N S ═══════════

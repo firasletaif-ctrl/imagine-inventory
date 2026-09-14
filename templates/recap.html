@@ -139,6 +139,21 @@
                 {% endif %}
             </div>
 
+            <!-- Detection IA des besoins (actions : masquee a l'impression) -->
+            <div class="recap-section no-print">
+                <h2>🤖 Besoins détectés dans les notes (IA)</h2>
+                <div class="ai-box info">
+                    L'IA lit les notes de l'équipe ci-dessous et les compare au stock du dépôt.
+                    Ce qui est demandé apparaît ici avec un bouton : <strong>confirme d'un clic</strong> et
+                    l'emprunt est créé, lié à cet événement (prise le jour de l'événement, retour le lendemain).
+                    Rien n'est créé sans ta validation.
+                </div>
+                <div style="margin-bottom:1rem">
+                    <button class="btn btn-primary" id="aiNeedsBtn" onclick="aiDetectNeeds()">🔍 Détecter les besoins dans les notes</button>
+                </div>
+                <div id="aiNeedsOut"></div>
+            </div>
+
             <!-- Notes -->
             <div class="recap-section">
                 <h2>📝 Notes & détails</h2>
@@ -174,4 +189,81 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var AI_EVT_ID = {{ evt.id }};
+function aiEsc(s){ var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+async function aiDetectNeeds(){
+    var btn = document.getElementById('aiNeedsBtn');
+    var out = document.getElementById('aiNeedsOut');
+    btn.disabled = true;
+    btn.textContent = '🤖 Lecture des notes + comparaison avec le stock... (quelques secondes)';
+    out.innerHTML = '';
+    try {
+        var r = await fetch('/schedule/' + AI_EVT_ID + '/ai-detect-needs', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: ''
+        });
+        var data = await r.json();
+        if (data.error) throw new Error(data.error);
+        if (!data.suggestions || data.suggestions.length === 0) {
+            out.innerHTML = '<div class="ai-box info">✅ Aucune demande de matériel détectée dans les notes (ou rien qui corresponde au stock du dépôt).</div>';
+            return;
+        }
+        var html = '<div style="display:grid;gap:.6rem;margin-bottom:.5rem">';
+        data.suggestions.forEach(function(s){
+            var stock = s.quantity > s.available
+                ? ' <span style="color:var(--red);font-weight:700">⚠️ stock : ' + s.available + ' disponible(s)</span>'
+                : ' <small style="color:var(--gray-500)">(' + s.available + ' disponible(s) sur ' + s.total + ')</small>';
+            html += '<div id="aiRow_' + s.equipment_id + '" style="background:#F6F8FC;border:1px solid var(--blue-pale);border-radius:10px;padding:.75rem 1rem;display:flex;gap:.7rem;align-items:center;flex-wrap:wrap">'
+                + '<div style="flex:1;min-width:220px"><strong style="font-size:.95rem">' + aiEsc(s.name) + '</strong>' + stock
+                + (s.reason ? '<br><small style="color:var(--gray-500)">📝 ' + aiEsc(s.reason) + '</small>' : '')
+                + '</div>'
+                + '<label style="font-size:.85rem;color:var(--gray-600)">Qté '
+                + '<input type="number" min="1" max="999" value="' + s.quantity + '" id="aiQty_' + s.equipment_id + '" style="width:70px;padding:.4rem .5rem;border:1px solid var(--gray-200);border-radius:6px;font-weight:700"></label>'
+                + '<button class="btn btn-success" id="aiBtn_' + s.equipment_id + '" style="padding:.55rem 1.1rem" onclick="aiConfirmBorrow(' + s.equipment_id + ')">✅ Confirmer l\'emprunt</button>'
+                + '</div>';
+        });
+        html += '</div>';
+        html += '<small style="color:var(--gray-500)">💡 Après une confirmation, recharge la page pour voir le matériel apparaître dans le tableau « Matériel réservé ».</small>';
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = '<div class="ai-box err">⚠️ ' + aiEsc(e.message) + '</div>';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 Re-détecter les besoins';
+    }
+}
+
+async function aiConfirmBorrow(eid){
+    var btn = document.getElementById('aiBtn_' + eid);
+    var row = document.getElementById('aiRow_' + eid);
+    btn.disabled = true;
+    btn.textContent = 'Enregistrement...';
+    var qty = parseInt(document.getElementById('aiQty_' + eid).value || '1', 10);
+    var fd = new URLSearchParams();
+    fd.set('equipment_id', eid);
+    fd.set('quantity', qty);
+    try {
+        var r = await fetch('/schedule/' + AI_EVT_ID + '/ai-confirm-borrow', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: fd.toString()
+        });
+        var data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'Erreur inconnue.');
+        row.style.background = '#EAF7EE';
+        row.style.borderColor = '#16A34A';
+        row.innerHTML = '<div style="color:#15803D;font-weight:600">✅ ' + aiEsc(data.msg) + ' — emprunt créé et lié à l\'événement.</div>';
+    } catch (e) {
+        alert(e.message);
+        btn.disabled = false;
+        btn.textContent = "✅ Confirmer l'emprunt";
+    }
+}
+</script>
 {% endblock %}
