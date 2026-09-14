@@ -210,11 +210,18 @@ async function aiDetectNeeds(){
         });
         var data = await r.json();
         if (data.error) throw new Error(data.error);
+        var html = '';
+        if (data.already_borrowed && data.already_borrowed.length) {
+            var names = [];
+            data.already_borrowed.forEach(function(a){ names.push(aiEsc(a.name) + ' ×' + a.quantity); });
+            html += '<div class="ai-box info" style="margin-bottom:.8rem">ℹ️ <strong>Déjà emprunté(s) pour cet événement</strong> — exclus de la détection : ' + names.join(', ') + '</div>';
+        }
         if (!data.suggestions || data.suggestions.length === 0) {
-            out.innerHTML = '<div class="ai-box info">✅ Aucune demande de matériel détectée dans les notes (ou rien qui corresponde au stock du dépôt).</div>';
+            html += '<div class="ai-box info">✅ Aucune <strong>nouvelle</strong> demande de matériel détectée (tout ce qui est demandé dans les notes est déjà emprunté pour cet événement, ou rien ne correspond au stock).</div>';
+            out.innerHTML = html;
             return;
         }
-        var html = '<div style="display:grid;gap:.6rem;margin-bottom:.5rem">';
+        html += '<div style="display:grid;gap:.6rem;margin-bottom:.5rem">';
         data.suggestions.forEach(function(s){
             var stock = s.quantity > s.available
                 ? ' <span style="color:var(--red);font-weight:700">⚠️ stock : ' + s.available + ' disponible(s)</span>'

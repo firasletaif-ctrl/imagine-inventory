@@ -2303,8 +2303,23 @@ def ai_detect_needs_route(evid):
     result, err = ai_detect_event_needs(evt, eqs)
     if err:
         return jsonify({'error': err}), 200
+    # ── Comparaison : le materiel DEJA emprunte pour cet evenement est exclu ──
+    already_map = {}
+    brows = Borrow.query.filter(
+        Borrow.status.in_(['active', 'late']),
+        db.or_(Borrow.event_id == evt.id, Borrow.event_name == evt.title)
+    ).all()
+    for b in brows:
+        if b.equipment:
+            already_map[b.equipment_id] = already_map.get(b.equipment_id, 0) + b.quantity
+    already = []
+    for eid, qty in already_map.items():
+        eq = db.session.get(Equipment, eid)
+        if eq:
+            already.append({'equipment_id': eq.id, 'name': eq.name, 'quantity': qty})
+    kept = [s for s in result if s['equipment_id'] not in already_map]
     out = []
-    for s in result:
+    for s in kept:
         eq = db.session.get(Equipment, s['equipment_id'])
         if not eq:
             continue
@@ -2312,8 +2327,8 @@ def ai_detect_needs_route(evid):
             'equipment_id': eq.id, 'name': eq.name, 'quantity': s['quantity'],
             'reason': s['reason'], 'available': eq.available_quantity, 'total': eq.total_quantity
         })
-    log_action('ai_detect_needs', f"Besoins detectes par IA pour \"{evt.title}\" : {len(out)} article(s)", evt.title)
-    return jsonify({'suggestions': out})
+    log_action('ai_detect_needs', f"Besoins detectes par IA pour \"{evt.title}\" : {len(out)} article(s) a confirmer, {len(already)} deja emprutes", evt.title)
+    return jsonify({'suggestions': out, 'already_borrowed': already})
 
 
 @app.route('/schedule/<int:evid>/ai-confirm-borrow', methods=['POST'])
