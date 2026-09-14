@@ -2207,8 +2207,17 @@ def _ai_chat(prompt, system='Tu es un assistant interne.', temperature=0.2):
         },
         method='POST'
     )
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        return json.loads(resp.read().decode('utf-8'))['choices'][0]['message']['content'].strip()
+    import time
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                return json.loads(resp.read().decode('utf-8'))['choices'][0]['message']['content'].strip()
+        except Exception as e:
+            is_429 = '429' in str(e) or 'Too Many' in str(e)
+            if is_429 and attempt < 2:
+                time.sleep(8 * (attempt + 1))  # 8s puis 16s, puis on relance
+                continue
+            raise
 
 
 def _extract_json_array(text):
@@ -2281,7 +2290,10 @@ Reponds UNIQUEMENT avec un tableau JSON valide, sans aucun texte avant ou apres,
     except RuntimeError:
         return None, "Erreur IA : service indisponible. Reessaie dans quelques secondes."
     except Exception as e:
-        return None, f"Erreur IA : {str(e)[:150]}"
+        msg = str(e)
+        if '429' in msg or 'Too Many' in msg:
+            return None, "Trop de demandes IA en peu de temps (limite du plan gratuit Groq). Attends 30 secondes et réessaie — le bouton reste verrouillé pour t'aider."
+        return None, f"Erreur IA : {msg[:150]}"
     arr = _extract_json_array(text)
     if arr is None:
         return None, "L'IA n'a pas renvoyé de liste lisible. Réessaie dans quelques secondes."

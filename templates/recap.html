@@ -199,6 +199,7 @@ function aiEsc(s){ var d = document.createElement('div'); d.textContent = s || '
 async function aiDetectNeeds(){
     var btn = document.getElementById('aiNeedsBtn');
     var out = document.getElementById('aiNeedsOut');
+    var failed = false;
     btn.disabled = true;
     btn.textContent = '🤖 Lecture des notes + comparaison avec le stock... (quelques secondes)';
     out.innerHTML = '';
@@ -240,10 +241,25 @@ async function aiDetectNeeds(){
         html += '<small style="color:var(--gray-500)">💡 Après une confirmation, recharge la page pour voir le matériel apparaître dans le tableau « Matériel réservé ».</small>';
         out.innerHTML = html;
     } catch (e) {
+        failed = true;
         out.innerHTML = '<div class="ai-box err">⚠️ ' + aiEsc(e.message) + '</div>';
     } finally {
-        btn.disabled = false;
-        btn.textContent = '🔍 Re-détecter les besoins';
+        if (failed) {
+            var wait = 30;
+            var tick = setInterval(function(){
+                wait--;
+                if (wait <= 0) {
+                    clearInterval(tick);
+                    btn.disabled = false;
+                    btn.textContent = '🔍 Détecter les besoins dans les notes';
+                } else {
+                    btn.textContent = '⏳ Réessaie dans ' + wait + 's';
+                }
+            }, 1000);
+        } else {
+            btn.disabled = false;
+            btn.textContent = '🔍 Re-détecter les besoins';
+        }
     }
 }
 
