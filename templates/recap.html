@@ -228,6 +228,7 @@ async function aiDetectNeeds(){
                 : ' <small style="color:var(--gray-500)">(' + s.available + ' disponible(s) sur ' + s.total + ')</small>';
             html += '<div id="aiRow_' + s.equipment_id + '" style="background:#F6F8FC;border:1px solid var(--blue-pale);border-radius:10px;padding:.75rem 1rem;display:flex;gap:.7rem;align-items:center;flex-wrap:wrap">'
                 + '<div style="flex:1;min-width:220px"><strong style="font-size:.95rem">' + aiEsc(s.name) + '</strong>' + stock
+                + (s.already_qty > 0 ? '<br><small style="color:#B45309;font-weight:600">🔁 dont ' + s.already_qty + ' déjà emprunté(s) pour cet événement — la suggestion est un complément</small>' : '')
                 + (s.reason ? '<br><small style="color:var(--gray-500)">📝 ' + aiEsc(s.reason) + '</small>' : '')
                 + '</div>'
                 + '<label style="font-size:.85rem;color:var(--gray-600)">Qté '

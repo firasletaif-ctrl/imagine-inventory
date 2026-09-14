@@ -2227,8 +2227,10 @@ def _extract_json_array(text):
         return None
 
 
-def ai_detect_event_needs(evt, eqs):
-    """L'IA lit les notes de l'evenement et detecte le materiel demande dans le stock.
+def ai_detect_event_needs(evt, eqs, already_lines):
+    """L'IA lit les notes de l'evenement et detecte le materiel RESTANT a emprunter
+    (en comparant avec ce qui est deja emprunte pour l'evenement).
+    already_lines : liste de lignes 'Nom xN' deja empruntes (ou []).
     Retourne (liste [{equipment_id, quantity, reason}], None) ou (None, erreur)."""
     if not ai_provider():
         return None, "IA non configurée : ajoute la variable GROQ_API_KEY (gratuite, sans carte — console.groq.com/keys) dans les Environment variables de Render, puis réessaie."
@@ -2238,9 +2240,11 @@ def ai_detect_event_needs(evt, eqs):
     for e in eqs:
         cat = e.category.name if e.category else ''
         lines.append(f"{e.id} | {e.name} | {cat}")
-    prompt = f"""On te donne la liste exacte du stock du depot (format : id | nom | categorie)
-et les notes ecrites par l'equipe pour un evenement.
-Detecte quel materiel l'equipe demande explicitement ou implique clairement, avec les quantites.
+    already_block = chr(10).join(already_lines) if already_lines else '(rien)'
+    prompt = f"""On te donne la liste exacte du stock du depot (format : id | nom | categorie),
+les notes ecrites par l'equipe pour un evenement, et la liste du materiel DEJA
+emprunte pour cet evenement.
+Detecte quel materiel l'equipe demande ENCORE (ce qui n'est pas deja couvert).
 
 REGLES STRICTES :
 - Ne propose QUE des articles qui existent dans la liste (retourne leur id EXACT)
@@ -2248,7 +2252,17 @@ REGLES STRICTES :
 - Synonymes courants : "un son / de la sono / sono" = Enceintes/Sonorisation, "tables" = Tables, "chaises" = Chaises, "ecran" = Ecrans, "lumiere / eclairage" = Eclairage, "scene" = Scenes
 - Ignore tout ce qui n'est PAS du materiel du depot (nourriture, boissons, personnel, transport, decoration non en stock, logistique...)
 - Un article mentionne plusieurs fois = UNE seule ligne (quantites additionnees)
-- Si rien n'est demande : retourne le tableau vide []
+- Si rien n'est a proposer : retourne le tableau vide []
+
+REGLE DE COMPARAISON (la plus importante) :
+- Si la note demande une famille de materiel (ex: 'chaises hautes') et qu'un article
+  de cette famille figure deja dans 'DEJA EMPRUNTE', le besoin est COUVERT :
+  ne re-propose PAS cette famille.
+- EXCEPTION : si la note donne une quantite SUPERIEURE a la quantite deja empruntee
+  pour cette famille, propose l'article DEJA EMPRUNTE (le meme) avec la quantite
+  RESTANTE (quantite note - quantite deja empruntee), et explique dans 'reason'.
+- Exemple : note '4 chaises hautes' + deja emprunte 'Chaises hautes x blanches x3'
+  -> propose l'article deja emprunte avec quantity 1, reason '4 demandees, 3 deja empruntees'.
 
 EVENEMENT : {evt.title} — {evt.date_label()} — {evt.location or 'lieu non precise'}
 NOTES DE L'EQUIPE :
@@ -2256,6 +2270,9 @@ NOTES DE L'EQUIPE :
 
 STOCK DU DEPOT (id | nom | categorie) :
 {chr(10).join(lines)}
+
+MATÉRIEL DEJA EMPRUNTÉ POUR CET ÉVÉNEMENT (déjà réservé, besoin déjà couvert) :
+{already_block}
 
 Reponds UNIQUEMENT avec un tableau JSON valide, sans aucun texte avant ou apres, au format :
 [{{"equipment_id": 12, "name": "Tables", "quantity": 10, "reason": "notes : '10 tables'"}}]"""
@@ -2291,7 +2308,8 @@ Reponds UNIQUEMENT avec un tableau JSON valide, sans aucun texte avant ou apres,
 @app.route('/schedule/<int:evid>/ai-detect-needs', methods=['POST'])
 @login_required
 def ai_detect_needs_route(evid):
-    """IA : detecte le materiel demande dans les notes de l'evenement."""
+    """IA : detecte le materiel RESTANT a emprunter d'apres les notes de l'evenement
+    (compare avec les emprunts deja lies a l'evenement)."""
     if is_pending_user():
         return jsonify({'error': 'Compte en attente.'}), 403
     if not (current_user.has_permission('borrow_equipment') or current_user.has_permission('manage_schedule')):
@@ -2300,10 +2318,7 @@ def ai_detect_needs_route(evid):
     if not evt:
         return jsonify({'error': 'Evenement introuvable.'}), 404
     eqs = Equipment.query.order_by(Equipment.name).all()
-    result, err = ai_detect_event_needs(evt, eqs)
-    if err:
-        return jsonify({'error': err}), 200
-    # ── Comparaison : le materiel DEJA emprunte pour cet evenement est exclu ──
+    # ── Materiel deja emprunte pour cet evenement (contexte donne a l'IA) ──
     already_map = {}
     brows = Borrow.query.filter(
         Borrow.status.in_(['active', 'late']),
@@ -2317,15 +2332,19 @@ def ai_detect_needs_route(evid):
         eq = db.session.get(Equipment, eid)
         if eq:
             already.append({'equipment_id': eq.id, 'name': eq.name, 'quantity': qty})
-    kept = [s for s in result if s['equipment_id'] not in already_map]
+    already_lines = [f"{a['name']} x{a['quantity']}" for a in already]
+    result, err = ai_detect_event_needs(evt, eqs, already_lines)
+    if err:
+        return jsonify({'error': err}), 200
     out = []
-    for s in kept:
+    for s in result:
         eq = db.session.get(Equipment, s['equipment_id'])
         if not eq:
             continue
         out.append({
             'equipment_id': eq.id, 'name': eq.name, 'quantity': s['quantity'],
-            'reason': s['reason'], 'available': eq.available_quantity, 'total': eq.total_quantity
+            'reason': s['reason'], 'available': eq.available_quantity, 'total': eq.total_quantity,
+            'already_qty': already_map.get(eq.id, 0)
         })
     log_action('ai_detect_needs', f"Besoins detectes par IA pour \"{evt.title}\" : {len(out)} article(s) a confirmer, {len(already)} deja emprutes", evt.title)
     return jsonify({'suggestions': out, 'already_borrowed': already})
