@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Client : {{ c.name }}{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:980px">
+    <div class="breadcrumb"><a href="{{ url_for('clients_list') }}">← Tous les clients</a></div>
+
+    <div style="background:linear-gradient(135deg,#0B1D3A,#1E3A5F);border-radius:16px;padding:1.8rem 2rem;color:white;box-shadow:var(--shadow-md);margin-bottom:1.4rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+            <div>
+                <div style="font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:.4rem">Fiche client</div>
+                <h1 style="margin:0 0 .6rem;font-size:1.7rem">{{ c.name }}</h1>
+                <div style="display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.92rem">
+                    {% if c.contact_person %}<span>👤 {{ c.contact_person }}</span>{% endif %}
+                    {% if c.phone %}<span>📞 {{ c.phone }}</span>{% endif %}
+                    {% if c.email %}<span>✉️ {{ c.email }}</span>{% endif %}
+                    {% if c.address %}<span>📍 {{ c.address }}</span>{% endif %}
+                </div>
+            </div>
+            {% if can_manage %}
+            <div style="display:flex;gap:.5rem">
+                <a class="btn btn-secondary" href="{{ url_for('client_edit', cid=c.id) }}">✏️ Modifier</a>
+                <form method="POST" action="{{ url_for('client_delete', cid=c.id) }}" onsubmit="return confirm('Supprimer ce client ? Ses événements seront conservés (sans lien client).')">
+                    <button class="btn btn-danger" type="submit">🗑️ Supprimer</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% if c.notes %}
+        <div style="margin-top:1rem;background:rgba(255,255,255,.08);border-radius:10px;padding:.8rem 1rem;font-size:.9rem;line-height:1.6;white-space:pre-line">{{ c.notes }}</div>
+        {% endif %}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.9rem;margin-bottom:1.4rem">
+        <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:1rem;text-align:center;box-shadow:var(--shadow-sm)">
+            <div style="font-size:1.7rem;font-weight:800;color:var(--blue-deep)">{{ total_events }}</div>
+            <div style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:1px">Événements</div>
+        </div>
+        <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:1rem;text-align:center;box-shadow:var(--shadow-sm)">
+            <div style="font-size:1.7rem;font-weight:800;color:var(--blue-deep)">{{ total_units_all }}</div>
+            <div style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:1px">Unités mobilisées</div>
+        </div>
+        <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:1rem;text-align:center;box-shadow:var(--shadow-sm)">
+            <div style="font-size:1.1rem;font-weight:800;color:var(--blue-deep);padding-top:.35rem">Depuis {{ now.strftime('%d/%m/%Y') }}</div>
+            <div style="font-size:.75rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:1px">Historique complet</div>
+        </div>
+    </div>
+
+    <h2 style="font-size:1.05rem;color:var(--blue-deep);margin:0 0 .8rem">📅 Historique des événements</h2>
+    {% if detail_rows %}
+    <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm)">
+        <table class="history-table">
+            <thead><tr><th>Date</th><th>Événement</th><th>Lieu</th><th>Statut</th><th>Matériel</th><th></th></tr></thead>
+            <tbody>
+                {% for r in detail_rows %}
+                <tr>
+                    <td style="white-space:nowrap">{{ r.e.event_date.strftime('%d/%m/%Y') }}{% if r.e.is_multiday() %} → {{ r.e.date_end().strftime('%d/%m') }}{% endif %}</td>
+                    <td><strong>{{ r.e.title }}</strong></td>
+                    <td>{{ r.e.location or '—' }}</td>
+                    <td>
+                        {% if r.e.status == 'upcoming' %}<span class="status-badge status-active">À venir</span>
+                        {% elif r.e.status == 'ongoing' %}<span class="status-badge status-late">En cours</span>
+                        {% elif r.e.status == 'completed' %}<span class="status-badge status-returned">Terminé</span>
+                        {% else %}<span class="status-badge" style="background:var(--gray-100);color:var(--gray-500)">Annulé</span>{% endif %}
+                    </td>
+                    <td>{% if r.units %}<span style="font-weight:700">{{ r.units }}</span> unité(s){% else %}—{% endif %}</td>
+                    <td style="text-align:right"><a class="btn btn-sm btn-secondary" href="{{ url_for('recap_view', evid=r.e.id) }}">📄 Récap</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:2.5rem;text-align:center;box-shadow:var(--shadow-sm)">
+        <div style="font-size:2.5rem;margin-bottom:.6rem"></div>
+        <p style="color:var(--gray-500);margin:0">Aucun événement lié à ce client pour le moment.</p>
+        <p style="color:var(--gray-400);font-size:.85rem;margin:.5rem 0 0">Créez un événement dans l'Emploi du temps et sélectionnez ce client.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

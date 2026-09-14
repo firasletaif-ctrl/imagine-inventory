@@ -197,6 +197,14 @@
                     <div class="form-group"><label>Heure debut</label><input type="time" name="start_time" value="08:00"></div>
                     <div class="form-group"><label>Heure fin</label><input type="time" name="end_time" value="17:00"></div>
                 </div>
+                <div class="form-group"><label>Client <small style="color:var(--gray-400)">(optionnel)</small></label>
+                    <select name="client_id">
+                        <option value="">— Aucun client —</option>
+                        {% for c in all_clients %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>Lieu</label>
                     <div class="hotel-search-wrap">
@@ -238,6 +246,14 @@
                     <div class="form-group"><label>Heure fin</label><input type="time" name="end_time" id="eeEnd"></div>
                 </div>
                 <div class="form-group"><label>Statut</label><select name="status" id="eeStatus"><option value="upcoming">A venir</option><option value="ongoing">En cours</option><option value="completed">Termine</option><option value="cancelled">Annule</option></select></div>
+                <div class="form-group"><label>Client <small style="color:var(--gray-400)">(optionnel)</small></label>
+                    <select name="client_id" id="eeClient">
+                        <option value="">— Aucun client —</option>
+                        {% for c in all_clients %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>Lieu</label>
                     <div class="hotel-search-wrap">
@@ -370,6 +386,7 @@ function openDay(iso, highlightId){
                 + '<div class="day-evt-top"><span class="day-evt-time">🕐 ' + esc(e.start) + ' – ' + esc(e.end) + '</span><span class="status-badge ' + badgeCls(e.status) + '">' + esc(statusLabel(e.status)) + '</span></div>'
                 + '<div class="day-evt-title">' + esc(e.title) + (multij ? ' <span style="background:var(--blue-pale);color:var(--blue);font-size:.68rem;padding:.1rem .5rem;border-radius:100px;font-weight:700">📆 ' + fmtRange(e) + '</span>' : '') + '</div>'
                 + (e.location ? '<div class="day-evt-meta">📍 ' + esc(e.location) + '</div>' : '')
+                + (e.client ? '<div class="day-evt-meta">👤 ' + esc(e.client) + '</div>' : '')
                 + (assignees ? '<div class="day-evt-meta">👥 ' + esc(assignees) + '</div>' : '')
                 + (e.description ? '<div class="day-evt-desc">' + esc(e.description) + '</div>' : '')
                 + '<div class="day-evt-actions">'
@@ -955,6 +972,8 @@ function fillEditForm(d) {
     document.getElementById('eeLocSearch').value = d.location || '';
     document.getElementById('eeLocHidden').value = d.location || '';
     document.getElementById('eeStatus').value = d.status || 'upcoming';
+    var _eeClient = document.getElementById('eeClient');
+    if (_eeClient){ _eeClient.value = (d.cid || '') + ''; }
     document.querySelectorAll('#eeUsers input[type=checkbox]').forEach(function(cb){cb.checked = d.users.indexOf(parseInt(cb.value,10)) >= 0});
     document.getElementById('editEventForm').action = '/schedule/' + d.id + '/edit';
     openModal('editEventModal');

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier le client' if c else 'Nouveau client' }}{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:680px">
+    <div class="breadcrumb"><a href="{{ url_for('clients_list') }}">← Tous les clients</a></div>
+    <div class="page-header">
+        <h1>{{ '✏️ Modifier le client' if c else '➕ Nouveau client' }}</h1>
+    </div>
+
+    <form method="POST" action="{{ url_for('client_update', cid=c.id) if c else url_for('client_save') }}"
+          style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:1.6rem;box-shadow:var(--shadow-sm)">
+        <div class="form-group">
+            <label>Nom du client *</label>
+            <input type="text" name="name" required value="{{ c.name if c else '' }}" placeholder="Ex: Hôteliex, Ministère de la Culture, M. Ben Ali...">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Personne à contacter</label>
+                <input type="text" name="contact_person" value="{{ c.contact_person if c else '' }}" placeholder="Ex: Mme Rostom">
+            </div>
+            <div class="form-group">
+                <label>Téléphone</label>
+                <input type="text" name="phone" value="{{ c.phone if c else '' }}" placeholder="+216 ...">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" value="{{ c.email if c else '' }}" placeholder="contact@societe.tn">
+        </div>
+        <div class="form-group">
+            <label>Adresse</label>
+            <input type="text" name="address" value="{{ c.address if c else '' }}" placeholder="Ville, rue...">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3" placeholder="Préférences, historique, remarques...">{{ c.notes if c else '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.2rem">
+            <a class="btn btn-secondary" href="{{ url_for('client_detail', cid=c.id) if c else url_for('clients_list') }}">Annuler</a>
+            <button class="btn btn-accent" type="submit">💾 {{ 'Enregistrer' if c else 'Créer le client' }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

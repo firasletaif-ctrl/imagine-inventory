@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Statistiques{% endblock %}
+
+{% block head %}
+<style>
+.stat-card{background:white;border:1px solid var(--gray-200);border-radius:14px;padding:1.1rem 1.2rem;box-shadow:var(--shadow-sm)}
+.stat-num{font-size:1.75rem;font-weight:800;color:var(--blue-deep);line-height:1.15}
+.stat-lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--gray-500);margin-top:.2rem}
+.stat-sub{font-size:.78rem;color:var(--gray-500);margin-top:.35rem}
+.stat-panel{background:white;border:1px solid var(--gray-200);border-radius:14px;padding:1.3rem 1.5rem;box-shadow:var(--shadow-sm)}
+.stat-panel h2{font-size:1rem;color:var(--blue-deep);margin:0 0 1rem;border-bottom:2px solid var(--gray-100);padding-bottom:.55rem}
+.hbar-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.55rem;font-size:.85rem}
+.hbar-name{width:215px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--gray-800);font-weight:600}
+.hbar-track{flex:1;background:var(--gray-100);border-radius:100px;height:14px;overflow:hidden}
+.hbar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,#13294B,#2E5A88)}
+.hbar-fill.red{background:linear-gradient(90deg,#B91C1C,#E63946)}
+.hbar-val{width:52px;text-align:right;font-weight:700;color:var(--blue-deep);flex-shrink:0;font-size:.82rem}
+.vbars{display:flex;align-items:flex-end;gap:5px;height:150px;padding-top:.5rem}
+.vbar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;height:100%;justify-content:flex-end}
+.vbar{width:100%;max-width:26px;background:linear-gradient(180deg,#2E5A88,#13294B);border-radius:6px 6px 0 0;min-height:2px}
+.vbar-lbl{font-size:.58rem;color:var(--gray-500);white-space:nowrap}
+.vbar-num{font-size:.62rem;font-weight:700;color:var(--blue-deep)}
+.topclient{display:flex;align-items:center;gap:.7rem;padding:.55rem 0;border-bottom:1px solid var(--gray-100);font-size:.9rem}
+.topclient:last-child{border-bottom:none}
+.topclient .rank{width:26px;height:26px;border-radius:50%;background:var(--blue-pale);color:var(--blue-deep);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0}
+.topclient .nm{flex:1;font-weight:600;color:var(--gray-800)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:1150px">
+    <div class="page-header">
+        <h1>📊 Statistiques du dépôt</h1>
+        <p>Vue d'ensemble de votre activité — mise à jour en temps réel, {{ now.strftime('%d/%m/%Y à %H:%M') }}.</p>
+    </div>
+
+    <!-- Indicateurs -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:.9rem;margin-bottom:1.3rem">
+        <div class="stat-card"><div class="stat-num">{{ total_equip }}</div><div class="stat-lbl">Articles au catalogue</div><div class="stat-sub">{{ total_units }} unités au total</div></div>
+        <div class="stat-card"><div class="stat-num">{{ active_b }}</div><div class="stat-lbl">Emprunts en cours</div><div class="stat-sub">{{ returned_b }} retournés au total</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--red)">{{ late_b }}</div><div class="stat-lbl">En retard</div><div class="stat-sub">{{ late_rate }} % de l'historique</div></div>
+        <div class="stat-card"><div class="stat-num">{{ events_upcoming }}</div><div class="stat-lbl">Événements à venir</div><div class="stat-sub">{{ events_month }} ce mois-ci · {{ events_total }} au total</div></div>
+        <div class="stat-card"><div class="stat-num">{{ clients_count }}</div><div class="stat-lbl">Clients</div><div class="stat-sub"><a href="{{ url_for('clients_list') }}" style="color:var(--blue);text-decoration:none">voir les fiches →</a></div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#B45309">{{ in_repair }}</div><div class="stat-lbl">Unités en réparation</div><div class="stat-sub"><a href="{{ url_for('repairs_page') }}" style="color:var(--blue);text-decoration:none">voir les réparations →</a></div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1rem">
+        <!-- Top matériel -->
+        <div class="stat-panel">
+            <h2>🏆 Matériel le plus emprunté (top 10)</h2>
+            {% if top10 %}
+            {% for t in top10 %}
+            <div class="hbar-row">
+                <div class="hbar-name" title="{{ t.name }}">{{ t.name }}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:{{ t.pct }}%"></div></div>
+                <div class="hbar-val">{{ t.q }} u</div>
+            </div>
+            {% endfor %}
+            <div style="font-size:.75rem;color:var(--gray-400);margin-top:.6rem">en unités cumulées — {{ top10|length }} articles affichés</div>
+            {% else %}
+            <p style="color:var(--gray-500);font-size:.88rem">Aucun emprunt enregistré pour le moment.</p>
+            {% endif %}
+        </div>
+
+        <!-- Emprunts par mois -->
+        <div class="stat-panel">
+            <h2>📈 Emprunts par mois (12 derniers mois)</h2>
+            <div class="vbars">
+                {% for m in months %}
+                <div class="vbar-col">
+                    <div class="vbar-num">{% if m.cnt %}{{ m.cnt }}{% endif %}</div>
+                    <div class="vbar" style="height:{{ m.pct }}%"></div>
+                    <div class="vbar-lbl">{{ m.label }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Par catégorie -->
+        <div class="stat-panel">
+            <h2>📂 Matériel par catégorie</h2>
+            {% for c in cats %}
+            <div class="hbar-row">
+                <div class="hbar-name" title="{{ c.name }}">{{ c.name }}</div>
+                <div class="hbar-track"><div class="hbar-fill" style="width:{{ c.pct }}%"></div></div>
+                <div class="hbar-val">{{ c.n }}</div>
+            </div>
+            {% endfor %}
+            <div style="font-size:.75rem;color:var(--gray-400);margin-top:.6rem">nombre d'articles par catégorie — repère ce qu'il manque ou ce qui est sur-représenté</div>
+        </div>
+
+        <!-- Top clients -->
+        <div class="stat-panel">
+            <h2>👑 Clients les plus actifs</h2>
+            {% if top_clients %}
+            {% for c in top_clients %}
+            <div class="topclient">
+                <div class="rank">{{ loop.index }}</div>
+                <div class="nm">{{ c.name }}</div>
+                <div style="font-weight:700;color:var(--blue-deep)">{{ c.n }} événement{{ 's' if c.n > 1 }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p style="color:var(--gray-500);font-size:.88rem">Liez des événements à des clients pour voir leur classement.</p>
+            <p style="margin-top:.8rem"><a class="btn btn-secondary btn-sm" href="{{ url_for('clients_list') }}">👤 Gérer les clients</a></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -87,6 +87,9 @@
                 <div><div class="k">Dates</div><div class="v">{{ evt.date_label() }}</div></div>
                 <div><div class="k">Horaires</div><div class="v">{{ evt.start_time }} – {{ evt.end_time }}</div></div>
                 <div><div class="k">Lieu</div><div class="v">{{ evt.location or 'Non précisé' }}</div></div>
+                {% if evt.client %}
+                <div><div class="k">Client</div><div class="v">👤 {{ evt.client.name }}</div></div>
+                {% endif %}
                 <div><div class="k">Matériel lié</div><div class="v">{{ total_units }} unité(s) — {{ borrows|length }} emprunt(s)</div></div>
             </div>
 

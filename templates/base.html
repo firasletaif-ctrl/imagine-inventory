@@ -39,9 +39,19 @@
             <a href="{{ url_for('inventory_page') }}" class="nav-item {% if request.endpoint in ('inventory_page', 'confirm_inventory_check') %}active{% endif %}">
                 <span class="nav-icon">📦</span><span>Inventaire</span>
             </a>
+            {% if has_perm('view_logs','manage_equipment','manage_schedule') %}
+            <a href="{{ url_for('stats_page') }}" class="nav-item {% if request.endpoint == 'stats_page' %}active{% endif %}">
+                <span class="nav-icon">📊</span><span>Statistiques</span>
+            </a>
+            {% endif %}
             <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>
+            {% if has_perm('manage_clients','manage_schedule') %}
+            <a href="{{ url_for('clients_list') }}" class="nav-item {% if request.endpoint in ('clients_list','client_detail','client_new','client_edit') %}active{% endif %}">
+                <span class="nav-icon">👤</span><span>Clients</span>
+            </a>
+            {% endif %}
             <a href="{{ url_for('recaps_list') }}" class="nav-item {% if request.endpoint in ('recaps_list', 'recap_view', 'recap_ai') %}active{% endif %}">
                 <span class="nav-icon">📄</span><span>Recaps evenements</span>
             </a>

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Clients{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:980px">
+    <div class="page-header">
+        <h1>👤 Clients</h1>
+        <p>Vos sociétés et particuliers, avec leur historique d'événements.</p>
+    </div>
+
+    <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.1rem">
+        <form method="GET" action="{{ url_for('clients_list') }}" style="flex:1;min-width:220px;display:flex;gap:.5rem">
+            <input type="text" name="search" value="{{ search }}" placeholder="Rechercher (nom, contact, téléphone, email)..."
+                   style="flex:1;padding:.6rem .9rem;border:1px solid var(--gray-200);border-radius:10px;font-size:.9rem">
+            <button class="btn btn-secondary" type="submit">🔍</button>
+            {% if search %}<a class="btn btn-secondary" href="{{ url_for('clients_list') }}">✕ Effacer</a>{% endif %}
+        </form>
+        {% if has_perm('manage_clients') %}
+        <a class="btn btn-accent" href="{{ url_for('client_new') }}">➕ Nouveau client</a>
+        {% endif %}
+    </div>
+
+    {% if rows %}
+    <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm)">
+        <table class="history-table">
+            <thead><tr><th>Client</th><th>Contact</th><th>Téléphone</th><th>Événements</th><th>Dernier événement</th><th></th></tr></thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td><a href="{{ url_for('client_detail', cid=r.c.id) }}" style="font-weight:700;color:var(--blue-deep)">{{ r.c.name }}</a></td>
+                    <td>{{ r.c.contact_person or '—' }}</td>
+                    <td>{{ r.c.phone or '—' }}</td>
+                    <td><span style="background:var(--blue-pale);color:var(--blue-deep);font-weight:700;padding:.15rem .6rem;border-radius:100px;font-size:.8rem">{{ r.n_events }}</span></td>
+                    <td>{% if r.last %}{{ r.last.strftime('%d/%m/%Y') }}{% else %}—{% endif %}</td>
+                    <td style="text-align:right;white-space:nowrap">
+                        {% if has_perm('manage_clients') %}
+                        <a class="btn btn-sm btn-secondary" href="{{ url_for('client_edit', cid=r.c.id) }}">✏️</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:3rem;text-align:center;box-shadow:var(--shadow-sm)">
+        <div style="font-size:3rem;margin-bottom:.8rem">👤</div>
+        <p style="color:var(--gray-500);margin:0 0 1rem">{{ 'Aucun client trouvé pour cette recherche.' if search else 'Aucun client pour le moment.' }}</p>
+        {% if not search and has_perm('manage_clients') %}<a class="btn btn-accent" href="{{ url_for('client_new') }}">➕ Créer votre premier client</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

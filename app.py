@@ -155,6 +155,7 @@ class Event(db.Model):
     end_time = db.Column(db.String(10), default='17:00')
     location = db.Column(db.String(200), default='')
     status = db.Column(db.String(50), default='upcoming')  # upcoming / ongoing / completed / cancelled
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)  # client lie a l'evenement
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=tunisia_now)
     assignments = db.relationship('EventAssignment', backref='event', lazy=True, cascade='all, delete-orphan')
@@ -166,6 +167,25 @@ class Event(db.Model):
         if self.is_multiday():
             return f"du {self.event_date.strftime('%d/%m/%Y')} au {self.date_end().strftime('%d/%m/%Y')}"
         return f"le {self.event_date.strftime('%d/%m/%Y')}"
+
+class Client(db.Model):
+    __tablename__ = 'clients'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)  # societe ou particulier
+    contact_person = db.Column(db.String(100), default='')
+    phone = db.Column(db.String(50), default='')
+    email = db.Column(db.String(200), default='')
+    address = db.Column(db.String(200), default='')
+    notes = db.Column(db.Text, default='')
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    updated_at = db.Column(db.DateTime, default=tunisia_now, onupdate=tunisia_now)
+    events = db.relationship('Event', backref=db.backref('client', lazy=True))
+    def event_count(self):
+        return Event.query.filter_by(client_id=self.id).count()
+    def last_event_date(self):
+        e = Event.query.filter_by(client_id=self.id).order_by(Event.event_date.desc()).first()
+        return e.event_date if e else None
+
 
 class EventAssignment(db.Model):
     __tablename__ = 'event_assignments'
@@ -743,6 +763,7 @@ ALL_PERMISSIONS = [
     {"key":"schedule_create","label":"Créer un événement","desc":"Nouveaux événements (1 jour ou plusieurs)","icon":"➕","group":"Planning"},
     {"key":"schedule_edit","label":"Modifier / supprimer un événement","desc":"Éditer ou supprimer les événements","icon":"✏️","group":"Planning"},
     {"key":"schedule_assign","label":"Assigner l'équipe","desc":"Affecter / retirer des membres sur un événement","icon":"👥","group":"Planning"},
+    {"key":"manage_clients","label":"Gérer les clients","desc":"Fiches clients : créer, modifier, supprimer, voir l'historique","icon":"👤","group":"Planning"},
     {"key":"schedule_clear","label":"Effacer les événements passés","desc":"Nettoyer le planning (évènements terminés)","icon":"🧹","group":"Planning"},
     # ──  Inventaire ──
     {"key":"inventory_generate","label":"Nouveau tirage inventaire","desc":"Régénérer le tirage aléatoire du jour à la main","icon":"🎲","group":"Inventaire"},
@@ -1802,7 +1823,8 @@ def schedule():
          'date': e.event_date.strftime('%Y-%m-%d'), 'dend': e.date_end().strftime('%Y-%m-%d'),
          'start': e.start_time or '08:00', 'end': e.end_time or '17:00',
          'location': e.location or '', 'status': e.status,
-         'users': [a.user_id for a in e.assignments]}
+         'users': [a.user_id for a in e.assignments],
+         'cid': e.client_id, 'client': e.client.name if e.client else ''}
         for e in all_events
     ])
     # URL publique du flux ICS (Google Calendar / Apple / Outlook)
@@ -1812,7 +1834,8 @@ def schedule():
     ics_url = site + '/calendar.ics?key=' + ICS_KEY
     all_users = User.query.order_by(User.full_name).all()
     user_names = dict([(u.id, u.full_name) for u in all_users])  # pour le JS (pas de comprehension Jinja)
-    return render_template('schedule.html', past=past, today=tunisia_now().date(), all_users=all_users, events_json=events_json, ics_url=ics_url, user_names=user_names, today_str=tunisia_now().date().strftime('%Y-%m-%d'))
+    all_clients = Client.query.order_by(Client.name).all()
+    return render_template('schedule.html', past=past, today=tunisia_now().date(), all_users=all_users, all_clients=all_clients, events_json=events_json, ics_url=ics_url, user_names=user_names, today_str=tunisia_now().date().strftime('%Y-%m-%d'))
 
 # ── Flux ICS : synchronisation avec Google Calendar, Apple Calendar, Outlook... ──
 def ics_escape(text):
@@ -1889,6 +1912,15 @@ def calendar_ics():
                     headers={'Content-Disposition': disp + '; filename="imagine-events-planning.ics"',
                              'Cache-Control': 'public, max-age=3600'})
 
+def _parse_client_id(val):
+    """client_id du formulaire -> int valide, ou None."""
+    try:
+        cid = int(val or 0)
+        return cid if cid > 0 and db.session.get(Client, cid) else None
+    except (TypeError, ValueError):
+        return None
+
+
 @app.route('/schedule/create', methods=['POST'])
 @permission_required_any('schedule_create', 'manage_schedule')
 def create_event():
@@ -1904,7 +1936,8 @@ def create_event():
     if ed_end < ed:
         flash('La date de fin doit etre apres (ou egale a) la date de debut.','error'); return redirect(url_for('schedule'))
     st = request.form.get('start_time','08:00'); et = request.form.get('end_time','17:00')
-    evt = Event(title=title, description=request.form.get('description','').strip(), event_date=ed, end_date=ed_end, start_time=st, end_time=et, location=request.form.get('location','').strip(), created_by=current_user.id)
+    client_id = _parse_client_id(request.form.get('client_id',''))
+    evt = Event(title=title, description=request.form.get('description','').strip(), event_date=ed, end_date=ed_end, start_time=st, end_time=et, location=request.form.get('location','').strip(), client_id=client_id, created_by=current_user.id)
     db.session.add(evt); db.session.flush()
     # Assign users
     user_ids = request.form.getlist('assigned_users')
@@ -1939,6 +1972,7 @@ def edit_event(evid):
         evt.end_date = evt.event_date
     evt.start_time = request.form.get('start_time','08:00'); evt.end_time = request.form.get('end_time','17:00')
     evt.location = request.form.get('location','').strip(); evt.status = request.form.get('status',evt.status)
+    evt.client_id = _parse_client_id(request.form.get('client_id',''))
     # Update assignments
     EventAssignment.query.filter_by(event_id=evid).delete()
     for uid in request.form.getlist('assigned_users'):
@@ -1980,6 +2014,196 @@ def unassign_user(evid, uid):
     ea = EventAssignment.query.filter_by(event_id=evid, user_id=uid).first()
     if ea: db.session.delete(ea); db.session.commit()
     return redirect(url_for('schedule'))
+
+
+# ═══════════ C L I E N T S ═══════════
+def _can_see_clients():
+    return current_user.has_permission('manage_clients') or current_user.has_permission('manage_schedule')
+
+
+@app.route('/clients')
+@login_required
+def clients_list():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    if not _can_see_clients(): flash('Permission requise.','error'); return redirect(url_for('dashboard'))
+    search = request.args.get('search','').strip()
+    q = Client.query
+    if search:
+        q = q.filter(db.or_(Client.name.ilike(f'%{search}%'), Client.contact_person.ilike(f'%{search}%'),
+                           Client.phone.ilike(f'%{search}%'), Client.email.ilike(f'%{search}%')))
+    clients = q.order_by(Client.name).all()
+    counts = dict(db.session.query(Client.id, db.func.count(Event.id)).outerjoin(Event, Event.client_id == Client.id).group_by(Client.id).all())
+    rows = []
+    for c in clients:
+        evts = Event.query.filter_by(client_id=c.id).order_by(Event.event_date.desc()).all()
+        last = evts[0].event_date if evts else None
+        rows.append({'c': c, 'n_events': counts.get(c.id, 0), 'last': last})
+    return render_template('clients.html', rows=rows, search=search)
+
+
+@app.route('/clients/<int:cid>')
+@login_required
+def client_detail(cid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    if not _can_see_clients(): flash('Permission requise.','error'); return redirect(url_for('dashboard'))
+    c = db.session.get(Client, cid)
+    if not c: flash('Client introuvable.','error'); return redirect(url_for('clients_list'))
+    evts = Event.query.filter_by(client_id=cid).order_by(Event.event_date.desc()).all()
+    detail_rows = []
+    total_units_all = 0
+    for e in evts:
+        units = 0
+        for b in Borrow.query.filter_by(event_id=e.id).all():
+            units += b.quantity
+        total_units_all += units
+        detail_rows.append({'e': e, 'units': units})
+    can_manage = current_user.has_permission('manage_clients') or current_user.has_permission('manage_database')
+    return render_template('client_detail.html', c=c, detail_rows=detail_rows, total_events=len(evts),
+                           total_units_all=total_units_all, can_manage=can_manage, now=tunisia_now())
+
+
+@app.route('/clients/new')
+@login_required
+@permission_required_any('manage_clients')
+def client_new():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    return render_template('client_form.html', c=None, can_manage=True)
+
+
+@app.route('/clients/save', methods=['POST'])
+@login_required
+@permission_required_any('manage_clients')
+def client_save():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    name = request.form.get('name','').strip()
+    if not name: flash('Le nom du client est requis.','error'); return redirect(url_for('client_new'))
+    c = Client(name=name)
+    _fill_client(c)
+    db.session.add(c)
+    db.session.commit()
+    log_action('client_create', f'Client "{name}" cree', )
+    flash(f'Client "{name}" cree.','success')
+    return redirect(url_for('client_detail', cid=c.id))
+
+
+@app.route('/clients/<int:cid>/edit')
+@login_required
+@permission_required_any('manage_clients')
+def client_edit(cid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    c = db.session.get(Client, cid)
+    if not c: flash('Client introuvable.','error'); return redirect(url_for('clients_list'))
+    return render_template('client_form.html', c=c, can_manage=True)
+
+
+@app.route('/clients/<int:cid>/save', methods=['POST'])
+@login_required
+@permission_required_any('manage_clients')
+def client_update(cid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    c = db.session.get(Client, cid)
+    if not c: flash('Client introuvable.','error'); return redirect(url_for('clients_list'))
+    name = request.form.get('name','').strip()
+    if not name: flash('Le nom du client est requis.','error'); return redirect(url_for('client_edit', cid=cid))
+    c.name = name
+    _fill_client(c)
+    db.session.commit()
+    log_action('client_update', f'Client "{name}" modifie')
+    flash(f'Client "{name}" mis a jour.','success')
+    return redirect(url_for('client_detail', cid=c.id))
+
+
+@app.route('/clients/<int:cid>/delete', methods=['POST'])
+@login_required
+@permission_required_any('manage_clients', 'manage_database')
+def client_delete(cid):
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    c = db.session.get(Client, cid)
+    if not c: flash('Client introuvable.','error'); return redirect(url_for('clients_list'))
+    # Les evenements sont conserves, ils perdent juste leur lien client
+    Event.query.filter_by(client_id=cid).update({'client_id': None})
+    db.session.delete(c)
+    db.session.commit()
+    log_action('client_delete', f'Client "{c.name}" supprime')
+    flash(f'Client "{c.name}" supprime (les événements sont conservés).','info')
+    return redirect(url_for('clients_list'))
+
+
+def _fill_client(c):
+    c.contact_person = request.form.get('contact_person','').strip()
+    c.phone = request.form.get('phone','').strip()
+    c.email = request.form.get('email','').strip()
+    c.address = request.form.get('address','').strip()
+    c.notes = request.form.get('notes','').strip()
+
+
+# ═══════════ S T A T I S T I Q U E S ═══════════
+@app.route('/stats')
+@login_required
+def stats_page():
+    if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
+    if not (current_user.has_permission('view_logs') or current_user.has_permission('manage_equipment') or current_user.has_permission('manage_schedule')):
+        flash('Permission requise.','error'); return redirect(url_for('dashboard'))
+    today = tunisia_now().date()
+    first_month = today.replace(day=1)
+    # ── Totaux ──
+    total_equip = Equipment.query.count()
+    total_units = db.session.query(db.func.coalesce(db.func.sum(Equipment.total_quantity), 0)).scalar() or 0
+    in_repair = db.session.query(db.func.coalesce(db.func.sum(Equipment.in_repair), 0)).scalar() or 0
+    active_b = Borrow.query.filter(Borrow.status.in_(['active', 'late'])).count()
+    late_b = Borrow.query.filter_by(status='late').count()
+    returned_b = Borrow.query.filter_by(status='returned').count()
+    total_b = Borrow.query.count()
+    events_total = Event.query.count()
+    events_month = Event.query.filter(Event.event_date >= first_month).count()
+    events_upcoming = Event.query.filter(Event.event_date >= today, Event.status.in_(['upcoming', 'ongoing'])).count()
+    clients_count = Client.query.count()
+    late_rate = int(late_b * 100 / total_b) if total_b else 0
+    # ── Top 10 materiels les plus empruntes (par unites) ──
+    top_rows = db.session.query(Equipment.name, db.func.sum(Borrow.quantity).label('q'),
+                                db.func.count(Borrow.id).label('n')) \
+        .join(Borrow, Borrow.equipment_id == Equipment.id) \
+        .group_by(Equipment.id, Equipment.name) \
+        .order_by(db.desc(db.func.sum(Borrow.quantity))).limit(10).all()
+    top_max = (top_rows[0][1] or 1) if top_rows else 1
+    top10 = [{'name': r[0], 'q': int(r[1] or 0), 'n': int(r[2] or 0), 'pct': int((r[1] or 0) * 100 / top_max)} for r in top_rows]
+    # ── Emprunts par mois (12 derniers mois) ──
+    month_names = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+    months = []
+    for i in range(11, -1, -1):
+        y, m = today.year, today.month - i
+        while m <= 0:
+            m += 12; y -= 1
+        start = date(y, m, 1)
+        end = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
+        when = db.func.coalesce(Borrow.pickup_date, Borrow.expected_return_date)
+        cnt = Borrow.query.filter(when >= start, when < end).count()
+        months.append({'label': f'{month_names[m - 1]} {str(y)[2:]}', 'cnt': cnt, 'pct': 0})
+    months_max = max((x['cnt'] for x in months), default=0) or 1
+    for x in months:
+        x['pct'] = max(4, int(x['cnt'] * 100 / months_max)) if x['cnt'] else 0
+    # ── Materiel par categorie ──
+    cat_rows = db.session.query(Category.name, db.func.count(Equipment.id),
+                                db.func.coalesce(db.func.sum(Equipment.total_quantity), 0)) \
+        .outerjoin(Equipment, Equipment.category_id == Category.id) \
+        .group_by(Category.id, Category.name) \
+        .order_by(db.desc(db.func.count(Equipment.id))).all()
+    cats = [{'name': r[0], 'n': int(r[1] or 0), 'units': int(r[2] or 0)} for r in cat_rows]
+    cats_max = max((c['n'] for c in cats), default=0) or 1
+    for c in cats:
+        c['pct'] = max(4, int(c['n'] * 100 / cats_max)) if c['n'] else 0
+    # ── Top clients (par nombre d'evenements) ──
+    tc_rows = db.session.query(Client.name, db.func.count(Event.id)) \
+        .join(Event, Event.client_id == Client.id) \
+        .group_by(Client.id, Client.name) \
+        .order_by(db.desc(db.func.count(Event.id))).limit(5).all()
+    top_clients = [{'name': r[0], 'n': int(r[1] or 0)} for r in tc_rows]
+    return render_template('stats.html', now=tunisia_now(), total_equip=total_equip, total_units=total_units,
+                           in_repair=in_repair, active_b=active_b, late_b=late_b, returned_b=returned_b,
+                           total_b=total_b, late_rate=late_rate, events_total=events_total,
+                           events_month=events_month, events_upcoming=events_upcoming, clients_count=clients_count,
+                           top10=top10, months=months, cats=cats, top_clients=top_clients)
+
 
 # ═══════════ N E W :  R E C A P S   D ' E V E N E M E N T  (matos + notes + equipe + IA) ═══════════
 def _recap_borrows(evid, evt):
@@ -2759,6 +2983,23 @@ def init_db():
             ensure_column('events', 'end_date', 'ALTER TABLE events ADD COLUMN end_date DATE')
             ensure_column('inventory_checks', 'in_repair_qty', 'ALTER TABLE inventory_checks ADD COLUMN in_repair_qty INTEGER DEFAULT 0')
             ensure_column('borrows', 'last_late_alert', 'ALTER TABLE borrows ADD COLUMN last_late_alert DATE')
+            ensure_column('events', 'client_id', 'ALTER TABLE events ADD COLUMN client_id INTEGER')
+            # ── Migration 1x : donner la permission 'manage_clients' aux roles
+            #    qui garent deja le planning (sinon les admins existants ne
+            #    verraient pas la page Clients) ──
+            if not get_app_setting('clients_perm_v1'):
+                try:
+                    for r in CustomRole.query.all():
+                        perms = r.get_permissions()
+                        if 'manage_schedule' in perms and 'manage_clients' not in perms:
+                            perms.append('manage_clients')
+                            r.set_permissions(perms)
+                    db.session.commit()
+                    set_app_setting('clients_perm_v1', '1')
+                    print('[INIT] permission manage_clients partagee aux roles planning')
+                except Exception as e:
+                    db.session.rollback()
+                    print(f'[INIT] migration permission clients ignoree: {str(e)[:120]}')
             # ── Cles VAPID pour les notifications push (generees une fois, en base) ──
             if not get_app_setting('vapid_private'):
                 try:
