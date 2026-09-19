@@ -737,6 +737,8 @@ def ping():
     (sauvegarde + inventaire + rappels) — idempotent, aucun effet ensuite."""
     today_s = date.today().strftime('%Y-%m-%d')
     try:
+        import time as _time
+        set_app_setting('last_ping_ts', str(int(_time.time())))
         if get_app_setting('daily_tasks_date') != today_s:
             set_app_setting('daily_tasks_date', today_s)
             run_daily_tasks()
@@ -899,12 +901,45 @@ def logout():
     flash('Vous etes deconnecte.','info')
     return redirect(url_for('login'))
 
+def _check_keepalive_health():
+    """Sentinelle keep-alive : si le pinger (cron-job.org) ne s'est plus
+    manifeste depuis plus de 2h en pleine fenetre d'activite (07h-01h Tunis),
+    le site envoie une alerte par email (1x par jour max). Ca evite que le
+    job cron se desactive en silence (ex: apres un long downtime du site)."""
+    try:
+        now_t = tunisia_now()
+        today_s = now_t.strftime('%Y-%m-%d')
+        if get_app_setting('keepalive_alert_date') == today_s:
+            return  # alerte deja envoyee aujourd'hui
+        hour = now_t.hour
+        if not (hour >= 7 or hour == 0):
+            return  # dehors de la fenetre 07h-01h : normal de ne pas pinger
+        import time as _time
+        last_ts = get_app_setting('last_ping_ts')
+        age_h = (_time.time() - int(last_ts)) / 3600 if last_ts else 999
+        if age_h > 2:
+            set_app_setting('keepalive_alert_date', today_s)
+            send_email('info@i-maginevents.com',
+                       '⚠️ Keep-alive Imagine Inventory : pinger silencieux',
+                       f'<p>Depuis plus de <strong>2 heures</strong>, le pinger automatique '
+                       f'(cron-job.org) ne s\'est plus manifeste sur le site entre 7h et 1h.</p>'
+                       f'<p>Le site risque de s\'endormir en pleine journee (1re page lente).</p>'
+                       f'<p><strong>À faire :</strong> ouvrir <a href="https://console.cron-job.org">cron-job.org</a> '
+                       f'et verifier que le job « Imagine Events - keep alive » est bien <strong>actif</strong>.</p>',
+                       'Depuis plus de 2 heures, le pinger automatique (cron-job.org) ne s est plus '
+                       'manifeste sur le site entre 7h et 1h. Verifier sur console.cron-job.org que le '
+                       'job "Imagine Events - keep alive" est actif.')
+            print('[KEEPALIVE] alerte pinger silencieux envoyee')
+    except Exception as e:
+        print(f'[KEEPALIVE] sentinelle ignoree: {type(e).__name__}: {str(e)[:120]}')
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     search = request.args.get('search','').strip(); cat_filter = request.args.get('category','')
     daily_db_snapshot()  # copie de securite quotidienne (SQLite)
     check_due_alerts()  # rappels automatiques (J-3/J-1 evenements, retards)
+    _check_keepalive_health()  # sentinelle : alerte si le pinger est silencieux
     q = Equipment.query
     if search: q = q.filter(db.or_(Equipment.name.ilike(f'%{search}%'),Equipment.description.ilike(f'%{search}%'),Equipment.reference.ilike(f'%{search}%'),Equipment.specifications.ilike(f'%{search}%'),Equipment.location.ilike(f'%{search}%')))
     if cat_filter: q = q.filter_by(category_id=int(cat_filter))
