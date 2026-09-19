@@ -919,7 +919,7 @@ def _check_keepalive_health():
         age_h = (_time.time() - int(last_ts)) / 3600 if last_ts else 999
         if age_h > 2:
             set_app_setting('keepalive_alert_date', today_s)
-            send_email('info@i-maginevents.com',
+            send_email('firasletaif@gmail.com',
                        '⚠️ Keep-alive Imagine Inventory : pinger silencieux',
                        f'<p>Depuis plus de <strong>2 heures</strong>, le pinger automatique '
                        f'(cron-job.org) ne s\'est plus manifeste sur le site entre 7h et 1h.</p>'
