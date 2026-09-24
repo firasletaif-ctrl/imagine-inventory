@@ -28,7 +28,16 @@ ICS_KEY = hashlib.sha256((app.secret_key + ':ics-feed').encode('utf-8')).hexdige
 CRON_KEY = hashlib.sha256((app.secret_key + ':cron-daily').encode('utf-8')).hexdigest()[:16]
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    # Forcer explicitement le pilote psycopg2 (fixe dans requirements.txt).
+    # Les versions recentes de SQLAlchemy (2.1+) choisissent par defaut le
+    # pilote "psycopg" v3 qui n'est PAS installe -> ModuleNotFoundError au
+    # demarrage sur Render. Avec +psycopg2, ca reste deterministe pour
+    # toutes les versions de SQLAlchemy.
+    if DATABASE_URL.startswith('postgresql://'):
+        DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
+    elif DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+psycopg2://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///inventory.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

@@ -8,3 +8,4 @@ qrcode[pil]==7.4.2
 psycopg2-binary==2.9.10
 gunicorn==23.0.0
 pywebpush==2.0.3
+SQLAlchemy>=2.0.16,<2.2
