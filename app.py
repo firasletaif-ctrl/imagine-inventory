@@ -2973,13 +2973,17 @@ def export_excel():
     # Data
     for r, eq in enumerate(Equipment.query.order_by(Equipment.name).all(), 5):
         cat_name = eq.category.name if eq.category else ''
-        data = [eq.reference, eq.name, cat_name, eq.description, eq.total_quantity, eq.available_quantity, eq.condition, eq.location, eq.specifications.replace('\n',' | ')[:200]]
+        # Champs defendus contre les NULL (les imports CSV peuvent laisser des NULL)
+        data = [eq.reference or '', eq.name or '', cat_name, eq.description or '',
+                eq.total_quantity or 0, eq.available_quantity or 0,
+                eq.condition or '', eq.location or '',
+                (eq.specifications or '').replace('\n',' | ')[:200]]
         for c, val in enumerate(data, 1):
             cell = ws.cell(row=r, column=c, value=val)
             cell.font = cell_font; cell.border = thin_border
             if c in (5,6): cell.alignment = Alignment(horizontal='center')
         # Color rows
-        fill = green_fill if eq.available_quantity > 0 else red_fill
+        fill = green_fill if (eq.available_quantity or 0) > 0 else red_fill
         for c in range(1, 10): ws.cell(row=r, column=c).fill = fill
     # Column widths
     widths = [15, 28, 18, 30, 12, 12, 14, 18, 35]
