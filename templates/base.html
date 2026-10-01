@@ -87,14 +87,6 @@
                     <span class="nav-icon">⬆️</span><span>Import complet (1 clic)</span>
                 </a>
                 {% endif %}
-                <a href="{{ url_for('export_photos_zip') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
-                    <span class="nav-icon">📸</span><span>Photos (ZIP)</span>
-                </a>
-                {% endif %}
-                {% if has_perm('photo_restore','manage_database') %}
-                <a href="{{ url_for('restore_photos') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
-                    <span class="nav-icon">📥</span><span>Restaurer photos</span>
-                </a>
                 {% endif %}
                 <a href="{{ url_for('all_qrcodes') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
                     <span class="nav-icon">🔲</span><span>QR Codes (tous)</span>
@@ -127,21 +119,6 @@
                 {% if has_perm('clear_borrow_history','clear_history') %}
                 <a href="#" class="nav-item nav-danger" onclick="openClearHistoryModal();return false" title="⚠️ A utiliser avec precaution">
                     <span class="nav-icon">⚠️</span><span>Effacer l'historique</span>
-                </a>
-                {% endif %}
-            </div>
-            {% endif %}
-            {% if has_perm('reset_tables','import_csv','manage_database') %}
-            <div style="margin:.25rem 0;padding:0 .5rem">
-                <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">🔄 Migration DB</div>
-                {% if has_perm('reset_tables','manage_database') %}
-                <a href="{{ url_for('reset_all_tables') }}" class="nav-item nav-danger" style="font-size:.8rem;padding:.5rem 1rem">
-                    <span class="nav-icon">🗑️</span><span>Reset tables</span>
-                </a>
-                {% endif %}
-                {% if has_perm('import_csv','manage_database') %}
-                <a href="{{ url_for('import_csv') }}" class="nav-item" style="font-size:.8rem;padding:.5rem 1rem">
-                    <span class="nav-icon">📥</span><span>Importer CSV</span>
                 </a>
                 {% endif %}
             </div>
