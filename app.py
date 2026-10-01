@@ -1677,6 +1677,21 @@ def import_csv():
                 flash(f'Erreur: {msg}','error')
             return redirect(url_for('import_csv'))
         
+        # ── PostgreSQL : resynchronise la sequence des ids apres l'import.
+        #    SANS CA : les prochaines insertions (login, export, nouvel
+        #    article...) repartent du debut de la sequence et entrent en
+        #    collision avec les ids importes -> erreur 500 partout.
+        #    (Sans effet sur SQLite qui gere les AUTOINCREMENT tout seul.) ──
+        try:
+            if not str(app.config['SQLALCHEMY_DATABASE_URI']).startswith('sqlite'):
+                db.session.execute(db.text(
+                    f"SELECT setval(pg_get_serial_sequence('{table}','id'), "
+                    f"(SELECT COALESCE(MAX(id),1) FROM {table}))"))
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f'[IMPORT] resynchronisation sequence {table} ignoree: {str(e)[:100]}')
+
         # SECURITE: ne jamais perdre manage_database sur son propre role
         if table == 'roles':
             my_role = db.session.get(CustomRole, current_user.role_id) if current_user.role_id else None
