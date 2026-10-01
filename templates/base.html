@@ -82,6 +82,11 @@
                 <a href="{{ url_for('full_backup') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem" title="Tout le site en un fichier (données + photos) — migration / sauvegarde">
                     <span class="nav-icon">💾</span><span>Sauvegarde complète</span>
                 </a>
+                {% if has_perm('import_csv','manage_database') %}
+                <a href="{{ url_for('import_full') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem" title="Restaurer tout le site depuis une sauvegarde ZIP (1 clic)">
+                    <span class="nav-icon">⬆️</span><span>Import complet (1 clic)</span>
+                </a>
+                {% endif %}
                 <a href="{{ url_for('export_photos_zip') }}" class="nav-item" style="font-size:.85rem;padding:.5rem 1rem">
                     <span class="nav-icon">📸</span><span>Photos (ZIP)</span>
                 </a>

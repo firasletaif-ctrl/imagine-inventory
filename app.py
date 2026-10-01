@@ -1530,6 +1530,140 @@ def clear_logs():
     return redirect(url_for('activity_logs'))
 
 
+# ═══════════ I M P O R T   C S V   (logique partagee) ═══════════
+CSV_IMPORT_ORDER = [
+    ('01_roles', 'roles'), ('02_categories', 'categories'), ('03_users', 'users'),
+    ('04_events', 'events'), ('05_event_assignments', 'event_assignments'),
+    ('06_equipment', 'equipment'), ('07_equipment_images', 'equipment_images'),
+    ('08_borrows', 'borrows'), ('09_activity_logs', 'activity_logs'),
+    ('10_notifications', 'notifications'), ('11_material_orders', 'material_orders'),
+    ('12_inventory_checks', 'inventory_checks'), ('13_event_reminders', 'event_reminders'),
+    ('14_app_settings', 'app_settings'),
+]
+
+def _import_csv_bytes(raw, table):
+    """Importe le contenu d'un CSV (texte) dans la table donnee (upsert :
+    les enregistrements existants par id / nom / email / reference sont
+    mis a jour, le reste est ajoute). Retourne (ok, count, erreurs,
+    comptes_sans_mdp)."""
+    import csv as csv_module
+    model_map = {
+        'roles': CustomRole, 'users': User, 'categories': Category,
+        'equipment': Equipment, 'equipment_images': EquipmentImage, 'borrows': Borrow,
+        'events': Event, 'event_assignments': EventAssignment, 'activity_logs': ActivityLog,
+        'notifications': Notification, 'material_orders': MaterialOrder,
+        'inventory_checks': InventoryCheck, 'event_reminders': EventReminder,
+        'app_settings': AppSetting,
+    }
+    model = model_map.get(table)
+    if not model:
+        return False, 0, ['table inconnue: ' + table], []
+    header = raw.split('\n', 1)[0]
+    delim = ';' if header.count(';') > header.count(',') else ','
+    rows = list(csv_module.DictReader(io.StringIO(raw), delimiter=delim))
+    if not rows:
+        return True, 0, [], []  # table vide dans la sauvegarde : normal, pas d'erreur
+    # Colonnes booleennes (exportees en 'true'/'false' texte par le CSV)
+    from sqlalchemy import Boolean as _SABool
+    bool_cols = set(c.name for c in model.__table__.columns if isinstance(c.type, _SABool))
+    cols = list(rows[0].keys())
+    count = 0
+    erreurs = []
+    comptes_sans_mdp = []
+    for i, row in enumerate(rows, 1):
+        try:
+            with db.session.begin_nested():
+                existing = None
+                if 'id' in cols and row.get('id','').strip():
+                    try:
+                        existing = db.session.get(model, int(row['id'].strip()))
+                    except Exception:
+                        existing = None
+                # Fallback: check by unique field (name/email/reference)
+                if not existing:
+                    if table == 'roles' and row.get('name','').strip():
+                        existing = model.query.filter_by(name=row.get('name','').strip()).first()
+                    elif table == 'users' and row.get('email','').strip():
+                        existing = model.query.filter_by(email=row.get('email','').strip().lower()).first()
+                    elif table == 'categories' and row.get('name','').strip():
+                        existing = model.query.filter_by(name=row.get('name','').strip()).first()
+                    elif table == 'equipment' and row.get('reference','').strip():
+                        existing = model.query.filter_by(reference=row.get('reference','').strip()).first()
+                    elif table == 'app_settings' and row.get('key','').strip():
+                        existing = db.session.get(AppSetting, row.get('key','').strip())
+                obj = existing if existing else model()
+                plain_pw = None
+                for col in cols:
+                    val = row.get(col, '').strip()
+                    if val == '' or val.lower() == 'none':
+                        val = None
+                        if col == 'id' and existing: continue
+                        setattr(obj, col, val)
+                        continue
+                    if col == 'id' and existing: continue
+                    if table == 'users' and col == 'password':
+                        plain_pw = val
+                        continue
+                    if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
+                        try: val = int(val)
+                        except: pass
+                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at'):
+                        parsed = None
+                        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
+                            try: parsed = datetime.strptime(val, fmt); break
+                            except: pass
+                        val = parsed
+                    if col in ('expected_return_date', 'pickup_date', 'check_date', 'last_late_alert', 'event_date', 'end_date') and val:
+                        try: val = datetime.strptime(val, '%Y-%m-%d').date()
+                        except:
+                            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+                                try: val = datetime.strptime(val, fmt).date(); break
+                                except: pass
+                            else: val = None
+                    if col in bool_cols and isinstance(val, str):
+                        val = val.strip().lower() in ('true', '1', 'yes', 't')
+                    if col == 'permissions' and val and not val.startswith('['):
+                        val = f'["{val}"]'
+                    setattr(obj, col, val)
+                if table == 'users':
+                    if obj.email:
+                        obj.email = obj.email.strip().lower()
+                    if not obj.email:
+                        raise ValueError('email vide')
+                    if plain_pw:
+                        obj.set_password(plain_pw)
+                    elif existing is None and not obj.password_hash:
+                        obj.set_password('Imagine123')
+                        comptes_sans_mdp.append(obj.email)
+                    if not obj.full_name:
+                        obj.full_name = obj.email.split('@')[0]
+                    if obj.role_id and not db.session.get(CustomRole, obj.role_id):
+                        obj.role_id = None
+                if not existing:
+                    db.session.add(obj)
+                db.session.flush()
+                count += 1
+        except Exception as e:
+            erreurs.append(f'Ligne {i}: {str(e)}')
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return False, count, erreurs + [f'commit: {str(e)[:150]}'], comptes_sans_mdp
+    # Resynchronise la sequence des ids (PostgreSQL) — indispensable apres
+    # un import d'ids existants, sinon les prochaines insertions collisionnent.
+    try:
+        if not str(app.config['SQLALCHEMY_DATABASE_URI']).startswith('sqlite'):
+            db.session.execute(db.text(
+                f"SELECT setval(pg_get_serial_sequence('{table}','id'), "
+                f"(SELECT COALESCE(MAX(id),1) FROM {table}))"))
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f'[IMPORT] resynchronisation sequence {table} ignoree: {str(e)[:100]}')
+    return True, count, erreurs, comptes_sans_mdp
+
+
 @app.route('/admin/import-csv', methods=['GET','POST'])
 @permission_required_any('import_csv', 'manage_database')
 def import_csv():
@@ -1543,130 +1677,10 @@ def import_csv():
         if not csv_file or not table:
             flash('Selectionnez une table et un fichier CSV.','error')
             return redirect(url_for('import_csv'))
-        
-        # Read CSV (accepte la virgule OU le point-virgule comme separateur)
-        import io, csv as csv_module
         raw = csv_file.read().decode('utf-8-sig')
-        header = raw.split('\n', 1)[0]
-        delim = ';' if header.count(';') > header.count(',') else ','
-        reader = csv_module.DictReader(io.StringIO(raw), delimiter=delim)
-        rows = list(reader)
-        if not rows:
-            flash('Fichier CSV vide.','error')
-            return redirect(url_for('import_csv'))
-        
-        model_map = {
-            'roles': CustomRole,
-            'users': User,
-            'categories': Category,
-            'equipment': Equipment,
-            'equipment_images': EquipmentImage,
-            'borrows': Borrow,
-            'events': Event,
-            'event_assignments': EventAssignment,
-            'activity_logs': ActivityLog,
-            'notifications': Notification,
-            'material_orders': MaterialOrder,
-            'inventory_checks': InventoryCheck,
-            'event_reminders': EventReminder,
-            'app_settings': AppSetting,
-        }
-        
-        model = model_map.get(table)
-        if not model:
-            flash('Table inconnue.','error')
-            return redirect(url_for('import_csv'))
-        
-        # Detect columns and import
-        cols = list(rows[0].keys())
-        count = 0
-        erreurs = []
-        comptes_sans_mdp = []
-        for i, row in enumerate(rows, 1):
-            try:
-                with db.session.begin_nested():
-                    # Check if record already exists
-                    existing = None
-                    if 'id' in cols and row.get('id','').strip():
-                        try:
-                            existing = db.session.get(model, int(row['id'].strip()))
-                        except Exception:
-                            existing = None
-                    # Fallback: check by unique field (name/email/reference)
-                    if not existing:
-                        if table == 'roles' and row.get('name','').strip():
-                            existing = model.query.filter_by(name=row.get('name','').strip()).first()
-                        elif table == 'users' and row.get('email','').strip():
-                            existing = model.query.filter_by(email=row.get('email','').strip().lower()).first()
-                        elif table == 'categories' and row.get('name','').strip():
-                            existing = model.query.filter_by(name=row.get('name','').strip()).first()
-                        elif table == 'equipment' and row.get('reference','').strip():
-                            existing = model.query.filter_by(reference=row.get('reference','').strip()).first()
-                        elif table == 'app_settings' and row.get('key','').strip():
-                            # cles (ex: VAPID push) -> match sur la cle primaire 'key'
-                            existing = db.session.get(AppSetting, row.get('key','').strip())
-
-                    obj = existing if existing else model()
-                    plain_pw = None
-                    for col in cols:
-                        val = row.get(col, '').strip()
-                        if val == '' or val.lower() == 'none':
-                            val = None
-                            if col == 'id' and existing: continue  # dont overwrite id
-                            setattr(obj, col, val)
-                            continue
-                        # Convert types
-                        if col == 'id' and existing: continue
-                        if table == 'users' and col == 'password':
-                            plain_pw = val
-                            continue
-                        if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
-                            try: val = int(val)
-                            except: pass
-                        # Handle date/datetime columns
-                        if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at'):
-                            parsed = None
-                            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
-                                try: parsed = datetime.strptime(val, fmt); break
-                                except: pass
-                            val = parsed
-                        if col in ('expected_return_date', 'pickup_date', 'check_date', 'last_late_alert', 'event_date', 'end_date') and val:
-                            try: val = datetime.strptime(val, '%Y-%m-%d').date()
-                            except:
-                                for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
-                                    try: val = datetime.strptime(val, fmt).date(); break
-                                    except: pass
-                                else: val = None
-                        if col == 'permissions' and val and not val.startswith('['):
-                            val = f'["{val}"]'  # ensure JSON format
-                        setattr(obj, col, val)
-                    # Utilisateurs: gerer le mot de passe et les champs obligatoires
-                    if table == 'users':
-                        if obj.email:
-                            obj.email = obj.email.strip().lower()
-                        if not obj.email:
-                            raise ValueError('email vide')
-                        if plain_pw:
-                            obj.set_password(plain_pw)
-                        elif existing is None and not obj.password_hash:
-                            obj.set_password('Imagine123')
-                            comptes_sans_mdp.append(obj.email)
-                        if not obj.full_name:
-                            obj.full_name = obj.email.split('@')[0]
-                        if obj.role_id and not db.session.get(CustomRole, obj.role_id):
-                            obj.role_id = None  # role inconnu -> aucun role
-                    if not existing:
-                        db.session.add(obj)
-                    db.session.flush()
-                    count += 1
-            except Exception as e:
-                erreurs.append(f'Ligne {i}: {str(e)}')
-        
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            msg = str(e)
+        ok, count, erreurs, comptes_sans_mdp = _import_csv_bytes(raw, table)
+        if not ok:
+            msg = erreurs[-1] if erreurs else 'Erreur inconnue.'
             if 'not-null' in msg.lower() or 'not null' in msg.lower():
                 flash('Erreur: une colonne obligatoire est vide (email, nom, mot de passe...). Verifie ton fichier CSV.','error')
             elif 'duplicate' in msg.lower() or 'unique' in msg.lower():
@@ -1674,24 +1688,8 @@ def import_csv():
             elif 'foreign key' in msg.lower():
                 flash('Erreur: une reference pointe vers un enregistrement inexistant. Importe d abord la table liee (ex: roles avant users).','error')
             else:
-                flash(f'Erreur: {msg}','error')
+                flash(f'Erreur: {msg[:200]}','error')
             return redirect(url_for('import_csv'))
-        
-        # ── PostgreSQL : resynchronise la sequence des ids apres l'import.
-        #    SANS CA : les prochaines insertions (login, export, nouvel
-        #    article...) repartent du debut de la sequence et entrent en
-        #    collision avec les ids importes -> erreur 500 partout.
-        #    (Sans effet sur SQLite qui gere les AUTOINCREMENT tout seul.) ──
-        try:
-            if not str(app.config['SQLALCHEMY_DATABASE_URI']).startswith('sqlite'):
-                db.session.execute(db.text(
-                    f"SELECT setval(pg_get_serial_sequence('{table}','id'), "
-                    f"(SELECT COALESCE(MAX(id),1) FROM {table}))"))
-                db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f'[IMPORT] resynchronisation sequence {table} ignoree: {str(e)[:100]}')
-
         # SECURITE: ne jamais perdre manage_database sur son propre role
         if table == 'roles':
             my_role = db.session.get(CustomRole, current_user.role_id) if current_user.role_id else None
@@ -1710,9 +1708,100 @@ def import_csv():
         if erreurs:
             flash(f'{len(erreurs)} ligne(s) ignoree(s): ' + ' | '.join(erreurs[:5]), 'warning')
         return redirect(url_for('import_csv'))
-    
-    tables = ['roles','users','categories','equipment','equipment_images','borrows','events','event_assignments','activity_logs','notifications','material_orders','inventory_checks','event_reminders','app_settings']
+    tables = [t for _, t in CSV_IMPORT_ORDER]
     return render_template('import_csv.html', tables=tables)
+
+
+@app.route('/admin/import-full', methods=['GET','POST'])
+@permission_required_any('import_csv', 'manage_database')
+def import_full():
+    """IMPORT COMPLET EN 1 CLIC : televerse le ZIP du bouton 'Sauvegarde
+    complete' et tout est importe (14 tables dans le bon ordre + photos +
+    reseynchronisation des compteurs)."""
+    if is_pending_user():
+        flash('Votre compte est en attente de validation.','error')
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        pw = request.form.get('password','')
+        if not current_user.check_password(pw):
+            flash('Mot de passe incorrect.','error')
+            return redirect(url_for('import_full'))
+        zf = request.files.get('zipfile')
+        if not zf or not (zf.filename or '').lower().endswith('.zip'):
+            flash('Selectionne le fichier ZIP telecharge via le bouton « 💾 Sauvegarde complète ».','error')
+            return redirect(url_for('import_full'))
+        import zipfile
+        stats = {}
+        total_err = 0
+        try:
+            with zipfile.ZipFile(zf) as z:
+                names = z.namelist()
+                # 1) les 14 tables, dans le bon ordre (celles presentes dans le ZIP)
+                for prefix, table in CSV_IMPORT_ORDER:
+                    fname = prefix + '.csv'
+                    if fname not in names:
+                        continue
+                    raw = z.read(fname).decode('utf-8-sig')
+                    ok, cnt, errs, sans_mdp = _import_csv_bytes(raw, table)
+                    if cnt:
+                        stats[table] = cnt
+                    total_err += len(errs)
+                    if not ok and errs and not cnt:
+                        flash(f'{table} : {errs[0][:150]}','error')
+                    if sans_mdp:
+                        flash(f'Comptes crees sans mot de passe (temporaire "Imagine123") : {", ".join(sans_mdp)}','warning')
+                # 2) les photos (dossier photos/ du ZIP)
+                photo_count = 0
+                en_base = 0
+                for fn in names:
+                    if not fn.startswith('photos/'):
+                        continue
+                    base = os.path.basename(fn)
+                    if not base or base == '.gitkeep':
+                        continue
+                    data = z.read(fn)
+                    if not data:
+                        continue
+                    if not ImageBlob.query.filter_by(filename=base).first():
+                        low = base.lower()
+                        mt = 'image/png' if low.endswith('.png') else 'image/jpeg' if low.endswith(('.jpg','.jpeg')) else 'image/gif' if low.endswith('.gif') else 'application/octet-stream'
+                        db.session.add(ImageBlob(filename=base, data=data, mimetype=mt))
+                        en_base += 1
+                    target = os.path.join(app.config['UPLOAD_FOLDER'], base)
+                    if not os.path.exists(target):
+                        with open(target, 'wb') as fh:
+                            fh.write(data)
+                    photo_count += 1
+                db.session.commit()
+        except zipfile.BadZipFile:
+            flash('Ce fichier n est pas un ZIP valide. Re-telere la sauvegarde depuis le bouton « 💾 Sauvegarde complète ».','error')
+            return redirect(url_for('import_full'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erreur pendant l import : {str(e)[:200]}','error')
+            return redirect(url_for('import_full'))
+        # 3) file de securite : reseynchronise les compteurs de TOUTES les tables
+        try:
+            if not str(app.config['SQLALCHEMY_DATABASE_URI']).startswith('sqlite'):
+                for _, table in CSV_IMPORT_ORDER:
+                    db.session.execute(db.text(
+                        f"SELECT setval(pg_get_serial_sequence('{table}','id'), "
+                        f"(SELECT COALESCE(MAX(id),1) FROM {table}))"))
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f'[IMPORT-FULL] setval global ignore: {str(e)[:100]}')
+        log_action('import_full', f'Import complet : {stats} + {photo_count} photos')
+        label = {'equipment':'articles','users':'comptes','borrows':'emprunts','events':'evenements',
+                 'categories':'categories','event_assignments':'affectations equipe','inventory_checks':'controles',
+                 'app_settings':'cles (push)','notifications':'notifications','material_orders':'commandes',
+                 'equipment_images':'photos liees','activity_logs':'logs','roles':'roles','event_reminders':'rappels'}
+        parts = [f'{n} {label.get(t, t)}' for t, n in stats.items()]
+        msg = '✅ IMPORT COMPLET : ' + ', '.join(parts) + f' + {photo_count} photos'
+        msg += f' — {total_err} ligne(s) en erreur' if total_err else ' — 0 erreur'
+        flash(msg, 'success')
+        return redirect(url_for('import_full'))
+    return render_template('import_full.html')
 
 
 @app.route('/admin/reset-tables', methods=['GET','POST'])

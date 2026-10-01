@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Import complet (1 clic){% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:720px">
+    <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au tableau de bord</a></div>
+    <div class="page-header">
+        <h1>⬆️ Import complet — 1 clic</h1>
+        <p>Restaure <strong>tout le site</strong> à partir d'une sauvegarde complète : articles, catégories, comptes, événements, emprunts, photos, historique… dans le bon ordre, en une seule opération.</p>
+    </div>
+
+    <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:1.6rem;box-shadow:var(--shadow-sm)">
+        <h2 style="font-size:1.05rem;color:var(--blue-deep);margin:0 0 .8rem">Comment faire</h2>
+        <ol style="margin:0 0 1.2rem 1.3rem;padding:0;line-height:2;font-size:.92rem">
+            <li><strong>Sur l'ancien site</strong> (ou le site à sauvegarder) : bouton 💾 <strong>Sauvegarde complète</strong> (menu Export) → le fichier <code style="background:var(--gray-100);padding:.1rem .4rem;border-radius:4px">imagine_backup_…​.zip</code> se télécharge.</li>
+            <li><strong>Ici</strong> : choisis ce fichier ci-dessous, entre ton mot de passe, clique sur <strong>« ⬆️ Importer tout »</strong>.</li>
+            <li>C'est tout. Les données déjà présentes (même numéro) sont <strong>mise à jour</strong>, le reste est <strong>ajouté</strong>. Rien n'est supprimé.</li>
+        </ol>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Fichier de sauvegarde (.zip)</label>
+                <input type="file" name="zipfile" accept=".zip" required
+                       style="width:100%;padding:.7rem;border:2px dashed var(--gray-200);border-radius:10px;font-size:.9rem">
+            </div>
+            <div class="form-group">
+                <label>Ton mot de passe (confirme l'import)</label>
+                <input type="password" name="password" required style="width:100%;padding:.7rem;border:1px solid var(--gray-200);border-radius:10px">
+            </div>
+            <button class="btn btn-accent" type="submit" style="width:100%;padding:.95rem;font-size:1rem">⬆️ Importer tout (1 clic)</button>
+        </form>
+        <p style="margin:1rem 0 0;font-size:.83rem;color:var(--gray-500);line-height:1.6">
+            ⏱️ Selon la taille du fichier (photos comprises), l'import peut prendre <strong>1 à 3 minutes</strong> — laisse la page travailler sans la fermer.
+            Un récapitulatif détaillé s'affichera à la fin.
+        </p>
+    </div>
+
+    <p style="margin-top:1rem;font-size:.83rem;color:var(--gray-400)">
+        💡 Version avancée (importer table par table) : « 📥 Importer CSV » dans le menu Migration DB.
+    </p>
+</div>
+{% endblock %}
