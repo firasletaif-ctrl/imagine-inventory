@@ -1,0 +1,39 @@
+name: Build Logiciel PC (Imagine Events)
+
+# Construction du logiciel PC (Windows .exe + Linux AppImage) de l'app
+# Imagine Events. Gratuit : tourne sur GitHub Actions.
+# Usage : bouton "Run workflow" dans l'onglet Actions de GitHub,
+# puis telecharger les fichiers depuis l'artifact.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [desktop-app]
+
+jobs:
+  build-desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: desktop-app
+        run: npm install --no-audit --no-fund
+
+      - name: Build Windows + Linux
+        working-directory: desktop-app
+        run: npx electron-builder --win --linux
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: imagine-events-pc
+          path: |
+            desktop-app/dist/*.exe
+            desktop-app/dist/*.AppImage

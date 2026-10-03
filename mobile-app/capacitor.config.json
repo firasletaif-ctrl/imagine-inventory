@@ -1,0 +1,11 @@
+{
+  "appId": "com.imagineevents.inventory",
+  "appName": "Imagine Events",
+  "webDir": "web",
+  "backgroundColor": "#0B1D3A",
+  "server": {
+    "url": "https://imagine-inventory.onrender.com",
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}

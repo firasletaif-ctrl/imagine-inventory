@@ -1,0 +1,40 @@
+{
+  "name": "imagine-events-desktop",
+  "productName": "Imagine Events",
+  "version": "1.0.0",
+  "description": "Imagine Events - Gestion du depot (logiciel PC)",
+  "main": "main.js",
+  "private": true,
+  "author": "Imagine Events Tunisia",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.imagineevents.inventory",
+    "productName": "Imagine Events",
+    "icon": "icon.png",
+    "files": ["main.js", "icon.png", "package.json"],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Imagine Events"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Office"
+    }
+  }
+}
