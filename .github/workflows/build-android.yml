@@ -30,9 +30,7 @@ jobs:
 
       - name: Accept Android SDK licenses
         run: |
-          if [ -f "$ANDROID_HOME/licenses" ]; then :; else mkdir -p "$ANDROID_HOME/licenses"; fi
-          |
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_HOME/licenses/android-sdk-license" 2>/dev/null || true
+          mkdir -p "$ANDROID_HOME/licenses"
           yes | sdkmanager --licenses --sdk_root="$ANDROID_HOME" > /dev/null 2>&1 || true
 
       - name: Install dependencies
