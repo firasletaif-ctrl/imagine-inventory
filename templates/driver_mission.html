@@ -124,7 +124,10 @@
     <hr style="margin:1.2rem 0;border:none;border-top:1px solid var(--gray-200)"><h3>Preuves enregistrées</h3>
     {% for proof_stage, proof in proofs.items() %}
     <div style="margin-top:1rem"><b>{% if proof_stage == 'delivery' %}Livraison{% else %}Récupération{% endif %}</b> · {{ proof.created_at.strftime('%d/%m/%Y %H:%M') if proof.created_at else '—' }}{% if proof.creator %} par {{ proof.creator.full_name }}{% endif %}
-      <div class="proof-preview" style="margin-top:.5rem">{% if proof.signature_data %}<div><small>Signature</small><br><img src="{{ proof.signature_data }}" alt="Signature"></div>{% endif %}{% if proof.photo_data %}<div><small>Photo</small><br><img src="{{ proof.photo_data }}" alt="Photo de preuve"></div>{% endif %}</div>
+      <div class="proof-preview" style="margin-top:.5rem">
+        {% if proof.signature_data %}<div><small>Signature</small><br><img src="{{ proof.signature_data }}" alt="Signature"><form method="POST" action="{{ url_for('driver_proof_delete_part', evid=evt.id, pid=proof.id) }}" onsubmit="return confirm('Supprimer cette signature ?')" style="margin-top:.45rem"><input type="hidden" name="part" value="signature"><button class="btn btn-danger btn-sm">🗑️ Supprimer la signature</button></form></div>{% endif %}
+        {% if proof.photo_data %}<div><small>Photo</small><br><img src="{{ proof.photo_data }}" alt="Photo de preuve"><form method="POST" action="{{ url_for('driver_proof_delete_part', evid=evt.id, pid=proof.id) }}" onsubmit="return confirm('Supprimer cette photo de preuve ?')" style="margin-top:.45rem"><input type="hidden" name="part" value="photo"><button class="btn btn-danger btn-sm">🗑️ Supprimer la photo</button></form></div>{% endif %}
+      </div>
       {% if proof.notes %}<p style="white-space:pre-line">{{ proof.notes }}</p>{% endif %}
     </div>
     {% endfor %}

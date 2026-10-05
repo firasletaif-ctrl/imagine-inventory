@@ -2029,6 +2029,7 @@ def activity_logs():
         'transport_settings':'⚙️ Mission transport modifiée',
         'transport_check':'✅ Contrôle matériel transport',
         'transport_proof':'✍️ Preuve transport enregistrée',
+        'transport_proof_delete':'🗑️ Preuve transport supprimée',
         'transport_navigation':'🗺️ Navigation chauffeur',
         'transport_tracking_start':'🟢 Suivi GPS démarré',
         'transport_tracking_stop':'🔴 Suivi GPS arrêté',
@@ -2793,6 +2794,41 @@ def driver_proof(evid):
     log_action('transport_proof', f'Preuve de {label} enregistrée pour « {evt.title} »')
     flash(f'Preuve de {label} enregistrée.', 'success')
     return redirect(url_for('driver_mission', evid=evid))
+
+
+@app.route('/driver/event/<int:evid>/proof/<int:pid>/delete-part', methods=['POST'])
+@permission_required_any('driver_access', 'manage_transport')
+def driver_proof_delete_part(evid, pid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        flash('Accès refusé.', 'error')
+        return redirect(url_for('driver_dashboard'))
+    proof = db.session.get(TransportProof, pid)
+    if not proof or proof.event_id != evid:
+        flash('Preuve introuvable.', 'error')
+        return redirect(url_for('driver_mission', evid=evid))
+    part = request.form.get('part', '').strip()
+    if part == 'signature':
+        if not proof.signature_data:
+            flash('Cette signature est déjà vide.', 'warning')
+            return redirect(url_for('driver_mission', evid=evid))
+        proof.signature_data = ''
+        label = 'Signature'
+    elif part == 'photo':
+        if not proof.photo_data:
+            flash('Cette photo est déjà vide.', 'warning')
+            return redirect(url_for('driver_mission', evid=evid))
+        proof.photo_data = ''
+        label = 'Photo'
+    else:
+        flash('Type de preuve invalide.', 'error')
+        return redirect(url_for('driver_mission', evid=evid))
+    db.session.commit()
+    stage_label = 'livraison' if proof.stage == 'delivery' else 'reprise du matériel'
+    log_action('transport_proof_delete', f'{label} de preuve supprimée ({stage_label}) pour « {evt.title} »')
+    flash(f'{label} supprimée. Tu peux maintenant en enregistrer une nouvelle.', 'success')
+    endpoint = 'driver_recap' if request.form.get('return_to') == 'recap' else 'driver_mission'
+    return redirect(url_for(endpoint, evid=evid))
 
 
 @app.route('/driver/event/<int:evid>/navigation-log', methods=['POST'])
