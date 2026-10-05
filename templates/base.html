@@ -47,6 +47,11 @@
             <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>
+            {% if has_perm('driver_access','manage_transport') %}
+            <a href="{{ url_for('driver_dashboard') }}" class="nav-item {% if request.endpoint in ('driver_dashboard','driver_mission','driver_print') %}active{% endif %}">
+                <span class="nav-icon">🚚</span><span>Chauffeur</span>
+            </a>
+            {% endif %}
             {% if has_perm('manage_clients','manage_schedule') %}
             <a href="{{ url_for('clients_list') }}" class="nav-item {% if request.endpoint in ('clients_list','client_detail','client_new','client_edit') %}active{% endif %}">
                 <span class="nav-icon">👤</span><span>Clients</span>

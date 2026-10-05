@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Chauffeur & Transport{% endblock %}
+{% block head %}
+<style>
+.driver-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
+.mission-card{background:#fff;border:1px solid var(--gray-200);border-radius:16px;padding:1.15rem;box-shadow:var(--shadow-sm)}
+.mission-card.today{border:2px solid var(--red);box-shadow:0 0 0 3px var(--red-pale)}
+.mission-top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}
+.mission-date{font-size:.76rem;font-weight:800;text-transform:uppercase;color:var(--red);letter-spacing:.6px}
+.mission-title{font-size:1.08rem;color:var(--blue-deep);margin:.2rem 0 .55rem}
+.transport-times{display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem;margin:.7rem 0;font-size:.8rem;color:var(--gray-600)}
+.progress-track{height:8px;border-radius:20px;background:var(--gray-100);overflow:hidden;margin:.5rem 0}.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:20px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="form-page" style="max-width:1200px">
+  <div class="dash-header">
+    <div><h1 class="dash-title">🚚 Chauffeur & Transport</h1><p class="dash-subtitle">Missions, navigation et contrôle du matériel</p></div>
+  </div>
+
+  {% if can_manage %}
+  <div class="detail-section" style="margin-bottom:1.2rem">
+    <h3 style="margin-bottom:.7rem">📍 Point de départ habituel</h3>
+    <form method="POST" action="{{ url_for('driver_depot_save') }}" style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <input name="depot_address" value="{{ depot_address }}" required style="flex:1;min-width:240px" placeholder="Adresse complète du dépôt">
+      <button class="btn btn-primary">Enregistrer</button>
+    </form>
+    <small style="color:var(--gray-500)">Le chauffeur pourra aussi choisir sa position GPS actuelle comme départ.</small>
+  </div>
+  {% endif %}
+
+  {% if missions %}
+  <div class="driver-grid">
+    {% for mission in missions %}
+    {% set evt = mission.event %}
+    <article class="mission-card {% if evt.event_date <= today and evt.date_end() >= today %}today{% endif %}">
+      <div class="mission-top">
+        <div>
+          <div class="mission-date">{% if evt.event_date <= today and evt.date_end() >= today %}Aujourd’hui · {% endif %}{{ evt.date_label() }}</div>
+          <h2 class="mission-title">{{ evt.title }}</h2>
+        </div>
+        <span class="status-badge {% if evt.status == 'completed' %}s-ok{% elif evt.status == 'cancelled' %}s-late{% else %}s-active{% endif %}">{{ evt.status }}</span>
+      </div>
+      <div style="font-size:.88rem;color:var(--gray-600)">📍 {{ evt.location or 'Destination non renseignée' }}</div>
+      <div class="transport-times">
+        <span>📦 Chargement : <b>{{ evt.transport_load_time or '—' }}</b></span>
+        <span>🚚 Départ : <b>{{ evt.transport_departure_time or '—' }}</b></span>
+        <span>📍 Livraison : <b>{{ evt.transport_delivery_time or evt.start_time or '—' }}</b></span>
+        <span>↩️ Récupération : <b>{{ evt.transport_recovery_time or '—' }}</b></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--gray-500)"><span>{{ mission.items }} article(s)</span><b>{{ mission.done }}/{{ mission.total }} contrôles</b></div>
+      <div class="progress-track"><div class="progress-fill" style="width:{{ mission.pct }}%"></div></div>
+      <a href="{{ url_for('driver_mission', evid=evt.id) }}" class="btn btn-accent" style="width:100%;margin-top:.65rem">Ouvrir la mission →</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state"><div class="empty-icon">🚚</div><h3>Aucune mission affectée</h3><p>Les événements auxquels le chauffeur est affecté apparaîtront ici.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

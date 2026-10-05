@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Mission — {{ evt.title }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+.mission-hero{background:linear-gradient(135deg,var(--blue-deep),#163a70);color:white;border-radius:18px;padding:1.3rem;margin-bottom:1rem}.mission-hero h1{color:white;margin:.2rem 0}.mission-meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.86rem;opacity:.9;margin-top:.6rem}
+.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem}.time-box{background:var(--gray-50);border:1px solid var(--gray-200);padding:.7rem;border-radius:10px;text-align:center}.time-box small{display:block;color:var(--gray-500);font-size:.7rem}.time-box b{font-size:1.05rem;color:var(--blue-deep)}
+#routeMap{height:390px;border-radius:14px;background:#e9eef5}.map-tools{display:flex;gap:.5rem;flex-wrap:wrap;margin:.7rem 0}.route-info{padding:.65rem .85rem;background:var(--blue-pale);color:var(--blue-deep);border-radius:9px;font-size:.85rem}
+.check-progress{height:11px;border-radius:20px;background:var(--gray-100);overflow:hidden}.check-progress>div{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .25s}
+.material-card{border:1px solid var(--gray-200);border-radius:13px;padding:.85rem;margin-bottom:.7rem;background:white}.material-head{display:flex;justify-content:space-between;gap:.5rem}.stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem;margin-top:.7rem}.stage-btn{border:1px solid var(--gray-200);background:var(--gray-50);border-radius:9px;padding:.6rem .3rem;font-size:.72rem;font-weight:700;cursor:pointer;color:var(--gray-600)}.stage-btn.done{background:#DCFCE7;border-color:#86EFAC;color:#166534}.stage-btn.busy{opacity:.55}
+.signature-wrap{border:1px solid var(--gray-300);border-radius:10px;background:#fff;overflow:hidden}.signature-wrap canvas{width:100%;height:180px;display:block;touch-action:none}
+.proof-preview{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}.proof-preview img{max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--gray-200)}
+@media(max-width:700px){.time-grid{grid-template-columns:repeat(2,1fr)}#routeMap{height:320px}.stage-grid{grid-template-columns:repeat(2,1fr)}.proof-preview{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="form-page" style="max-width:1150px">
+  <div class="breadcrumb"><a href="{{ url_for('driver_dashboard') }}">← Toutes les missions</a></div>
+  <section class="mission-hero">
+    <small>MISSION TRANSPORT · {{ evt.date_label() }}</small>
+    <h1>🚚 {{ evt.title }}</h1>
+    <div class="mission-meta"><span>📍 {{ evt.location or 'Destination non renseignée' }}</span>{% if evt.client %}<span>👤 {{ evt.client.name }}</span>{% endif %}<span>🕐 Événement {{ evt.start_time }}–{{ evt.end_time }}</span></div>
+  </section>
+
+  <section class="detail-section" style="margin-bottom:1rem">
+    <div class="time-grid">
+      <div class="time-box"><small>PRÉPARATION</small><b>{{ evt.transport_load_time or '—' }}</b></div>
+      <div class="time-box"><small>DÉPART</small><b>{{ evt.transport_departure_time or '—' }}</b></div>
+      <div class="time-box"><small>LIVRAISON</small><b>{{ evt.transport_delivery_time or evt.start_time or '—' }}</b></div>
+      <div class="time-box"><small>RÉCUPÉRATION</small><b>{{ evt.transport_recovery_time or '—' }}</b></div>
+    </div>
+    {% if evt.transport_notes %}<div style="margin-top:.8rem;padding:.7rem;background:#FFF7ED;border-radius:9px;white-space:pre-line">📝 {{ evt.transport_notes }}</div>{% endif %}
+    {% if can_manage %}
+    <details style="margin-top:1rem"><summary style="cursor:pointer;font-weight:700;color:var(--blue-deep)">⚙️ Configurer les horaires et consignes</summary>
+      <form method="POST" action="{{ url_for('driver_mission_settings', evid=evt.id) }}" style="margin-top:.8rem">
+        <div class="form-row"><div class="form-group"><label>Heure préparation</label><input type="time" name="transport_load_time" value="{{ evt.transport_load_time or '' }}"></div><div class="form-group"><label>Heure départ</label><input type="time" name="transport_departure_time" value="{{ evt.transport_departure_time or '' }}"></div></div>
+        <div class="form-row"><div class="form-group"><label>Heure livraison</label><input type="time" name="transport_delivery_time" value="{{ evt.transport_delivery_time or '' }}"></div><div class="form-group"><label>Heure récupération</label><input type="time" name="transport_recovery_time" value="{{ evt.transport_recovery_time or '' }}"></div></div>
+        <div class="form-group"><label>Consignes chauffeur</label><textarea name="transport_notes" rows="3">{{ evt.transport_notes or '' }}</textarea></div>
+        <button class="btn btn-primary">💾 Enregistrer</button>
+      </form>
+    </details>
+    {% endif %}
+  </section>
+
+  <section class="detail-section" style="margin-bottom:1rem">
+    <h2>🗺️ Navigation</h2>
+    {% if evt.location %}
+    <div class="map-tools">
+      <button class="btn btn-primary" type="button" onclick="routeFromDepot()">🏢 Depuis le dépôt</button>
+      <button class="btn btn-secondary" type="button" onclick="routeFromGPS()">📱 Depuis ma position</button>
+      <button class="btn btn-secondary" type="button" onclick="openExternal('google')">Google Maps</button>
+      <button class="btn btn-secondary" type="button" onclick="openExternal('waze')">Waze</button>
+    </div>
+    <div id="routeInfo" class="route-info">Choisis le point de départ pour calculer l’itinéraire.</div>
+    <div id="routeMap" style="margin-top:.7rem"></div>
+    <small style="display:block;color:var(--gray-500);margin-top:.5rem">Carte gratuite OpenStreetMap. Google Maps/Waze tiennent compte du trafic en temps réel.</small>
+    {% else %}<div class="alert alert-warning">Ajoute d’abord le lieu de l’événement dans l’emploi du temps.</div>{% endif %}
+  </section>
+
+  <section class="detail-section" style="margin-bottom:1rem">
+    <div style="display:flex;justify-content:space-between;gap:.7rem;align-items:center;flex-wrap:wrap"><div><h2>📦 Fiche matériel</h2><p style="color:var(--gray-500);font-size:.85rem">Préparé → chargé → livré → récupéré</p></div><a class="btn btn-secondary" target="_blank" href="{{ url_for('driver_print', evid=evt.id) }}">🖨️ Imprimer</a></div>
+    <div style="display:flex;justify-content:space-between;font-size:.8rem;margin:.7rem 0 .35rem"><span>Progression globale</span><b id="progressText">{{ done }}/{{ total }}</b></div>
+    <div class="check-progress"><div id="progressBar" style="width:{{ pct }}%"></div></div>
+    <div style="margin-top:1rem">
+    {% if rows %}
+      {% for row in rows %}
+      <article class="material-card">
+        <div class="material-head"><div><strong>{{ row.equipment.name }}</strong><br><small style="color:var(--gray-500)">{{ row.equipment.reference or '' }} · {{ row.equipment.category.name if row.equipment.category else 'Autre' }}</small></div><b style="font-size:1.15rem;color:var(--red)">×{{ row.quantity }}</b></div>
+        <div class="stage-grid">
+          {% for stage in stages %}
+          {% set check = row.checks.get(stage) %}
+          <button type="button" class="stage-btn {% if check and check.checked_quantity >= row.quantity %}done{% endif %}" data-equipment="{{ row.equipment.id }}" data-stage="{{ stage }}" data-quantity="{{ row.quantity }}" onclick="toggleCheck(this)">{% if check and check.checked_quantity >= row.quantity %}✅{% else %}⬜{% endif %} {{ stage_labels.get(stage) }}</button>
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    {% else %}<div class="empty-state"><div class="empty-icon">📦</div><h3>Aucun matériel lié</h3><p>Lie d’abord les emprunts à cet événement.</p></div>{% endif %}
+    </div>
+  </section>
+
+  <section class="detail-section">
+    <h2>✍️ Preuve de livraison / récupération</h2>
+    <form method="POST" action="{{ url_for('driver_proof', evid=evt.id) }}" id="proofForm">
+      <div class="form-group"><label>Étape</label><select name="stage" required><option value="delivery">Livraison</option><option value="recovery">Récupération</option></select></div>
+      <label style="font-weight:700;font-size:.85rem">Signature client</label>
+      <div class="signature-wrap"><canvas id="signatureCanvas"></canvas></div>
+      <input type="hidden" name="signature_data" id="signatureData"><button type="button" class="btn btn-secondary btn-sm" style="margin:.4rem 0 .8rem" onclick="clearSignature()">Effacer la signature</button>
+      <div class="form-group"><label>Photo de preuve</label><input type="file" id="proofPhoto" accept="image/*" capture="environment"><input type="hidden" name="photo_data" id="photoData"><small id="photoStatus"></small></div>
+      <div class="form-group"><label>Note</label><textarea name="proof_notes" rows="2" placeholder="Nom du réceptionnaire, remarque..."></textarea></div>
+      <button class="btn btn-accent" id="proofSubmit">✅ Enregistrer la preuve</button>
+    </form>
+    {% if proofs %}
+    <hr style="margin:1.2rem 0;border:none;border-top:1px solid var(--gray-200)"><h3>Preuves enregistrées</h3>
+    {% for proof_stage, proof in proofs.items() %}
+    <div style="margin-top:1rem"><b>{% if proof_stage == 'delivery' %}Livraison{% else %}Récupération{% endif %}</b> · {{ proof.created_at.strftime('%d/%m/%Y %H:%M') if proof.created_at else '—' }}{% if proof.creator %} par {{ proof.creator.full_name }}{% endif %}
+      <div class="proof-preview" style="margin-top:.5rem">{% if proof.signature_data %}<div><small>Signature</small><br><img src="{{ proof.signature_data }}" alt="Signature"></div>{% endif %}{% if proof.photo_data %}<div><small>Photo</small><br><img src="{{ proof.photo_data }}" alt="Photo de preuve"></div>{% endif %}</div>
+      {% if proof.notes %}<p style="white-space:pre-line">{{ proof.notes }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if evt.location %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>{% endif %}
+<script>
+var EVENT_ID={{ evt.id }};
+var destination={{ (evt.location or '')|tojson }};
+var depotAddress={{ depot_address|tojson }};
+var map=null, routeLayer=null, markers=[];
+function initMap(){if(!destination||typeof L==='undefined')return;map=L.map('routeMap').setView([36.8065,10.1815],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);}
+async function geocode(address){var u='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tn&q='+encodeURIComponent(address);var r=await fetch(u,{headers:{'Accept':'application/json'}});var d=await r.json();if(!d.length)throw new Error('Adresse introuvable : '+address);return [parseFloat(d[0].lat),parseFloat(d[0].lon)];}
+async function drawRoute(start){try{document.getElementById('routeInfo').textContent='Calcul de l’itinéraire...';var end=await geocode(destination);var u='https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson&steps=true';var r=await fetch(u);var d=await r.json();if(!d.routes||!d.routes.length)throw new Error('Aucun itinéraire trouvé');if(routeLayer)map.removeLayer(routeLayer);markers.forEach(function(m){map.removeLayer(m)});markers=[];routeLayer=L.geoJSON(d.routes[0].geometry,{style:{color:'#E63946',weight:6,opacity:.85}}).addTo(map);markers.push(L.marker(start).addTo(map).bindPopup('Départ'));markers.push(L.marker(end).addTo(map).bindPopup(destination));map.fitBounds(routeLayer.getBounds(),{padding:[25,25]});var km=(d.routes[0].distance/1000).toFixed(1);var min=Math.round(d.routes[0].duration/60);document.getElementById('routeInfo').innerHTML='🚚 <b>'+km+' km</b> · environ <b>'+min+' min</b> hors trafic en temps réel';}catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message;}}
+async function routeFromDepot(){try{drawRoute(await geocode(depotAddress));}catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message;}}
+function routeFromGPS(){if(!navigator.geolocation){document.getElementById('routeInfo').textContent='Géolocalisation indisponible.';return;}document.getElementById('routeInfo').textContent='Recherche de ta position...';navigator.geolocation.getCurrentPosition(function(p){drawRoute([p.coords.latitude,p.coords.longitude]);},function(){document.getElementById('routeInfo').textContent='⚠️ Autorise la localisation dans les réglages du téléphone.';},{enableHighAccuracy:true,timeout:12000});}
+function openExternal(app){fetch('/driver/event/'+EVENT_ID+'/navigation-log',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app='+encodeURIComponent(app),keepalive:true});var url=app==='waze'?'https://www.waze.com/ul?q='+encodeURIComponent(destination)+'&navigate=yes':'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(destination)+'&travelmode=driving';window.open(url,'_blank');}
+async function toggleCheck(btn){if(btn.classList.contains('busy'))return;btn.classList.add('busy');var checked=btn.classList.contains('done');var body=new URLSearchParams({equipment_id:btn.dataset.equipment,stage:btn.dataset.stage,quantity:checked?'0':btn.dataset.quantity});try{var r=await fetch('/driver/event/'+EVENT_ID+'/check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body});var d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Erreur');btn.classList.toggle('done',d.checked);btn.innerHTML=(d.checked?'✅ ':'⬜ ')+btn.textContent.replace(/^✅ |^⬜ /,'');document.getElementById('progressText').textContent=d.done+'/'+d.total;document.getElementById('progressBar').style.width=d.pct+'%';}catch(e){alert(e.message);}finally{btn.classList.remove('busy');}}
+var canvas=document.getElementById('signatureCanvas'),ctx=canvas.getContext('2d'),drawing=false,hasSignature=false;
+function sizeCanvas(){var saved=hasSignature?canvas.toDataURL():null;canvas.width=canvas.clientWidth*window.devicePixelRatio;canvas.height=180*window.devicePixelRatio;ctx.scale(window.devicePixelRatio,window.devicePixelRatio);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#0B1D3A';if(saved){var i=new Image();i.onload=function(){ctx.drawImage(i,0,0,canvas.clientWidth,180)};i.src=saved;}}
+function point(e){var r=canvas.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}function startDraw(e){e.preventDefault();drawing=true;var p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y)}function moveDraw(e){if(!drawing)return;e.preventDefault();var p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke();hasSignature=true}function endDraw(){drawing=false}['mousedown','touchstart'].forEach(function(n){canvas.addEventListener(n,startDraw,{passive:false})});['mousemove','touchmove'].forEach(function(n){canvas.addEventListener(n,moveDraw,{passive:false})});['mouseup','mouseleave','touchend'].forEach(function(n){canvas.addEventListener(n,endDraw)});function clearSignature(){ctx.clearRect(0,0,canvas.width,canvas.height);hasSignature=false;}
+document.getElementById('proofPhoto').addEventListener('change',function(){var f=this.files[0];if(!f)return;var img=new Image(),reader=new FileReader();reader.onload=function(e){img.onload=function(){var max=1200,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);document.getElementById('photoData').value=c.toDataURL('image/jpeg',.75);document.getElementById('photoStatus').textContent='Photo prête ✓';};img.src=e.target.result};reader.readAsDataURL(f)});
+document.getElementById('proofForm').addEventListener('submit',function(){if(hasSignature)document.getElementById('signatureData').value=canvas.toDataURL('image/png');document.getElementById('proofSubmit').disabled=true;});
+window.addEventListener('load',function(){sizeCanvas();initMap()});window.addEventListener('resize',sizeCanvas);
+</script>
+{% endblock %}

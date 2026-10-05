@@ -167,7 +167,15 @@ class Event(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)  # client lie a l'evenement
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=tunisia_now)
+    # Horaires propres au transport (differents des horaires de l'evenement).
+    transport_load_time = db.Column(db.String(10), default='')
+    transport_departure_time = db.Column(db.String(10), default='')
+    transport_delivery_time = db.Column(db.String(10), default='')
+    transport_recovery_time = db.Column(db.String(10), default='')
+    transport_notes = db.Column(db.Text, default='')
     assignments = db.relationship('EventAssignment', backref='event', lazy=True, cascade='all, delete-orphan')
+    transport_checks = db.relationship('TransportCheck', backref='event', lazy=True, cascade='all, delete-orphan')
+    transport_proofs = db.relationship('TransportProof', backref='event', lazy=True, cascade='all, delete-orphan')
     def date_end(self):
         return self.end_date or self.event_date
     def is_multiday(self):
@@ -203,6 +211,36 @@ class EventAssignment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     role = db.Column(db.String(100), default='Staff')  # Staff, Responsable, Technicien, etc.
     notes = db.Column(db.Text, default='')
+
+
+# ── Transport / Chauffeur : suivi du materiel par etapes ──
+class TransportCheck(db.Model):
+    __tablename__ = 'transport_checks'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    stage = db.Column(db.String(20), nullable=False)  # prepared / loaded / delivered / recovered
+    checked_quantity = db.Column(db.Integer, default=0)
+    checked_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    checked_at = db.Column(db.DateTime, nullable=True)
+    equipment = db.relationship('Equipment')
+    checker = db.relationship('User', foreign_keys=[checked_by])
+    __table_args__ = (db.UniqueConstraint('event_id', 'equipment_id', 'stage', name='uq_transport_check_stage'),)
+
+
+# Signature et photo de preuve, conservees en base sous forme de data URL.
+class TransportProof(db.Model):
+    __tablename__ = 'transport_proofs'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    stage = db.Column(db.String(20), nullable=False)  # delivery / recovery
+    signature_data = db.Column(db.Text, default='')
+    photo_data = db.Column(db.Text, default='')
+    notes = db.Column(db.Text, default='')
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    creator = db.relationship('User', foreign_keys=[created_by])
+    __table_args__ = (db.UniqueConstraint('event_id', 'stage', name='uq_transport_proof_stage'),)
 
 # ── NEW: Notifications ──
 class Notification(db.Model):
@@ -776,6 +814,9 @@ ALL_PERMISSIONS = [
     {"key":"schedule_assign","label":"Assigner l'équipe","desc":"Affecter / retirer des membres sur un événement","icon":"👥","group":"Planning"},
     {"key":"manage_clients","label":"Gérer les clients","desc":"Fiches clients : créer, modifier, supprimer, voir l'historique","icon":"👤","group":"Planning"},
     {"key":"schedule_clear","label":"Effacer les événements passés","desc":"Nettoyer le planning (évènements terminés)","icon":"🧹","group":"Planning"},
+    # ── 🚚 Chauffeur / Transport ──
+    {"key":"driver_access","label":"Espace chauffeur","desc":"Voir ses missions, la navigation et cocher le matériel","icon":"🚚","group":"Chauffeur & Transport"},
+    {"key":"manage_transport","label":"Gérer les transports","desc":"Voir toutes les missions et configurer horaires, dépôt et preuves","icon":"🗺️","group":"Chauffeur & Transport"},
     # ──  Inventaire ──
     {"key":"inventory_generate","label":"Nouveau tirage inventaire","desc":"Régénérer le tirage aléatoire du jour à la main","icon":"🎲","group":"Inventaire"},
     {"key":"inventory_clear","label":"Effacer l'historique inventaire","desc":"Supprimer les contrôles des jours précédents","icon":"🗑️","group":"Inventaire"},
@@ -1538,7 +1579,8 @@ CSV_IMPORT_ORDER = [
     ('08_borrows', 'borrows'), ('09_activity_logs', 'activity_logs'),
     ('10_notifications', 'notifications'), ('11_material_orders', 'material_orders'),
     ('12_inventory_checks', 'inventory_checks'), ('13_event_reminders', 'event_reminders'),
-    ('14_app_settings', 'app_settings'),
+    ('14_app_settings', 'app_settings'), ('15_transport_checks', 'transport_checks'),
+    ('16_transport_proofs', 'transport_proofs'),
 ]
 
 def _import_csv_bytes(raw, table):
@@ -1553,7 +1595,8 @@ def _import_csv_bytes(raw, table):
         'events': Event, 'event_assignments': EventAssignment, 'activity_logs': ActivityLog,
         'notifications': Notification, 'material_orders': MaterialOrder,
         'inventory_checks': InventoryCheck, 'event_reminders': EventReminder,
-        'app_settings': AppSetting,
+        'app_settings': AppSetting, 'transport_checks': TransportCheck,
+        'transport_proofs': TransportProof,
     }
     model = model_map.get(table)
     if not model:
@@ -1607,7 +1650,7 @@ def _import_csv_bytes(raw, table):
                     if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
                         try: val = int(val)
                         except: pass
-                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at'):
+                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at', 'checked_at'):
                         parsed = None
                         for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
                             try: parsed = datetime.strptime(val, fmt); break
@@ -1795,7 +1838,8 @@ def import_full():
         label = {'equipment':'articles','users':'comptes','borrows':'emprunts','events':'evenements',
                  'categories':'categories','event_assignments':'affectations equipe','inventory_checks':'controles',
                  'app_settings':'cles (push)','notifications':'notifications','material_orders':'commandes',
-                 'equipment_images':'photos liees','activity_logs':'logs','roles':'roles','event_reminders':'rappels'}
+                 'equipment_images':'photos liees','activity_logs':'logs','roles':'roles','event_reminders':'rappels',
+                 'transport_checks':'contrôles transport','transport_proofs':'preuves transport'}
         parts = [f'{n} {label.get(t, t)}' for t, n in stats.items()]
         msg = '✅ IMPORT COMPLET : ' + ', '.join(parts) + f' + {photo_count} photos'
         msg += f' — {total_err} ligne(s) en erreur' if total_err else ' — 0 erreur'
@@ -1820,6 +1864,8 @@ def reset_all_tables():
         # l'ordre, d'ou le bug invisible jusqu'a la migration.)
         Notification.query.delete()
         EventReminder.query.delete()
+        TransportCheck.query.delete()
+        TransportProof.query.delete()
         EventAssignment.query.delete()
         Event.query.delete()
         ActivityLog.query.delete()
@@ -1936,6 +1982,12 @@ def activity_logs():
         'edit_event':'✏️ Evenement modifie','delete_event':'🗑️ Evenement supprime',
         'clear_past_events':'🧹 Evenements passes effaces','clear_history':'🧹 Effacement historique',
         'export_excel':'📊 Export Excel','permission_denied':'🚫 Acces refuse',
+        'transport_depot_update':'📍 Dépôt transport modifié',
+        'transport_settings':'⚙️ Mission transport modifiée',
+        'transport_check':'✅ Contrôle matériel transport',
+        'transport_proof':'✍️ Preuve transport enregistrée',
+        'transport_navigation':'🗺️ Navigation chauffeur',
+        'transport_print':'🖨️ Fiche transport imprimée',
     }
     return render_template('activity_logs.html', logs=logs, action_filter=action_filter, user_filter=user_filter, total_today=total_today, total_week=total_week, all_actions=all_actions, ACTION_LABELS=ACTION_LABELS, all_users=User.query.order_by(User.full_name).all())
 
@@ -2365,6 +2417,232 @@ def _recap_borrows(evid, evt):
                 borrows.append(b)
     borrows.sort(key=lambda b: (b.pickup_date or b.expected_return_date, b.id))
     return borrows
+
+
+# ═══════════ C H A U F F E U R   /   T R A N S P O R T ═══════════
+TRANSPORT_STAGES = ('prepared', 'loaded', 'delivered', 'recovered')
+TRANSPORT_STAGE_LABELS = {
+    'prepared': 'Préparé', 'loaded': 'Chargé',
+    'delivered': 'Livré', 'recovered': 'Récupéré'
+}
+
+
+def _transport_event_allowed(evt):
+    """Un gestionnaire voit tout ; un chauffeur ne voit que ses affectations."""
+    if not evt or not current_user.is_authenticated:
+        return False
+    if current_user.has_permission('manage_transport'):
+        return True
+    if not current_user.has_permission('driver_access'):
+        return False
+    return EventAssignment.query.filter_by(event_id=evt.id, user_id=current_user.id).first() is not None
+
+
+def _transport_material(evt):
+    """Liste agrégée du matériel lié à l'événement et état des 4 contrôles."""
+    grouped = {}
+    for borrow in _recap_borrows(evt.id, evt):
+        if not borrow.equipment:
+            continue
+        eid = borrow.equipment_id
+        if eid not in grouped:
+            grouped[eid] = {'equipment': borrow.equipment, 'quantity': 0, 'checks': {}}
+        grouped[eid]['quantity'] += max(0, borrow.quantity or 0)
+    checks = TransportCheck.query.filter_by(event_id=evt.id).all()
+    for check in checks:
+        if check.equipment_id in grouped and check.stage in TRANSPORT_STAGES:
+            grouped[check.equipment_id]['checks'][check.stage] = check
+    rows = list(grouped.values())
+    rows.sort(key=lambda row: ((row['equipment'].category.name if row['equipment'].category else ''), row['equipment'].name.lower()))
+    for row in rows:
+        row['complete_count'] = 0
+        for stage in TRANSPORT_STAGES:
+            check = row['checks'].get(stage)
+            if check and (check.checked_quantity or 0) >= row['quantity']:
+                row['complete_count'] += 1
+    return rows
+
+
+def _transport_progress(rows):
+    total = len(rows) * len(TRANSPORT_STAGES)
+    done = sum(row['complete_count'] for row in rows)
+    return done, total, int(done * 100 / total) if total else 0
+
+
+@app.route('/driver')
+@permission_required_any('driver_access', 'manage_transport')
+def driver_dashboard():
+    today = tunisia_now().date()
+    q = Event.query.filter(Event.end_date >= today - timedelta(days=7))
+    if not current_user.has_permission('manage_transport'):
+        q = q.join(EventAssignment).filter(EventAssignment.user_id == current_user.id)
+    events = q.order_by(Event.event_date, Event.transport_departure_time, Event.start_time).all()
+    missions = []
+    for evt in events:
+        rows = _transport_material(evt)
+        done, total, pct = _transport_progress(rows)
+        missions.append({'event': evt, 'items': len(rows), 'done': done, 'total': total, 'pct': pct})
+    depot_address = get_app_setting('transport_depot_address', 'Rue du Lac Loch Ness, Les Berges du Lac, Tunis')
+    return render_template('driver.html', missions=missions, today=today,
+                           depot_address=depot_address,
+                           can_manage=current_user.has_permission('manage_transport'))
+
+
+@app.route('/driver/depot', methods=['POST'])
+@permission_required('manage_transport')
+def driver_depot_save():
+    address = request.form.get('depot_address', '').strip()
+    if not address:
+        flash('Adresse du dépôt requise.', 'error')
+        return redirect(url_for('driver_dashboard'))
+    set_app_setting('transport_depot_address', address)
+    log_action('transport_depot_update', f'Adresse de départ transport modifiée : {address}')
+    flash('Adresse du dépôt enregistrée.', 'success')
+    return redirect(url_for('driver_dashboard'))
+
+
+@app.route('/driver/event/<int:evid>')
+@permission_required_any('driver_access', 'manage_transport')
+def driver_mission(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        log_action('permission_denied', f'Accès refusé à la mission transport #{evid}')
+        flash('Cette mission ne vous est pas affectée.', 'error')
+        return redirect(url_for('driver_dashboard'))
+    rows = _transport_material(evt)
+    done, total, pct = _transport_progress(rows)
+    proofs = {}
+    for proof in TransportProof.query.filter_by(event_id=evid).all():
+        proofs[proof.stage] = proof
+    depot_address = get_app_setting('transport_depot_address', 'Rue du Lac Loch Ness, Les Berges du Lac, Tunis')
+    return render_template('driver_mission.html', evt=evt, rows=rows, stages=TRANSPORT_STAGES,
+                           stage_labels=TRANSPORT_STAGE_LABELS, done=done, total=total, pct=pct,
+                           proofs=proofs, depot_address=depot_address,
+                           can_manage=current_user.has_permission('manage_transport'))
+
+
+@app.route('/driver/event/<int:evid>/settings', methods=['POST'])
+@permission_required('manage_transport')
+def driver_mission_settings(evid):
+    evt = db.session.get(Event, evid)
+    if not evt:
+        flash('Événement introuvable.', 'error')
+        return redirect(url_for('driver_dashboard'))
+    evt.transport_load_time = request.form.get('transport_load_time', '').strip()
+    evt.transport_departure_time = request.form.get('transport_departure_time', '').strip()
+    evt.transport_delivery_time = request.form.get('transport_delivery_time', '').strip()
+    evt.transport_recovery_time = request.form.get('transport_recovery_time', '').strip()
+    evt.transport_notes = request.form.get('transport_notes', '').strip()
+    db.session.commit()
+    log_action('transport_settings', f'Horaires transport modifiés pour « {evt.title} »')
+    flash('Horaires et consignes transport enregistrés.', 'success')
+    return redirect(url_for('driver_mission', evid=evid))
+
+
+@app.route('/driver/event/<int:evid>/check', methods=['POST'])
+@permission_required_any('driver_access', 'manage_transport')
+def driver_check(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        return jsonify({'ok': False, 'error': 'Accès refusé'}), 403
+    try:
+        equipment_id = int(request.form.get('equipment_id', '0'))
+        quantity = max(0, int(request.form.get('quantity', '0')))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'Valeur invalide'}), 400
+    stage = request.form.get('stage', '').strip()
+    if stage not in TRANSPORT_STAGES:
+        return jsonify({'ok': False, 'error': 'Étape invalide'}), 400
+    material = _transport_material(evt)
+    target = None
+    for row in material:
+        if row['equipment'].id == equipment_id:
+            target = row
+            break
+    if not target:
+        return jsonify({'ok': False, 'error': 'Matériel absent de cette mission'}), 404
+    quantity = min(quantity, target['quantity'])
+    check = TransportCheck.query.filter_by(event_id=evid, equipment_id=equipment_id, stage=stage).first()
+    if quantity <= 0:
+        if check:
+            db.session.delete(check)
+            db.session.commit()
+        state = 'décoché'
+    else:
+        if not check:
+            check = TransportCheck(event_id=evid, equipment_id=equipment_id, stage=stage)
+            db.session.add(check)
+        check.checked_quantity = quantity
+        check.checked_by = current_user.id
+        check.checked_at = tunisia_now()
+        db.session.commit()
+        state = f'validé ({quantity}/{target["quantity"]})'
+    log_action('transport_check', f'{TRANSPORT_STAGE_LABELS[stage]} {state} — {target["equipment"].name} — événement « {evt.title} »', target['equipment'].name, quantity)
+    rows = _transport_material(evt)
+    done, total, pct = _transport_progress(rows)
+    return jsonify({'ok': True, 'checked': quantity > 0, 'done': done, 'total': total, 'pct': pct})
+
+
+@app.route('/driver/event/<int:evid>/proof', methods=['POST'])
+@permission_required_any('driver_access', 'manage_transport')
+def driver_proof(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        flash('Accès refusé.', 'error')
+        return redirect(url_for('driver_dashboard'))
+    stage = request.form.get('stage', '')
+    if stage not in ('delivery', 'recovery'):
+        flash('Type de preuve invalide.', 'error')
+        return redirect(url_for('driver_mission', evid=evid))
+    signature = request.form.get('signature_data', '')
+    photo = request.form.get('photo_data', '')
+    if signature and not signature.startswith('data:image/png;base64,'):
+        signature = ''
+    if photo and not photo.startswith('data:image/'):
+        photo = ''
+    if len(signature) > 2_000_000 or len(photo) > 5_000_000:
+        flash('La signature ou la photo est trop volumineuse.', 'error')
+        return redirect(url_for('driver_mission', evid=evid))
+    proof = TransportProof.query.filter_by(event_id=evid, stage=stage).first()
+    if not proof:
+        proof = TransportProof(event_id=evid, stage=stage)
+        db.session.add(proof)
+    if signature:
+        proof.signature_data = signature
+    if photo:
+        proof.photo_data = photo
+    proof.notes = request.form.get('proof_notes', '').strip()
+    proof.created_by = current_user.id
+    proof.created_at = tunisia_now()
+    db.session.commit()
+    label = 'livraison' if stage == 'delivery' else 'récupération'
+    log_action('transport_proof', f'Preuve de {label} enregistrée pour « {evt.title} »')
+    flash(f'Preuve de {label} enregistrée.', 'success')
+    return redirect(url_for('driver_mission', evid=evid))
+
+
+@app.route('/driver/event/<int:evid>/navigation-log', methods=['POST'])
+@permission_required_any('driver_access', 'manage_transport')
+def driver_navigation_log(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        return jsonify({'ok': False}), 403
+    app_name = request.form.get('app', 'carte')[:30]
+    log_action('transport_navigation', f'Navigation {app_name} ouverte vers « {evt.location or evt.title} »')
+    return jsonify({'ok': True})
+
+
+@app.route('/driver/event/<int:evid>/print')
+@permission_required_any('driver_access', 'manage_transport')
+def driver_print(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        flash('Accès refusé.', 'error')
+        return redirect(url_for('driver_dashboard'))
+    rows = _transport_material(evt)
+    log_action('transport_print', f'Fiche matériel imprimable ouverte pour « {evt.title} »')
+    return render_template('driver_print.html', evt=evt, rows=rows, stages=TRANSPORT_STAGES,
+                           stage_labels=TRANSPORT_STAGE_LABELS, now=tunisia_now())
 
 
 def _recap_context(evid):
@@ -2916,6 +3194,8 @@ def full_backup():
         ('12_inventory_checks', InventoryCheck),
         ('13_event_reminders', EventReminder),
         ('14_app_settings', AppSetting),
+        ('15_transport_checks', TransportCheck),
+        ('16_transport_proofs', TransportProof),
     ]
 
     def fmt(v):
@@ -3136,6 +3416,11 @@ def init_db():
             ensure_column('inventory_checks', 'in_repair_qty', 'ALTER TABLE inventory_checks ADD COLUMN in_repair_qty INTEGER DEFAULT 0')
             ensure_column('borrows', 'last_late_alert', 'ALTER TABLE borrows ADD COLUMN last_late_alert DATE')
             ensure_column('events', 'client_id', 'ALTER TABLE events ADD COLUMN client_id INTEGER')
+            ensure_column('events', 'transport_load_time', "ALTER TABLE events ADD COLUMN transport_load_time VARCHAR(10) DEFAULT ''")
+            ensure_column('events', 'transport_departure_time', "ALTER TABLE events ADD COLUMN transport_departure_time VARCHAR(10) DEFAULT ''")
+            ensure_column('events', 'transport_delivery_time', "ALTER TABLE events ADD COLUMN transport_delivery_time VARCHAR(10) DEFAULT ''")
+            ensure_column('events', 'transport_recovery_time', "ALTER TABLE events ADD COLUMN transport_recovery_time VARCHAR(10) DEFAULT ''")
+            ensure_column('events', 'transport_notes', "ALTER TABLE events ADD COLUMN transport_notes TEXT DEFAULT ''")
             # ── Migration 1x : donner la permission 'manage_clients' aux roles
             #    qui garent deja le planning (sinon les admins existants ne
             #    verraient pas la page Clients) ──
@@ -3197,6 +3482,7 @@ def init_db():
             ar = ensure_role('Admin', '👑', 'Toutes les permissions', [p['key'] for p in ALL_PERMISSIONS])
             ensure_role('Staff', '👷', 'Emprunts et retours', ['borrow_equipment', 'return_equipment'])
             ensure_role('Manager', '🛡️', 'Gestion complete sans effacer historique', ['manage_users','manage_equipment','borrow_equipment','return_equipment','manage_categories','view_logs','manage_schedule'])
+            ensure_role('Chauffeur', '🚚', 'Missions, navigation et contrôle du matériel', ['driver_access'])
             ensure_role('En attente', '⏳', 'Nouveau compte en attente', [])
             db.session.flush()  # pour obtenir l'id du role Admin
 
