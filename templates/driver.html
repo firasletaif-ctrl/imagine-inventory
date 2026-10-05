@@ -62,7 +62,7 @@
         <span>📦 Chargement : <b>{{ evt.transport_load_time or '—' }}</b></span>
         <span>🚚 Départ : <b>{{ evt.transport_departure_time or '—' }}</b></span>
         <span>📍 Livraison : <b>{{ evt.transport_delivery_time or evt.start_time or '—' }}</b></span>
-        <span>↩️ Récupération : <b>{{ evt.transport_recovery_time or '—' }}</b></span>
+        <span>↩️ Reprise matériel : <b>{{ evt.transport_recovery_time or '—' }}</b></span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--gray-500)"><span>{{ mission.items }} article(s)</span><b>{{ mission.done }}/{{ mission.total }} contrôles</b></div>
       <div class="progress-track"><div class="progress-fill" style="width:{{ mission.pct }}%"></div></div>

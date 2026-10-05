@@ -36,17 +36,38 @@
       <div class="time-box"><small>PRÉPARATION</small><b>{{ evt.transport_load_time or '—' }}</b></div>
       <div class="time-box"><small>DÉPART</small><b>{{ evt.transport_departure_time or '—' }}</b></div>
       <div class="time-box"><small>LIVRAISON</small><b>{{ evt.transport_delivery_time or evt.start_time or '—' }}</b></div>
-      <div class="time-box"><small>RÉCUPÉRATION</small><b>{{ evt.transport_recovery_time or '—' }}</b></div>
+      <div class="time-box"><small>REPRISE DU MATÉRIEL</small><b>{{ evt.transport_recovery_time or '—' }}</b></div>
     </div>
     {% if evt.transport_notes %}<div style="margin-top:.8rem;padding:.7rem;background:#FFF7ED;border-radius:9px;white-space:pre-line">📝 {{ evt.transport_notes }}</div>{% endif %}
     {% if can_manage %}
     <details style="margin-top:1rem"><summary style="cursor:pointer;font-weight:700;color:var(--blue-deep)">⚙️ Configurer les horaires et consignes</summary>
       <form method="POST" action="{{ url_for('driver_mission_settings', evid=evt.id) }}" style="margin-top:.8rem">
         <div class="form-row"><div class="form-group"><label>Heure préparation</label><input type="time" name="transport_load_time" value="{{ evt.transport_load_time or '' }}"></div><div class="form-group"><label>Heure départ</label><input type="time" name="transport_departure_time" value="{{ evt.transport_departure_time or '' }}"></div></div>
-        <div class="form-row"><div class="form-group"><label>Heure livraison</label><input type="time" name="transport_delivery_time" value="{{ evt.transport_delivery_time or '' }}"></div><div class="form-group"><label>Heure récupération</label><input type="time" name="transport_recovery_time" value="{{ evt.transport_recovery_time or '' }}"></div></div>
+        <div class="form-row"><div class="form-group"><label>Heure livraison</label><input type="time" name="transport_delivery_time" value="{{ evt.transport_delivery_time or '' }}"></div><div class="form-group"><label>Heure de reprise du matériel <small>(facultatif)</small></label><input type="time" name="transport_recovery_time" value="{{ evt.transport_recovery_time or '' }}"></div></div>
+        <div class="form-row"><div class="form-group"><label>Ordre des arrêts</label><select name="transport_route_mode"><option value="optimized" {% if evt.transport_optimize_stops %}selected{% endif %}>⚡ Optimiser automatiquement</option><option value="manual" {% if not evt.transport_optimize_stops %}selected{% endif %}>🔢 Respecter l’ordre saisi</option></select></div><div class="form-group"><label>Après le dernier arrêt</label><label style="display:flex;align-items:center;gap:.5rem;margin-top:.65rem"><input type="checkbox" name="transport_return_depot" value="1" {% if evt.transport_return_depot %}checked{% endif %}> Retour automatique au dépôt</label></div></div>
         <div class="form-group"><label>Consignes chauffeur</label><textarea name="transport_notes" rows="3">{{ evt.transport_notes or '' }}</textarea></div>
         <button class="btn btn-primary">💾 Enregistrer</button>
       </form>
+    </details>
+    <details style="margin-top:1rem" open><summary style="cursor:pointer;font-weight:700;color:var(--blue-deep)">📍 Points d’arrêt intermédiaires ({{ evt.transport_stops|length }})</summary>
+      <div style="margin-top:.8rem">
+        {% for stop in evt.transport_stops %}
+        <div style="border:1px solid var(--gray-200);border-radius:10px;padding:.7rem;margin-bottom:.55rem;background:var(--gray-50)">
+          <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <div><b>{{ loop.index }}. {{ stop.label }}</b>{% if stop.planned_time %} · 🕐 {{ stop.planned_time }}{% endif %}<br><small style="color:var(--gray-500)">{{ stop.address }}</small></div>
+            <div style="display:flex;gap:.3rem">
+              <form method="POST" action="{{ url_for('driver_stop_move', evid=evt.id, sid=stop.id) }}"><input type="hidden" name="direction" value="up"><button class="btn btn-secondary btn-sm" title="Monter">↑</button></form>
+              <form method="POST" action="{{ url_for('driver_stop_move', evid=evt.id, sid=stop.id) }}"><input type="hidden" name="direction" value="down"><button class="btn btn-secondary btn-sm" title="Descendre">↓</button></form>
+              <form method="POST" action="{{ url_for('driver_stop_delete', evid=evt.id, sid=stop.id) }}" onsubmit="return confirm('Supprimer cet arrêt ?')"><button class="btn btn-danger btn-sm">✕</button></form>
+            </div>
+          </div>
+          <details style="margin-top:.45rem"><summary style="cursor:pointer;font-size:.78rem;color:var(--blue)">Modifier</summary>
+            <form method="POST" action="{{ url_for('driver_stop_save', evid=evt.id) }}" style="margin-top:.5rem"><input type="hidden" name="stop_id" value="{{ stop.id }}"><div class="form-row"><div class="form-group"><label>Nom</label><input name="label" value="{{ stop.label }}" required></div><div class="form-group"><label>Heure prévue</label><input type="time" name="planned_time" value="{{ stop.planned_time or '' }}"></div></div><div class="form-group"><label>Adresse / Plus Code</label><input name="address" value="{{ stop.address }}" required></div><button class="btn btn-primary btn-sm">Enregistrer</button></form>
+          </details>
+        </div>
+        {% endfor %}
+        <form method="POST" action="{{ url_for('driver_stop_save', evid=evt.id) }}" style="border:1px dashed var(--gray-300);border-radius:10px;padding:.75rem;margin-top:.7rem"><b>➕ Ajouter un arrêt</b><div class="form-row" style="margin-top:.55rem"><div class="form-group"><label>Nom</label><input name="label" placeholder="Ex. Fournisseur, client 2…" required></div><div class="form-group"><label>Heure prévue</label><input type="time" name="planned_time"></div></div><div class="form-group"><label>Adresse ou Plus Code</label><input name="address" placeholder="Adresse complète" required></div><button class="btn btn-accent btn-sm">Ajouter l’arrêt</button></form>
+      </div>
     </details>
     {% endif %}
   </section>
@@ -60,7 +81,8 @@
       <button class="btn btn-secondary" type="button" onclick="openExternal('google')">Google Maps</button>
       <button class="btn btn-secondary" type="button" onclick="openExternal('waze')">Waze</button>
     </div>
-    <div id="routeInfo" class="route-info">Choisis le point de départ pour calculer l’itinéraire.</div>
+    <div id="routeInfo" class="route-info">Choisis le point de départ pour calculer l’itinéraire avec {{ evt.transport_stops|length }} arrêt(s) intermédiaire(s).</div>
+    <div id="routeOrder" style="margin-top:.6rem"></div>
     <div id="routeMap" style="margin-top:.7rem"></div>
     <small style="display:block;color:var(--gray-500);margin-top:.5rem">Carte gratuite OpenStreetMap. Google Maps/Waze tiennent compte du trafic en temps réel.</small>
     {% else %}<div class="alert alert-warning">Ajoute d’abord le lieu de l’événement dans l’emploi du temps.</div>{% endif %}
@@ -117,6 +139,10 @@ var EVENT_ID={{ evt.id }};
 var trackingActive={% if tracker and tracker.active %}true{% else %}false{% endif %};
 var trackingWatch=null,trackingLastSent=0,wakeLock=null;
 var destination={{ (evt.location or '')|tojson }};
+var eventTitle={{ evt.title|tojson }};
+var missionStops={{ stops_data|tojson }};
+var optimizeStops={% if evt.transport_optimize_stops %}true{% else %}false{% endif %};
+var returnToDepot={% if evt.transport_return_depot %}true{% else %}false{% endif %};
 var depotAddress={{ depot_address|tojson }};
 var depotLat=parseFloat({{ (depot_lat or '')|tojson }}), depotLng=parseFloat({{ (depot_lng or '')|tojson }});
 var map=null, routeLayer=null, markers=[];
@@ -139,10 +165,26 @@ async function stopTracking(){
 }
 function initMap(){if(!destination||typeof L==='undefined')return;map=L.map('routeMap').setView([36.8065,10.1815],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);}
 async function geocode(address){var u='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tn&q='+encodeURIComponent(address);var r=await fetch(u,{headers:{'Accept':'application/json'}});var d=await r.json();if(!d.length)throw new Error('Adresse introuvable : '+address);return [parseFloat(d[0].lat),parseFloat(d[0].lon)];}
-async function drawRoute(start){try{document.getElementById('routeInfo').textContent='Calcul de l’itinéraire...';var end=await geocode(destination);var u='https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson&steps=true';var r=await fetch(u);var d=await r.json();if(!d.routes||!d.routes.length)throw new Error('Aucun itinéraire trouvé');if(routeLayer)map.removeLayer(routeLayer);markers.forEach(function(m){map.removeLayer(m)});markers=[];routeLayer=L.geoJSON(d.routes[0].geometry,{style:{color:'#E63946',weight:6,opacity:.85}}).addTo(map);markers.push(L.marker(start).addTo(map).bindPopup('Départ'));markers.push(L.marker(end).addTo(map).bindPopup(destination));map.fitBounds(routeLayer.getBounds(),{padding:[25,25]});var km=(d.routes[0].distance/1000).toFixed(1);var min=Math.round(d.routes[0].duration/60);document.getElementById('routeInfo').innerHTML='🚚 <b>'+km+' km</b> · environ <b>'+min+' min</b> hors trafic en temps réel';}catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message;}}
+async function configuredDepotCoord(){if(Number.isFinite(depotLat)&&Number.isFinite(depotLng))return[depotLat,depotLng];return await geocode(depotAddress);}
+async function drawRoute(start){
+  try{
+    document.getElementById('routeInfo').textContent='Calcul de la tournée et des arrêts...';document.getElementById('routeOrder').innerHTML='';
+    var points=[{label:'Départ',address:'',coord:start,time:''}];
+    for(var i=0;i<missionStops.length;i++){var s=missionStops[i],coord;if(s.latitude!==null&&s.longitude!==null)coord=[parseFloat(s.latitude),parseFloat(s.longitude)];else coord=await geocode(s.address);points.push({label:s.label,address:s.address,coord:coord,time:s.time||''});}
+    var eventCoord=await geocode(destination);points.push({label:'Événement : '+eventTitle,address:destination,coord:eventCoord,time:{{ (evt.transport_delivery_time or evt.start_time or '')|tojson }}});
+    if(returnToDepot)points.push({label:'Retour au dépôt',address:depotAddress,coord:await configuredDepotCoord(),time:''});
+    var coords=points.map(function(p){return p.coord[1]+','+p.coord[0]}).join(';'),url,data,route,ordered=points.slice();
+    if(optimizeStops&&points.length>2){url='https://router.project-osrm.org/trip/v1/driving/'+coords+'?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson&steps=true';data=await(await fetch(url)).json();if(!data.trips||!data.trips.length)throw new Error('Aucune tournée optimisée trouvée');route=data.trips[0];ordered=new Array(points.length);data.waypoints.forEach(function(w,index){ordered[w.waypoint_index]=points[index]});}
+    else{url='https://router.project-osrm.org/route/v1/driving/'+coords+'?overview=full&geometries=geojson&steps=true';data=await(await fetch(url)).json();if(!data.routes||!data.routes.length)throw new Error('Aucun itinéraire trouvé');route=data.routes[0];}
+    if(routeLayer)map.removeLayer(routeLayer);markers.forEach(function(m){map.removeLayer(m)});markers=[];routeLayer=L.geoJSON(route.geometry,{style:{color:'#E63946',weight:6,opacity:.85}}).addTo(map);
+    var html='<div style="display:grid;gap:.3rem">';ordered.forEach(function(p,index){markers.push(L.marker(p.coord).addTo(map).bindPopup('<b>'+(index+1)+'. '+escapeRoute(p.label)+'</b><br>'+escapeRoute(p.address)+(p.time?'<br>🕐 '+p.time:'')));html+='<div style="padding:.45rem .65rem;background:var(--gray-50);border-radius:8px;font-size:.82rem"><b>'+(index+1)+'. '+escapeRoute(p.label)+'</b>'+(p.time?' · 🕐 '+p.time:'')+(p.address?'<br><small>'+escapeRoute(p.address)+'</small>':'')+'</div>';});html+='</div>';document.getElementById('routeOrder').innerHTML=html;
+    map.fitBounds(routeLayer.getBounds(),{padding:[25,25]});var km=(route.distance/1000).toFixed(1),min=Math.round(route.duration/60),mode=optimizeStops?'ordre optimisé':'ordre saisi';document.getElementById('routeInfo').innerHTML='🚚 <b>'+km+' km</b> · environ <b>'+min+' min</b> · '+mode+(returnToDepot?' · retour dépôt':'')+' · hors trafic réel';
+  }catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message;}
+}
+function escapeRoute(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 async function routeFromDepot(){try{if(Number.isFinite(depotLat)&&Number.isFinite(depotLng)){drawRoute([depotLat,depotLng]);}else{drawRoute(await geocode(depotAddress));}}catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message+' — enregistre la position GPS du dépôt dans la rubrique Chauffeur.';}}
 function routeFromGPS(){if(!navigator.geolocation){document.getElementById('routeInfo').textContent='Géolocalisation indisponible.';return;}document.getElementById('routeInfo').textContent='Recherche de ta position...';navigator.geolocation.getCurrentPosition(function(p){drawRoute([p.coords.latitude,p.coords.longitude]);},function(){document.getElementById('routeInfo').textContent='⚠️ Autorise la localisation dans les réglages du téléphone.';},{enableHighAccuracy:true,timeout:12000});}
-function openExternal(app){fetch('/driver/event/'+EVENT_ID+'/navigation-log',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app='+encodeURIComponent(app),keepalive:true});var url=app==='waze'?'https://www.waze.com/ul?q='+encodeURIComponent(destination)+'&navigate=yes':'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(destination)+'&travelmode=driving';window.open(url,'_blank');}
+function openExternal(app){fetch('/driver/event/'+EVENT_ID+'/navigation-log',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app='+encodeURIComponent(app),keepalive:true});var finalDestination=returnToDepot?depotAddress:destination,url;if(app==='waze'){url='https://www.waze.com/ul?q='+encodeURIComponent(finalDestination)+'&navigate=yes';}else{var wp=[];missionStops.forEach(function(s){wp.push(s.address)});if(returnToDepot)wp.push(destination);url='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(finalDestination)+'&travelmode=driving'+(wp.length?'&waypoints='+encodeURIComponent(wp.join('|')):'');}window.open(url,'_blank');}
 async function toggleCheck(btn){if(btn.classList.contains('busy'))return;btn.classList.add('busy');var checked=btn.classList.contains('done');var body=new URLSearchParams({equipment_id:btn.dataset.equipment,stage:btn.dataset.stage,quantity:checked?'0':btn.dataset.quantity});try{var r=await fetch('/driver/event/'+EVENT_ID+'/check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body});var d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Erreur');btn.classList.toggle('done',d.checked);btn.innerHTML=(d.checked?'✅ ':'⬜ ')+btn.textContent.replace(/^✅ |^⬜ /,'');document.getElementById('progressText').textContent=d.done+'/'+d.total;document.getElementById('progressBar').style.width=d.pct+'%';}catch(e){alert(e.message);}finally{btn.classList.remove('busy');}}
 var canvas=document.getElementById('signatureCanvas'),ctx=canvas.getContext('2d'),drawing=false,hasSignature=false;
 function sizeCanvas(){var saved=hasSignature?canvas.toDataURL():null;canvas.width=canvas.clientWidth*window.devicePixelRatio;canvas.height=180*window.devicePixelRatio;ctx.scale(window.devicePixelRatio,window.devicePixelRatio);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#0B1D3A';if(saved){var i=new Image();i.onload=function(){ctx.drawImage(i,0,0,canvas.clientWidth,180)};i.src=saved;}}

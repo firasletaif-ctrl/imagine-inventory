@@ -173,10 +173,13 @@ class Event(db.Model):
     transport_delivery_time = db.Column(db.String(10), default='')
     transport_recovery_time = db.Column(db.String(10), default='')
     transport_notes = db.Column(db.Text, default='')
+    transport_optimize_stops = db.Column(db.Boolean, default=True)
+    transport_return_depot = db.Column(db.Boolean, default=False)
     assignments = db.relationship('EventAssignment', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_checks = db.relationship('TransportCheck', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_proofs = db.relationship('TransportProof', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_trackers = db.relationship('TransportTracker', lazy=True, cascade='all, delete-orphan', overlaps='event')
+    transport_stops = db.relationship('TransportStop', backref='event', lazy=True, cascade='all, delete-orphan', order_by='TransportStop.position')
     def date_end(self):
         return self.end_date or self.event_date
     def is_multiday(self):
@@ -263,6 +266,19 @@ class TransportTracker(db.Model):
     user = db.relationship('User', foreign_keys=[user_id])
     event = db.relationship('Event', foreign_keys=[event_id])
     __table_args__ = (db.UniqueConstraint('event_id', 'user_id', name='uq_transport_tracker_user'),)
+
+
+class TransportStop(db.Model):
+    __tablename__ = 'transport_stops'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    label = db.Column(db.String(150), default='Arrêt')
+    address = db.Column(db.String(300), nullable=False)
+    planned_time = db.Column(db.String(10), default='')
+    position = db.Column(db.Integer, default=0)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
 
 # ── NEW: Notifications ──
 class Notification(db.Model):
@@ -1603,6 +1619,7 @@ CSV_IMPORT_ORDER = [
     ('12_inventory_checks', 'inventory_checks'), ('13_event_reminders', 'event_reminders'),
     ('14_app_settings', 'app_settings'), ('15_transport_checks', 'transport_checks'),
     ('16_transport_proofs', 'transport_proofs'), ('17_transport_trackers', 'transport_trackers'),
+    ('18_transport_stops', 'transport_stops'),
 ]
 
 def _import_csv_bytes(raw, table):
@@ -1619,6 +1636,7 @@ def _import_csv_bytes(raw, table):
         'inventory_checks': InventoryCheck, 'event_reminders': EventReminder,
         'app_settings': AppSetting, 'transport_checks': TransportCheck,
         'transport_proofs': TransportProof, 'transport_trackers': TransportTracker,
+        'transport_stops': TransportStop,
     }
     model = model_map.get(table)
     if not model:
@@ -1862,7 +1880,7 @@ def import_full():
                  'app_settings':'cles (push)','notifications':'notifications','material_orders':'commandes',
                  'equipment_images':'photos liees','activity_logs':'logs','roles':'roles','event_reminders':'rappels',
                  'transport_checks':'contrôles transport','transport_proofs':'preuves transport',
-                 'transport_trackers':'positions GPS transport'}
+                 'transport_trackers':'positions GPS transport','transport_stops':'arrêts transport'}
         parts = [f'{n} {label.get(t, t)}' for t, n in stats.items()]
         msg = '✅ IMPORT COMPLET : ' + ', '.join(parts) + f' + {photo_count} photos'
         msg += f' — {total_err} ligne(s) en erreur' if total_err else ' — 0 erreur'
@@ -1890,6 +1908,7 @@ def reset_all_tables():
         TransportCheck.query.delete()
         TransportProof.query.delete()
         TransportTracker.query.delete()
+        TransportStop.query.delete()
         EventAssignment.query.delete()
         Event.query.delete()
         ActivityLog.query.delete()
@@ -2013,6 +2032,7 @@ def activity_logs():
         'transport_navigation':'🗺️ Navigation chauffeur',
         'transport_tracking_start':'🟢 Suivi GPS démarré',
         'transport_tracking_stop':'🔴 Suivi GPS arrêté',
+        'transport_stop_update':'📍 Arrêts transport modifiés',
         'transport_print':'🖨️ Fiche transport imprimée',
     }
     return render_template('activity_logs.html', logs=logs, action_filter=action_filter, user_filter=user_filter, total_today=total_today, total_week=total_week, all_actions=all_actions, ACTION_LABELS=ACTION_LABELS, all_users=User.query.order_by(User.full_name).all())
@@ -2580,10 +2600,16 @@ def driver_mission(evid):
     depot_lat = get_app_setting('transport_depot_lat', '')
     depot_lng = get_app_setting('transport_depot_lng', '')
     tracker = TransportTracker.query.filter_by(event_id=evid, user_id=current_user.id).first()
+    stops_data = []
+    for stop in evt.transport_stops:
+        stops_data.append({'id': stop.id, 'label': stop.label or 'Arrêt',
+                           'address': stop.address, 'time': stop.planned_time or '',
+                           'latitude': stop.latitude, 'longitude': stop.longitude})
     return render_template('driver_mission.html', evt=evt, rows=rows, stages=TRANSPORT_STAGES,
                            stage_labels=TRANSPORT_STAGE_LABELS, done=done, total=total, pct=pct,
                            proofs=proofs, depot_address=depot_address,
                            depot_lat=depot_lat, depot_lng=depot_lng, tracker=tracker,
+                           stops_data=stops_data,
                            can_manage=current_user.has_permission('manage_transport'))
 
 
@@ -2599,9 +2625,91 @@ def driver_mission_settings(evid):
     evt.transport_delivery_time = request.form.get('transport_delivery_time', '').strip()
     evt.transport_recovery_time = request.form.get('transport_recovery_time', '').strip()
     evt.transport_notes = request.form.get('transport_notes', '').strip()
+    evt.transport_optimize_stops = request.form.get('transport_route_mode', 'optimized') == 'optimized'
+    evt.transport_return_depot = request.form.get('transport_return_depot') == '1'
     db.session.commit()
     log_action('transport_settings', f'Horaires transport modifiés pour « {evt.title} »')
-    flash('Horaires et consignes transport enregistrés.', 'success')
+    flash('Horaires, consignes et mode d’itinéraire enregistrés.', 'success')
+    return redirect(url_for('driver_mission', evid=evid))
+
+
+@app.route('/driver/event/<int:evid>/stop/save', methods=['POST'])
+@permission_required('manage_transport')
+def driver_stop_save(evid):
+    evt = db.session.get(Event, evid)
+    if not evt:
+        flash('Événement introuvable.', 'error')
+        return redirect(url_for('driver_dashboard'))
+    address = request.form.get('address', '').strip()
+    label = request.form.get('label', '').strip() or 'Arrêt'
+    planned_time = request.form.get('planned_time', '').strip()
+    if not address:
+        flash('Adresse de l’arrêt requise.', 'error')
+        return redirect(url_for('driver_mission', evid=evid))
+    try:
+        sid = int(request.form.get('stop_id', '0') or 0)
+    except (TypeError, ValueError):
+        sid = 0
+    stop = db.session.get(TransportStop, sid) if sid else None
+    if stop and stop.event_id != evid:
+        stop = None
+    if not stop:
+        max_pos = db.session.query(db.func.max(TransportStop.position)).filter_by(event_id=evid).scalar() or 0
+        stop = TransportStop(event_id=evid, position=max_pos + 1)
+        db.session.add(stop)
+        action_word = 'ajouté'
+    else:
+        action_word = 'modifié'
+    stop.label = label[:150]
+    stop.address = address[:300]
+    stop.planned_time = planned_time[:10]
+    stop.latitude = stop.longitude = None
+    try:
+        from openlocationcode import openlocationcode as olc
+        plus_code = address.split(',', 1)[0].strip().upper().replace(' ', '')
+        if olc.isShort(plus_code):
+            plus_code = olc.recoverNearest(plus_code, 36.8065, 10.1815)
+        if olc.isFull(plus_code):
+            area = olc.decode(plus_code)
+            stop.latitude, stop.longitude = area.latitudeCenter, area.longitudeCenter
+    except Exception:
+        pass
+    db.session.commit()
+    log_action('transport_stop_update', f'Arrêt « {stop.label} » {action_word} pour « {evt.title} » : {stop.address}')
+    flash(f'Arrêt {action_word}.', 'success')
+    return redirect(url_for('driver_mission', evid=evid))
+
+
+@app.route('/driver/event/<int:evid>/stop/<int:sid>/delete', methods=['POST'])
+@permission_required('manage_transport')
+def driver_stop_delete(evid, sid):
+    evt = db.session.get(Event, evid)
+    stop = db.session.get(TransportStop, sid)
+    if evt and stop and stop.event_id == evid:
+        label = stop.label
+        db.session.delete(stop)
+        db.session.commit()
+        log_action('transport_stop_update', f'Arrêt « {label} » supprimé de « {evt.title} »')
+        flash('Arrêt supprimé.', 'success')
+    return redirect(url_for('driver_mission', evid=evid))
+
+
+@app.route('/driver/event/<int:evid>/stop/<int:sid>/move', methods=['POST'])
+@permission_required('manage_transport')
+def driver_stop_move(evid, sid):
+    stop = db.session.get(TransportStop, sid)
+    direction = request.form.get('direction', '')
+    if not stop or stop.event_id != evid or direction not in ('up', 'down'):
+        return redirect(url_for('driver_mission', evid=evid))
+    ordered = TransportStop.query.filter_by(event_id=evid).order_by(TransportStop.position, TransportStop.id).all()
+    index = ordered.index(stop)
+    other_index = index - 1 if direction == 'up' else index + 1
+    if 0 <= other_index < len(ordered):
+        other = ordered[other_index]
+        stop.position, other.position = other.position, stop.position
+        db.session.commit()
+        evt = db.session.get(Event, evid)
+        log_action('transport_stop_update', f'Ordre des arrêts modifié pour « {evt.title} »')
     return redirect(url_for('driver_mission', evid=evid))
 
 
@@ -3358,6 +3466,7 @@ def full_backup():
         ('15_transport_checks', TransportCheck),
         ('16_transport_proofs', TransportProof),
         ('17_transport_trackers', TransportTracker),
+        ('18_transport_stops', TransportStop),
     ]
 
     def fmt(v):
@@ -3583,6 +3692,10 @@ def init_db():
             ensure_column('events', 'transport_delivery_time', "ALTER TABLE events ADD COLUMN transport_delivery_time VARCHAR(10) DEFAULT ''")
             ensure_column('events', 'transport_recovery_time', "ALTER TABLE events ADD COLUMN transport_recovery_time VARCHAR(10) DEFAULT ''")
             ensure_column('events', 'transport_notes', "ALTER TABLE events ADD COLUMN transport_notes TEXT DEFAULT ''")
+            ensure_column('events', 'transport_optimize_stops', 'ALTER TABLE events ADD COLUMN transport_optimize_stops BOOLEAN DEFAULT TRUE')
+            ensure_column('events', 'transport_return_depot', 'ALTER TABLE events ADD COLUMN transport_return_depot BOOLEAN DEFAULT FALSE')
+            ensure_column('transport_stops', 'latitude', 'ALTER TABLE transport_stops ADD COLUMN latitude FLOAT')
+            ensure_column('transport_stops', 'longitude', 'ALTER TABLE transport_stops ADD COLUMN longitude FLOAT')
             # ── Migration 1x : donner la permission 'manage_clients' aux roles
             #    qui garent deja le planning (sinon les admins existants ne
             #    verraient pas la page Clients) ──
