@@ -51,8 +51,13 @@
                     {% set u = log.user_id | get_user %}
                     <tr>
                         <td style="white-space:nowrap">
+                            {% if log.timestamp %}
                             <strong>{{ log.timestamp.strftime('%d/%m/%Y') }}</strong><br>
                             <small style="color:var(--gray-500)">🕐 {{ log.timestamp.strftime('%H:%M:%S') }}</small>
+                            {% else %}
+                            <strong>Date inconnue</strong><br>
+                            <small style="color:var(--gray-500)">—</small>
+                            {% endif %}
                         </td>
                         <td>{{ u.full_name if u else '—' }}</td>
                         <td>
