@@ -2483,8 +2483,10 @@ def driver_dashboard():
         done, total, pct = _transport_progress(rows)
         missions.append({'event': evt, 'items': len(rows), 'done': done, 'total': total, 'pct': pct})
     depot_address = get_app_setting('transport_depot_address', 'Rue du Lac Loch Ness, Les Berges du Lac, Tunis')
+    depot_lat = get_app_setting('transport_depot_lat', '')
+    depot_lng = get_app_setting('transport_depot_lng', '')
     return render_template('driver.html', missions=missions, today=today,
-                           depot_address=depot_address,
+                           depot_address=depot_address, depot_lat=depot_lat, depot_lng=depot_lng,
                            can_manage=current_user.has_permission('manage_transport'))
 
 
@@ -2496,8 +2498,22 @@ def driver_depot_save():
         flash('Adresse du dépôt requise.', 'error')
         return redirect(url_for('driver_dashboard'))
     set_app_setting('transport_depot_address', address)
-    log_action('transport_depot_update', f'Adresse de départ transport modifiée : {address}')
-    flash('Adresse du dépôt enregistrée.', 'success')
+    lat = request.form.get('depot_lat', '').strip()
+    lng = request.form.get('depot_lng', '').strip()
+    try:
+        lat_num, lng_num = float(lat), float(lng)
+        if not (-90 <= lat_num <= 90 and -180 <= lng_num <= 180):
+            raise ValueError()
+        set_app_setting('transport_depot_lat', str(lat_num))
+        set_app_setting('transport_depot_lng', str(lng_num))
+        gps_label = f' ({lat_num:.6f}, {lng_num:.6f})'
+    except (TypeError, ValueError):
+        # Une nouvelle adresse saisie manuellement invalide les anciennes coordonnées.
+        set_app_setting('transport_depot_lat', '')
+        set_app_setting('transport_depot_lng', '')
+        gps_label = ''
+    log_action('transport_depot_update', f'Adresse de départ transport modifiée : {address}{gps_label}')
+    flash('Adresse et position du dépôt enregistrées.', 'success')
     return redirect(url_for('driver_dashboard'))
 
 
@@ -2515,9 +2531,12 @@ def driver_mission(evid):
     for proof in TransportProof.query.filter_by(event_id=evid).all():
         proofs[proof.stage] = proof
     depot_address = get_app_setting('transport_depot_address', 'Rue du Lac Loch Ness, Les Berges du Lac, Tunis')
+    depot_lat = get_app_setting('transport_depot_lat', '')
+    depot_lng = get_app_setting('transport_depot_lng', '')
     return render_template('driver_mission.html', evt=evt, rows=rows, stages=TRANSPORT_STAGES,
                            stage_labels=TRANSPORT_STAGE_LABELS, done=done, total=total, pct=pct,
                            proofs=proofs, depot_address=depot_address,
+                           depot_lat=depot_lat, depot_lng=depot_lng,
                            can_manage=current_user.has_permission('manage_transport'))
 
 

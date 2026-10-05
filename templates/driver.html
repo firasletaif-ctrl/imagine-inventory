@@ -21,11 +21,14 @@
   {% if can_manage %}
   <div class="detail-section" style="margin-bottom:1.2rem">
     <h3 style="margin-bottom:.7rem">📍 Point de départ habituel</h3>
-    <form method="POST" action="{{ url_for('driver_depot_save') }}" style="display:flex;gap:.6rem;flex-wrap:wrap">
-      <input name="depot_address" value="{{ depot_address }}" required style="flex:1;min-width:240px" placeholder="Adresse complète du dépôt">
+    <form method="POST" action="{{ url_for('driver_depot_save') }}" id="depotForm" style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <input name="depot_address" value="{{ depot_address }}" required style="flex:1;min-width:240px" placeholder="Nom ou adresse du dépôt" oninput="document.getElementById('depotLat').value='';document.getElementById('depotLng').value=''">
+      <input type="hidden" name="depot_lat" id="depotLat" value="{{ depot_lat }}">
+      <input type="hidden" name="depot_lng" id="depotLng" value="{{ depot_lng }}">
+      <button type="button" class="btn btn-secondary" id="gpsDepotBtn" onclick="captureDepotGPS()">📍 Utiliser ma position GPS</button>
       <button class="btn btn-primary">Enregistrer</button>
     </form>
-    <small style="color:var(--gray-500)">Le chauffeur pourra aussi choisir sa position GPS actuelle comme départ.</small>
+    <small id="depotGpsStatus" style="color:var(--gray-500)">{% if depot_lat and depot_lng %}✅ Position GPS enregistrée : {{ depot_lat }}, {{ depot_lng }}{% else %}Les codes courts comme V6P7+RFW ne sont pas reconnus par OpenStreetMap. Depuis le dépôt, utilise « Ma position GPS » pour une position exacte.{% endif %}</small>
   </div>
   {% endif %}
 
@@ -58,4 +61,22 @@
   <div class="empty-state"><div class="empty-icon">🚚</div><h3>Aucune mission affectée</h3><p>Les événements auxquels le chauffeur est affecté apparaîtront ici.</p></div>
   {% endif %}
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function captureDepotGPS(){
+  var btn=document.getElementById('gpsDepotBtn'),status=document.getElementById('depotGpsStatus');
+  if(!navigator.geolocation){status.textContent='⚠️ Géolocalisation indisponible sur cet appareil.';return;}
+  btn.disabled=true;status.textContent='📍 Recherche de la position précise du dépôt...';
+  navigator.geolocation.getCurrentPosition(function(p){
+    document.getElementById('depotLat').value=p.coords.latitude.toFixed(7);
+    document.getElementById('depotLng').value=p.coords.longitude.toFixed(7);
+    status.textContent='✅ Position trouvée avec une précision d’environ '+Math.round(p.coords.accuracy)+' m. Appuie maintenant sur Enregistrer.';
+    btn.disabled=false;
+  },function(e){
+    status.textContent='⚠️ Position impossible. Autorise la localisation pour ce site dans les réglages du téléphone.';
+    btn.disabled=false;
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+</script>
 {% endblock %}
