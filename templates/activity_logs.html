@@ -88,6 +88,8 @@
                             {% elif log.action == 'permission_denied' %}<span class="status-badge" style="background:var(--red-pale);color:var(--red)">🚫 Acces refuse</span>
                             {% elif log.action == 'transport_check' %}<span class="status-badge" style="background:#DCFCE7;color:#166534">✅ Contrôle transport</span>
                             {% elif log.action == 'transport_navigation' %}<span class="status-badge" style="background:#DBEAFE;color:#1E40AF">🗺️ Navigation</span>
+                            {% elif log.action == 'transport_tracking_start' %}<span class="status-badge" style="background:#DCFCE7;color:#166534">🟢 Suivi GPS démarré</span>
+                            {% elif log.action == 'transport_tracking_stop' %}<span class="status-badge" style="background:#FEE2E2;color:#991B1B">🔴 Suivi GPS arrêté</span>
                             {% elif log.action == 'transport_proof' %}<span class="status-badge" style="background:#EDE9FE;color:#6D28D9">✍️ Preuve transport</span>
                             {% elif log.action == 'transport_print' %}<span class="status-badge" style="background:#F1F5F9;color:#475569">🖨️ Fiche transport</span>
                             {% elif log.action == 'transport_settings' %}<span class="status-badge" style="background:#FEF3C7;color:#92400E">⚙️ Mission transport</span>

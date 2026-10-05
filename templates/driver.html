@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Chauffeur & Transport{% endblock %}
 {% block head %}
+{% if can_manage %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endif %}
 <style>
 .driver-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
 .mission-card{background:#fff;border:1px solid var(--gray-200);border-radius:16px;padding:1.15rem;box-shadow:var(--shadow-sm)}
@@ -10,6 +11,7 @@
 .mission-title{font-size:1.08rem;color:var(--blue-deep);margin:.2rem 0 .55rem}
 .transport-times{display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem;margin:.7rem 0;font-size:.8rem;color:var(--gray-600)}
 .progress-track{height:8px;border-radius:20px;background:var(--gray-100);overflow:hidden;margin:.5rem 0}.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:20px}
+#liveTrackingMap{height:380px;border-radius:14px;background:#e9eef5}.tracking-list{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}.tracking-chip{background:#DCFCE7;color:#166534;border-radius:10px;padding:.55rem .75rem;font-size:.8rem;font-weight:600}
 </style>
 {% endblock %}
 {% block content %}
@@ -28,7 +30,18 @@
       <button type="button" class="btn btn-secondary" id="gpsDepotBtn" onclick="captureDepotGPS()">📍 Utiliser ma position GPS</button>
       <button class="btn btn-primary">Enregistrer</button>
     </form>
-    <small id="depotGpsStatus" style="color:var(--gray-500)">{% if depot_lat and depot_lng %}✅ Position GPS enregistrée : {{ depot_lat }}, {{ depot_lng }}{% else %}Les codes courts comme V6P7+RFW ne sont pas reconnus par OpenStreetMap. Depuis le dépôt, utilise « Ma position GPS » pour une position exacte.{% endif %}</small>
+    <small id="depotGpsStatus" style="color:var(--gray-500)">{% if depot_lat and depot_lng %}✅ Position enregistrée : {{ depot_lat }}, {{ depot_lng }}{% else %}Tu peux saisir une adresse complète, un Plus Code Google comme V6P7+RFW, ou utiliser la position GPS du téléphone.{% endif %}</small>
+  </div>
+  {% endif %}
+
+  {% if can_manage %}
+  <div class="detail-section" style="margin-bottom:1.2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:.7rem;flex-wrap:wrap">
+      <div><h2>📡 Suivi GPS en direct</h2><p style="font-size:.84rem;color:var(--gray-500)">Positions actualisées toutes les 15 secondes pendant que le chauffeur partage sa position.</p></div>
+      <span id="trackingRefresh" style="font-size:.76rem;color:var(--gray-500)">Chargement…</span>
+    </div>
+    <div id="liveTrackingMap"></div>
+    <div id="trackingList" class="tracking-list"></div>
   </div>
   {% endif %}
 
@@ -63,6 +76,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
+{% if can_manage %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>{% endif %}
 <script>
 function captureDepotGPS(){
   var btn=document.getElementById('gpsDepotBtn'),status=document.getElementById('depotGpsStatus');
@@ -78,5 +92,33 @@ function captureDepotGPS(){
     btn.disabled=false;
   },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
 }
+{% if can_manage %}
+var trackingMap=null,trackingMarkers={};
+function initTrackingMap(){
+  if(typeof L==='undefined')return;
+  trackingMap=L.map('liveTrackingMap').setView([36.8065,10.1815],10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(trackingMap);
+  refreshTracking();setInterval(refreshTracking,15000);
+}
+async function refreshTracking(){
+  try{
+    var r=await fetch('/driver/tracking/live',{cache:'no-store'}),d=await r.json();
+    if(!d.ok)throw new Error('Erreur de suivi');
+    var active={},list=document.getElementById('trackingList'),html='',bounds=[];
+    d.trackers.forEach(function(t){
+      active[t.id]=true;var pos=[t.latitude,t.longitude];bounds.push(pos);
+      var popup='<b>🚚 '+escapeHtml(t.driver)+'</b><br>'+escapeHtml(t.event)+'<br>Vitesse : '+t.speed_kmh+' km/h<br>Actualisé : '+t.updated_at+'<br><a href="'+t.mission_url+'">Ouvrir la mission</a>';
+      if(trackingMarkers[t.id])trackingMarkers[t.id].setLatLng(pos).setPopupContent(popup);else trackingMarkers[t.id]=L.marker(pos).addTo(trackingMap).bindPopup(popup);
+      html+='<a class="tracking-chip" href="'+t.mission_url+'">🟢 '+escapeHtml(t.driver)+' · '+escapeHtml(t.event)+' · '+t.updated_at+'</a>';
+    });
+    Object.keys(trackingMarkers).forEach(function(id){if(!active[id]){trackingMap.removeLayer(trackingMarkers[id]);delete trackingMarkers[id];}});
+    list.innerHTML=html||'<span style="font-size:.84rem;color:var(--gray-500)">Aucun chauffeur ne partage actuellement sa position.</span>';
+    document.getElementById('trackingRefresh').textContent='Actualisé à '+new Date().toLocaleTimeString('fr-FR');
+    if(bounds.length===1)trackingMap.setView(bounds[0],15);else if(bounds.length>1)trackingMap.fitBounds(bounds,{padding:[30,30]});
+  }catch(e){document.getElementById('trackingRefresh').textContent='⚠️ '+e.message;}
+}
+function escapeHtml(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+window.addEventListener('load',initTrackingMap);
+{% endif %}
 </script>
 {% endblock %}

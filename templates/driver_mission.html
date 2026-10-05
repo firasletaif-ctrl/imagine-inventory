@@ -10,6 +10,7 @@
 .material-card{border:1px solid var(--gray-200);border-radius:13px;padding:.85rem;margin-bottom:.7rem;background:white}.material-head{display:flex;justify-content:space-between;gap:.5rem}.stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem;margin-top:.7rem}.stage-btn{border:1px solid var(--gray-200);background:var(--gray-50);border-radius:9px;padding:.6rem .3rem;font-size:.72rem;font-weight:700;cursor:pointer;color:var(--gray-600)}.stage-btn.done{background:#DCFCE7;border-color:#86EFAC;color:#166534}.stage-btn.busy{opacity:.55}
 .signature-wrap{border:1px solid var(--gray-300);border-radius:10px;background:#fff;overflow:hidden}.signature-wrap canvas{width:100%;height:180px;display:block;touch-action:none}
 .proof-preview{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}.proof-preview img{max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--gray-200)}
+.tracking-panel{border:2px solid #BBF7D0;background:#F0FDF4;border-radius:14px;padding:1rem;margin-bottom:1rem}.tracking-panel.off{border-color:var(--gray-200);background:var(--gray-50)}.tracking-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#16A34A;margin-right:.35rem;box-shadow:0 0 0 4px #DCFCE7}.tracking-panel.off .tracking-dot{background:#94A3B8;box-shadow:none}
 @media(max-width:700px){.time-grid{grid-template-columns:repeat(2,1fr)}#routeMap{height:320px}.stage-grid{grid-template-columns:repeat(2,1fr)}.proof-preview{grid-template-columns:1fr}}
 </style>
 {% endblock %}
@@ -20,6 +21,14 @@
     <small>MISSION TRANSPORT · {{ evt.date_label() }}</small>
     <h1>🚚 {{ evt.title }}</h1>
     <div class="mission-meta"><span>📍 {{ evt.location or 'Destination non renseignée' }}</span>{% if evt.client %}<span>👤 {{ evt.client.name }}</span>{% endif %}<span>🕐 Événement {{ evt.start_time }}–{{ evt.end_time }}</span></div>
+  </section>
+
+  <section class="tracking-panel {% if not tracker or not tracker.active %}off{% endif %}" id="trackingPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:.7rem;flex-wrap:wrap">
+      <div><strong><span class="tracking-dot"></span><span id="trackingTitle">{% if tracker and tracker.active %}Suivi GPS actif{% else %}Suivi GPS arrêté{% endif %}</span></strong><div id="trackingStatus" style="font-size:.8rem;color:var(--gray-600);margin-top:.2rem">{% if tracker and tracker.active %}La position du camion est visible par les gestionnaires transport.{% else %}Démarre le partage au moment du départ.{% endif %}</div></div>
+      <div style="display:flex;gap:.5rem"><button type="button" class="btn btn-success" id="trackingStart" onclick="startTracking()" {% if tracker and tracker.active %}style="display:none"{% endif %}>📡 Démarrer le suivi</button><button type="button" class="btn btn-danger" id="trackingStop" onclick="stopTracking()" {% if not tracker or not tracker.active %}style="display:none"{% endif %}>⏹ Arrêter</button></div>
+    </div>
+    <small style="display:block;margin-top:.55rem;color:var(--gray-500)">Garde cette mission ouverte pendant le trajet. La position est envoyée toutes les 15 secondes et le suivi s’arrête uniquement avec le bouton Arrêter.</small>
   </section>
 
   <section class="detail-section" style="margin-bottom:1rem">
@@ -105,10 +114,29 @@
 {% if evt.location %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>{% endif %}
 <script>
 var EVENT_ID={{ evt.id }};
+var trackingActive={% if tracker and tracker.active %}true{% else %}false{% endif %};
+var trackingWatch=null,trackingLastSent=0,wakeLock=null;
 var destination={{ (evt.location or '')|tojson }};
 var depotAddress={{ depot_address|tojson }};
 var depotLat=parseFloat({{ (depot_lat or '')|tojson }}), depotLng=parseFloat({{ (depot_lng or '')|tojson }});
 var map=null, routeLayer=null, markers=[];
+async function trackingPost(path,data){var r=await fetch('/driver/event/'+EVENT_ID+'/tracking/'+path,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(data||{})});var d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Erreur GPS');return d;}
+function setTrackingUI(active,msg){trackingActive=active;document.getElementById('trackingPanel').classList.toggle('off',!active);document.getElementById('trackingTitle').textContent=active?'Suivi GPS actif':'Suivi GPS arrêté';document.getElementById('trackingStart').style.display=active?'none':'';document.getElementById('trackingStop').style.display=active?'':'none';if(msg)document.getElementById('trackingStatus').textContent=msg;}
+async function startTracking(){
+  if(!navigator.geolocation){alert('La géolocalisation n’est pas disponible sur cet appareil.');return;}
+  try{await trackingPost('start',{});setTrackingUI(true,'Recherche de la position du camion…');startPositionWatch();if(navigator.wakeLock){try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}}catch(e){alert(e.message);}
+}
+function startPositionWatch(){
+  if(trackingWatch!==null||!navigator.geolocation)return;
+  trackingWatch=navigator.geolocation.watchPosition(async function(p){
+    var now=Date.now();if(now-trackingLastSent<14000)return;trackingLastSent=now;
+    try{var d=await trackingPost('location',{latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy||0,speed:p.coords.speed||0,heading:p.coords.heading||0});setTrackingUI(true,'Position envoyée à '+d.updated_at+' · précision ±'+Math.round(p.coords.accuracy||0)+' m');}catch(e){document.getElementById('trackingStatus').textContent='⚠️ '+e.message;}
+  },function(e){document.getElementById('trackingStatus').textContent='⚠️ Autorise la localisation précise pour Imagine Events.';},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+}
+async function stopTracking(){
+  try{await trackingPost('stop',{});}catch(e){alert(e.message);return;}
+  if(trackingWatch!==null){navigator.geolocation.clearWatch(trackingWatch);trackingWatch=null;}if(wakeLock){try{await wakeLock.release();}catch(e){}wakeLock=null;}setTrackingUI(false,'Le partage de position est arrêté.');
+}
 function initMap(){if(!destination||typeof L==='undefined')return;map=L.map('routeMap').setView([36.8065,10.1815],11);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);}
 async function geocode(address){var u='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tn&q='+encodeURIComponent(address);var r=await fetch(u,{headers:{'Accept':'application/json'}});var d=await r.json();if(!d.length)throw new Error('Adresse introuvable : '+address);return [parseFloat(d[0].lat),parseFloat(d[0].lon)];}
 async function drawRoute(start){try{document.getElementById('routeInfo').textContent='Calcul de l’itinéraire...';var end=await geocode(destination);var u='https://router.project-osrm.org/route/v1/driving/'+start[1]+','+start[0]+';'+end[1]+','+end[0]+'?overview=full&geometries=geojson&steps=true';var r=await fetch(u);var d=await r.json();if(!d.routes||!d.routes.length)throw new Error('Aucun itinéraire trouvé');if(routeLayer)map.removeLayer(routeLayer);markers.forEach(function(m){map.removeLayer(m)});markers=[];routeLayer=L.geoJSON(d.routes[0].geometry,{style:{color:'#E63946',weight:6,opacity:.85}}).addTo(map);markers.push(L.marker(start).addTo(map).bindPopup('Départ'));markers.push(L.marker(end).addTo(map).bindPopup(destination));map.fitBounds(routeLayer.getBounds(),{padding:[25,25]});var km=(d.routes[0].distance/1000).toFixed(1);var min=Math.round(d.routes[0].duration/60);document.getElementById('routeInfo').innerHTML='🚚 <b>'+km+' km</b> · environ <b>'+min+' min</b> hors trafic en temps réel';}catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message;}}
@@ -121,6 +149,6 @@ function sizeCanvas(){var saved=hasSignature?canvas.toDataURL():null;canvas.widt
 function point(e){var r=canvas.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}function startDraw(e){e.preventDefault();drawing=true;var p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y)}function moveDraw(e){if(!drawing)return;e.preventDefault();var p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke();hasSignature=true}function endDraw(){drawing=false}['mousedown','touchstart'].forEach(function(n){canvas.addEventListener(n,startDraw,{passive:false})});['mousemove','touchmove'].forEach(function(n){canvas.addEventListener(n,moveDraw,{passive:false})});['mouseup','mouseleave','touchend'].forEach(function(n){canvas.addEventListener(n,endDraw)});function clearSignature(){ctx.clearRect(0,0,canvas.width,canvas.height);hasSignature=false;}
 document.getElementById('proofPhoto').addEventListener('change',function(){var f=this.files[0];if(!f)return;var img=new Image(),reader=new FileReader();reader.onload=function(e){img.onload=function(){var max=1200,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);document.getElementById('photoData').value=c.toDataURL('image/jpeg',.75);document.getElementById('photoStatus').textContent='Photo prête ✓';};img.src=e.target.result};reader.readAsDataURL(f)});
 document.getElementById('proofForm').addEventListener('submit',function(){if(hasSignature)document.getElementById('signatureData').value=canvas.toDataURL('image/png');document.getElementById('proofSubmit').disabled=true;});
-window.addEventListener('load',function(){sizeCanvas();initMap()});window.addEventListener('resize',sizeCanvas);
+window.addEventListener('load',async function(){sizeCanvas();initMap();if(trackingActive){startPositionWatch();if(navigator.wakeLock){try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}}});window.addEventListener('resize',sizeCanvas);
 </script>
 {% endblock %}

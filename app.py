@@ -176,6 +176,7 @@ class Event(db.Model):
     assignments = db.relationship('EventAssignment', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_checks = db.relationship('TransportCheck', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_proofs = db.relationship('TransportProof', backref='event', lazy=True, cascade='all, delete-orphan')
+    transport_trackers = db.relationship('TransportTracker', lazy=True, cascade='all, delete-orphan', overlaps='event')
     def date_end(self):
         return self.end_date or self.event_date
     def is_multiday(self):
@@ -241,6 +242,27 @@ class TransportProof(db.Model):
     created_at = db.Column(db.DateTime, default=tunisia_now)
     creator = db.relationship('User', foreign_keys=[created_by])
     __table_args__ = (db.UniqueConstraint('event_id', 'stage', name='uq_transport_proof_stage'),)
+
+
+# Dernière position connue du chauffeur pour une mission. Une seule ligne est
+# mise à jour toutes les 15 secondes afin de ne pas remplir inutilement la base.
+class TransportTracker(db.Model):
+    __tablename__ = 'transport_trackers'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    accuracy = db.Column(db.Float, nullable=True)
+    speed = db.Column(db.Float, nullable=True)
+    heading = db.Column(db.Float, nullable=True)
+    active = db.Column(db.Boolean, default=False)
+    started_at = db.Column(db.DateTime, nullable=True)
+    stopped_at = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime, nullable=True)
+    user = db.relationship('User', foreign_keys=[user_id])
+    event = db.relationship('Event', foreign_keys=[event_id])
+    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', name='uq_transport_tracker_user'),)
 
 # ── NEW: Notifications ──
 class Notification(db.Model):
@@ -1580,7 +1602,7 @@ CSV_IMPORT_ORDER = [
     ('10_notifications', 'notifications'), ('11_material_orders', 'material_orders'),
     ('12_inventory_checks', 'inventory_checks'), ('13_event_reminders', 'event_reminders'),
     ('14_app_settings', 'app_settings'), ('15_transport_checks', 'transport_checks'),
-    ('16_transport_proofs', 'transport_proofs'),
+    ('16_transport_proofs', 'transport_proofs'), ('17_transport_trackers', 'transport_trackers'),
 ]
 
 def _import_csv_bytes(raw, table):
@@ -1596,7 +1618,7 @@ def _import_csv_bytes(raw, table):
         'notifications': Notification, 'material_orders': MaterialOrder,
         'inventory_checks': InventoryCheck, 'event_reminders': EventReminder,
         'app_settings': AppSetting, 'transport_checks': TransportCheck,
-        'transport_proofs': TransportProof,
+        'transport_proofs': TransportProof, 'transport_trackers': TransportTracker,
     }
     model = model_map.get(table)
     if not model:
@@ -1650,7 +1672,7 @@ def _import_csv_bytes(raw, table):
                     if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
                         try: val = int(val)
                         except: pass
-                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at', 'checked_at'):
+                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at', 'checked_at', 'started_at', 'stopped_at'):
                         parsed = None
                         for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
                             try: parsed = datetime.strptime(val, fmt); break
@@ -1839,7 +1861,8 @@ def import_full():
                  'categories':'categories','event_assignments':'affectations equipe','inventory_checks':'controles',
                  'app_settings':'cles (push)','notifications':'notifications','material_orders':'commandes',
                  'equipment_images':'photos liees','activity_logs':'logs','roles':'roles','event_reminders':'rappels',
-                 'transport_checks':'contrôles transport','transport_proofs':'preuves transport'}
+                 'transport_checks':'contrôles transport','transport_proofs':'preuves transport',
+                 'transport_trackers':'positions GPS transport'}
         parts = [f'{n} {label.get(t, t)}' for t, n in stats.items()]
         msg = '✅ IMPORT COMPLET : ' + ', '.join(parts) + f' + {photo_count} photos'
         msg += f' — {total_err} ligne(s) en erreur' if total_err else ' — 0 erreur'
@@ -1866,6 +1889,7 @@ def reset_all_tables():
         EventReminder.query.delete()
         TransportCheck.query.delete()
         TransportProof.query.delete()
+        TransportTracker.query.delete()
         EventAssignment.query.delete()
         Event.query.delete()
         ActivityLog.query.delete()
@@ -1987,6 +2011,8 @@ def activity_logs():
         'transport_check':'✅ Contrôle matériel transport',
         'transport_proof':'✍️ Preuve transport enregistrée',
         'transport_navigation':'🗺️ Navigation chauffeur',
+        'transport_tracking_start':'🟢 Suivi GPS démarré',
+        'transport_tracking_stop':'🔴 Suivi GPS arrêté',
         'transport_print':'🖨️ Fiche transport imprimée',
     }
     return render_template('activity_logs.html', logs=logs, action_filter=action_filter, user_filter=user_filter, total_today=total_today, total_week=total_week, all_actions=all_actions, ACTION_LABELS=ACTION_LABELS, all_users=User.query.order_by(User.full_name).all())
@@ -2500,20 +2526,40 @@ def driver_depot_save():
     set_app_setting('transport_depot_address', address)
     lat = request.form.get('depot_lat', '').strip()
     lng = request.form.get('depot_lng', '').strip()
+    lat_num = lng_num = None
+    position_source = ''
     try:
         lat_num, lng_num = float(lat), float(lng)
         if not (-90 <= lat_num <= 90 and -180 <= lng_num <= 180):
             raise ValueError()
+        position_source = 'GPS'
+    except (TypeError, ValueError):
+        # Les codes Google Plus courts (ex. V6P7+RFW) ne sont pas compris par
+        # OpenStreetMap. On les convertit nous-mêmes en coordonnées autour de Tunis.
+        try:
+            from openlocationcode import openlocationcode as olc
+            plus_code = address.split(',', 1)[0].strip().upper().replace(' ', '')
+            if olc.isShort(plus_code):
+                plus_code = olc.recoverNearest(plus_code, 36.8065, 10.1815)
+            if not olc.isFull(plus_code):
+                raise ValueError()
+            area = olc.decode(plus_code)
+            lat_num, lng_num = area.latitudeCenter, area.longitudeCenter
+            position_source = 'Plus Code'
+        except Exception:
+            lat_num = lng_num = None
+    if lat_num is not None and lng_num is not None:
         set_app_setting('transport_depot_lat', str(lat_num))
         set_app_setting('transport_depot_lng', str(lng_num))
-        gps_label = f' ({lat_num:.6f}, {lng_num:.6f})'
-    except (TypeError, ValueError):
-        # Une nouvelle adresse saisie manuellement invalide les anciennes coordonnées.
+        gps_label = f' ({lat_num:.6f}, {lng_num:.6f}, {position_source})'
+        flash(f'Dépôt enregistré et localisé par {position_source}.', 'success')
+    else:
+        # Une nouvelle adresse non géolocalisable invalide les anciennes coordonnées.
         set_app_setting('transport_depot_lat', '')
         set_app_setting('transport_depot_lng', '')
         gps_label = ''
+        flash('Adresse enregistrée. Pour la carte intégrée, utilise une adresse complète ou le bouton GPS.', 'warning')
     log_action('transport_depot_update', f'Adresse de départ transport modifiée : {address}{gps_label}')
-    flash('Adresse et position du dépôt enregistrées.', 'success')
     return redirect(url_for('driver_dashboard'))
 
 
@@ -2533,10 +2579,11 @@ def driver_mission(evid):
     depot_address = get_app_setting('transport_depot_address', 'Rue du Lac Loch Ness, Les Berges du Lac, Tunis')
     depot_lat = get_app_setting('transport_depot_lat', '')
     depot_lng = get_app_setting('transport_depot_lng', '')
+    tracker = TransportTracker.query.filter_by(event_id=evid, user_id=current_user.id).first()
     return render_template('driver_mission.html', evt=evt, rows=rows, stages=TRANSPORT_STAGES,
                            stage_labels=TRANSPORT_STAGE_LABELS, done=done, total=total, pct=pct,
                            proofs=proofs, depot_address=depot_address,
-                           depot_lat=depot_lat, depot_lng=depot_lng,
+                           depot_lat=depot_lat, depot_lng=depot_lng, tracker=tracker,
                            can_manage=current_user.has_permission('manage_transport'))
 
 
@@ -2649,6 +2696,101 @@ def driver_navigation_log(evid):
     app_name = request.form.get('app', 'carte')[:30]
     log_action('transport_navigation', f'Navigation {app_name} ouverte vers « {evt.location or evt.title} »')
     return jsonify({'ok': True})
+
+
+@app.route('/driver/event/<int:evid>/tracking/start', methods=['POST'])
+@permission_required_any('driver_access', 'manage_transport')
+def driver_tracking_start(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        return jsonify({'ok': False, 'error': 'Accès refusé'}), 403
+    tracker = TransportTracker.query.filter_by(event_id=evid, user_id=current_user.id).first()
+    if not tracker:
+        tracker = TransportTracker(event_id=evid, user_id=current_user.id)
+        db.session.add(tracker)
+    was_active = bool(tracker.active)
+    tracker.active = True
+    tracker.started_at = tracker.started_at if was_active and tracker.started_at else tunisia_now()
+    tracker.stopped_at = None
+    tracker.updated_at = tunisia_now()
+    db.session.commit()
+    if not was_active:
+        log_action('transport_tracking_start', f'Suivi GPS démarré pour « {evt.title} »')
+    return jsonify({'ok': True, 'active': True})
+
+
+@app.route('/driver/event/<int:evid>/tracking/location', methods=['POST'])
+@permission_required_any('driver_access', 'manage_transport')
+def driver_tracking_location(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        return jsonify({'ok': False, 'error': 'Accès refusé'}), 403
+    tracker = TransportTracker.query.filter_by(event_id=evid, user_id=current_user.id).first()
+    if not tracker or not tracker.active:
+        return jsonify({'ok': False, 'error': 'Suivi GPS non démarré'}), 409
+    try:
+        lat = float(request.form.get('latitude', ''))
+        lng = float(request.form.get('longitude', ''))
+        accuracy = float(request.form.get('accuracy', '0') or 0)
+        speed = float(request.form.get('speed', '0') or 0)
+        heading = float(request.form.get('heading', '0') or 0)
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            raise ValueError()
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'Position invalide'}), 400
+    tracker.latitude = lat
+    tracker.longitude = lng
+    tracker.accuracy = max(0, min(accuracy, 10000))
+    tracker.speed = max(0, speed)
+    tracker.heading = heading
+    tracker.updated_at = tunisia_now()
+    db.session.commit()
+    return jsonify({'ok': True, 'updated_at': tracker.updated_at.strftime('%H:%M:%S')})
+
+
+@app.route('/driver/event/<int:evid>/tracking/stop', methods=['POST'])
+@permission_required_any('driver_access', 'manage_transport')
+def driver_tracking_stop(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        return jsonify({'ok': False, 'error': 'Accès refusé'}), 403
+    tracker = TransportTracker.query.filter_by(event_id=evid, user_id=current_user.id).first()
+    if tracker and tracker.active:
+        tracker.active = False
+        tracker.stopped_at = tunisia_now()
+        tracker.updated_at = tunisia_now()
+        db.session.commit()
+        log_action('transport_tracking_stop', f'Suivi GPS arrêté pour « {evt.title} »')
+    return jsonify({'ok': True, 'active': False})
+
+
+@app.route('/driver/tracking/live')
+@permission_required('manage_transport')
+def driver_tracking_live():
+    """Positions actives visibles uniquement par les gestionnaires transport."""
+    cutoff = tunisia_now() - timedelta(minutes=10)
+    trackers = TransportTracker.query.filter(
+        TransportTracker.active.is_(True),
+        TransportTracker.latitude.isnot(None),
+        TransportTracker.longitude.isnot(None),
+        TransportTracker.updated_at >= cutoff
+    ).order_by(TransportTracker.updated_at.desc()).all()
+    data = []
+    for tracker in trackers:
+        evt = db.session.get(Event, tracker.event_id)
+        user = db.session.get(User, tracker.user_id)
+        if not evt or not user:
+            continue
+        data.append({
+            'id': tracker.id, 'event_id': evt.id, 'event': evt.title,
+            'driver': user.full_name, 'latitude': tracker.latitude,
+            'longitude': tracker.longitude, 'accuracy': tracker.accuracy or 0,
+            'speed_kmh': round((tracker.speed or 0) * 3.6, 1),
+            'heading': tracker.heading or 0,
+            'updated_at': tracker.updated_at.strftime('%H:%M:%S') if tracker.updated_at else '',
+            'mission_url': url_for('driver_mission', evid=evt.id)
+        })
+    return jsonify({'ok': True, 'trackers': data})
 
 
 @app.route('/driver/event/<int:evid>/print')
@@ -3215,6 +3357,7 @@ def full_backup():
         ('14_app_settings', AppSetting),
         ('15_transport_checks', TransportCheck),
         ('16_transport_proofs', TransportProof),
+        ('17_transport_trackers', TransportTracker),
     ]
 
     def fmt(v):
