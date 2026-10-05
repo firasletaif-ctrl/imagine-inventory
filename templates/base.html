@@ -51,6 +51,9 @@
             <a href="{{ url_for('driver_dashboard') }}" class="nav-item {% if request.endpoint in ('driver_dashboard','driver_mission','driver_print') %}active{% endif %}">
                 <span class="nav-icon">🚚</span><span>Chauffeur</span>
             </a>
+            <a href="{{ url_for('driver_recaps') }}" class="nav-item {% if request.endpoint in ('driver_recaps','driver_recap') %}active{% endif %}">
+                <span class="nav-icon">📑</span><span>Récaps chauffeurs</span>
+            </a>
             {% endif %}
             {% if has_perm('manage_clients','manage_schedule') %}
             <a href="{{ url_for('clients_list') }}" class="nav-item {% if request.endpoint in ('clients_list','client_detail','client_new','client_edit') %}active{% endif %}">

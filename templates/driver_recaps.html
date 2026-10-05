@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Récaps chauffeurs{% endblock %}
+{% block head %}
+<style>
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:1rem}.recap-card{background:#fff;border:1px solid var(--gray-200);border-radius:15px;padding:1rem;box-shadow:var(--shadow-sm)}.recap-head{display:flex;justify-content:space-between;gap:.7rem;align-items:flex-start}.recap-title{font-size:1.05rem;color:var(--blue-deep);margin:.15rem 0}.recap-meta{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin:.8rem 0;font-size:.8rem;color:var(--gray-600)}.driver-chip{display:inline-block;background:var(--blue-pale);color:var(--blue-deep);border-radius:100px;padding:.25rem .55rem;font-size:.73rem;margin:.15rem .15rem .15rem 0}.progress-track{height:8px;background:var(--gray-100);border-radius:20px;overflow:hidden}.progress-track div{height:100%;background:linear-gradient(90deg,var(--blue),var(--green))}
+</style>
+{% endblock %}
+{% block content %}
+<div class="form-page" style="max-width:1200px">
+  <div class="dash-header"><div><h1 class="dash-title">📑 Récaps chauffeurs</h1><p class="dash-subtitle">Historique complet des missions de transport</p></div><a class="btn btn-secondary" href="{{ url_for('driver_dashboard') }}">🚚 Missions en cours</a></div>
+  {% if recaps %}<div class="recap-grid">
+  {% for recap in recaps %}{% set evt = recap.event %}
+    <article class="recap-card">
+      <div class="recap-head"><div><small style="color:var(--red);font-weight:700">{{ evt.date_label() }}</small><h2 class="recap-title">{{ evt.title }}</h2></div><span class="status-badge {% if recap.state == 'Terminée' %}s-ok{% elif recap.state == 'En cours' %}s-active{% elif recap.state == 'Annulée' %}s-late{% endif %}">{{ recap.state }}</span></div>
+      <div style="font-size:.82rem;color:var(--gray-600)">📍 {{ evt.location or 'Lieu non renseigné' }}</div>
+      <div style="margin-top:.45rem">{% if recap.drivers %}{% for driver in recap.drivers %}<span class="driver-chip">🚚 {{ driver.user.full_name }}</span>{% endfor %}{% else %}<span style="font-size:.76rem;color:var(--gray-400)">Aucun chauffeur identifié</span>{% endif %}</div>
+      <div class="recap-meta"><span>📦 {{ recap.items }} article(s)</span><span>🔢 {{ recap.units }} unité(s)</span><span>📍 {{ recap.stops }} arrêt(s)</span><span>✍️ {{ recap.proofs }} preuve(s)</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:.3rem"><span>Contrôles matériel</span><b>{{ recap.pct }}%</b></div><div class="progress-track"><div style="width:{{ recap.pct }}%"></div></div>
+      <a href="{{ url_for('driver_recap', evid=evt.id) }}" class="btn btn-primary" style="width:100%;margin-top:.8rem">Ouvrir le récap complet →</a>
+    </article>
+  {% endfor %}
+  </div>{% else %}<div class="empty-state"><div class="empty-icon">📑</div><h3>Aucune mission</h3></div>{% endif %}
+</div>
+{% endblock %}

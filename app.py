@@ -2914,6 +2914,83 @@ def driver_print(evid):
                            stage_labels=TRANSPORT_STAGE_LABELS, now=tunisia_now())
 
 
+def _driver_recap_context(evt):
+    """Contexte complet et imprimable d'une mission chauffeur."""
+    rows = _transport_material(evt)
+    done, total, pct = _transport_progress(rows)
+    team = []
+    drivers = []
+    driver_ids = set()
+    for assignment in evt.assignments:
+        user = db.session.get(User, assignment.user_id)
+        if not user:
+            continue
+        member = {'user': user, 'assignment_role': assignment.role or 'Staff'}
+        team.append(member)
+        if user.has_permission('driver_access') or (assignment.role or '').lower() == 'chauffeur':
+            drivers.append(member)
+            driver_ids.add(user.id)
+    trackers = TransportTracker.query.filter_by(event_id=evt.id).order_by(TransportTracker.started_at).all()
+    for tracker in trackers:
+        if tracker.user and tracker.user_id not in driver_ids:
+            drivers.append({'user': tracker.user, 'assignment_role': 'Chauffeur GPS'})
+            driver_ids.add(tracker.user_id)
+    proofs = TransportProof.query.filter_by(event_id=evt.id).order_by(TransportProof.created_at).all()
+    activity = ActivityLog.query.filter(
+        ActivityLog.action.like('transport_%'),
+        ActivityLog.description.ilike('%' + (evt.title or '') + '%')
+    ).order_by(ActivityLog.timestamp.desc()).limit(100).all()
+    total_units = sum(row['quantity'] for row in rows)
+    if total and pct == 100:
+        mission_state = 'Terminée'
+    elif evt.status == 'cancelled':
+        mission_state = 'Annulée'
+    elif evt.event_date > tunisia_now().date() and done == 0:
+        mission_state = 'À venir'
+    elif done > 0 or any(tracker.active for tracker in trackers):
+        mission_state = 'En cours'
+    else:
+        mission_state = 'À préparer'
+    return {
+        'evt': evt, 'rows': rows, 'done': done, 'total': total, 'pct': pct,
+        'total_units': total_units, 'team': team, 'drivers': drivers,
+        'trackers': trackers, 'proofs': proofs, 'activity': activity,
+        'mission_state': mission_state
+    }
+
+
+@app.route('/driver/recaps')
+@permission_required_any('driver_access', 'manage_transport')
+def driver_recaps():
+    q = Event.query
+    if not current_user.has_permission('manage_transport'):
+        q = q.join(EventAssignment).filter(EventAssignment.user_id == current_user.id)
+    events = q.order_by(Event.event_date.desc(), Event.start_time.desc()).limit(200).all()
+    recaps = []
+    for evt in events:
+        ctx = _driver_recap_context(evt)
+        recaps.append({
+            'event': evt, 'drivers': ctx['drivers'], 'items': len(ctx['rows']),
+            'units': ctx['total_units'], 'pct': ctx['pct'], 'state': ctx['mission_state'],
+            'stops': len(evt.transport_stops), 'proofs': len(ctx['proofs'])
+        })
+    return render_template('driver_recaps.html', recaps=recaps,
+                           can_manage=current_user.has_permission('manage_transport'))
+
+
+@app.route('/driver/recap/<int:evid>')
+@permission_required_any('driver_access', 'manage_transport')
+def driver_recap(evid):
+    evt = db.session.get(Event, evid)
+    if not _transport_event_allowed(evt):
+        flash('Cette mission ne vous est pas affectée.', 'error')
+        return redirect(url_for('driver_recaps'))
+    ctx = _driver_recap_context(evt)
+    return render_template('driver_recap.html', now=tunisia_now(),
+                           stages=TRANSPORT_STAGES, stage_labels=TRANSPORT_STAGE_LABELS,
+                           **ctx)
+
+
 def _recap_context(evid):
     """Tout ce qu'il faut pour afficher un recap d'evenement."""
     evt = db.session.get(Event, evid)

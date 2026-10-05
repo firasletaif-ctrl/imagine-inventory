@@ -16,7 +16,7 @@
 {% endblock %}
 {% block content %}
 <div class="form-page" style="max-width:1150px">
-  <div class="breadcrumb"><a href="{{ url_for('driver_dashboard') }}">← Toutes les missions</a></div>
+  <div class="breadcrumb" style="display:flex;justify-content:space-between;gap:.5rem;align-items:center"><a href="{{ url_for('driver_dashboard') }}">← Toutes les missions</a><a class="btn btn-secondary btn-sm" href="{{ url_for('driver_recap', evid=evt.id) }}">📑 Récap complet</a></div>
   <section class="mission-hero">
     <small>MISSION TRANSPORT · {{ evt.date_label() }}</small>
     <h1>🚚 {{ evt.title }}</h1>
