@@ -60,7 +60,7 @@
         <span style="font-size:.85rem;color:var(--gray-500)">Document généré le {{ now.strftime('%d/%m/%Y à %H:%M') }}</span>
         <span style="flex:1"></span>
         <form method="POST" action="{{ url_for('recap_ai', evid=evt.id) }}">
-            <button class="btn btn-secondary" {% if not ai_configured %}title="Configure GROQ_API_KEY (gratuit) ou OPENAI_API_KEY dans Render pour activer l'IA"{% endif %}>🤖 {{ "Régénérer le résumé IA" if ai_text else "Générer le résumé IA" }}</button>
+            <button class="btn btn-secondary" {% if not ai_configured %}title="Configure GROQ_API_KEY (gratuit) ou OPENAI_API_KEY dans Render pour activer l'IA"{% endif %}>🤖 {{ "Mettre à jour la synthèse IA" if ai_text else "Générer la synthèse IA" }}</button>
         </form>
         <button class="btn btn-accent" onclick="window.print()">🖨️ Imprimer / PDF</button>
     </div>
@@ -97,7 +97,8 @@
 
             <!-- Resume IA -->
             <div class="recap-section">
-                <h2>🤖 Résumé de préparation</h2>
+                <h2>🤖 Synthèse opérationnelle IA</h2>
+                {% if evt.ai_recap_generated_at %}<p style="font-size:.75rem;color:var(--gray-500);margin-top:-.6rem">Dernière génération : {{ evt.ai_recap_generated_at.strftime('%d/%m/%Y à %H:%M') }} · résumé sauvegardé</p>{% endif %}
                 {% if ai_text %}
                 <div class="ai-text">{{ ai_text }}</div>
                 {% endif %}

@@ -175,6 +175,9 @@ class Event(db.Model):
     transport_notes = db.Column(db.Text, default='')
     transport_optimize_stops = db.Column(db.Boolean, default=True)
     transport_return_depot = db.Column(db.Boolean, default=False)
+    ai_recap_text = db.Column(db.Text, default='')
+    ai_recap_generated_at = db.Column(db.DateTime, nullable=True)
+    ai_recap_generated_by = db.Column(db.Integer, nullable=True)
     assignments = db.relationship('EventAssignment', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_checks = db.relationship('TransportCheck', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_proofs = db.relationship('TransportProof', backref='event', lazy=True, cascade='all, delete-orphan')
@@ -1789,10 +1792,10 @@ def _import_csv_bytes(raw, table):
                     if table == 'users' and col == 'password':
                         plain_pw = val
                         continue
-                    if col.endswith('_id') or col == 'id' or col.endswith('_quantity') or col in ('assigned_to', 'completed_by', 'created_by', 'confirmed_by', 'position', 'multiplier', 'borrow_id', 'quantity'):
+                    if col.endswith('_id') or col == 'id' or col.endswith('_quantity') or col in ('assigned_to', 'completed_by', 'created_by', 'confirmed_by', 'ai_recap_generated_by', 'position', 'multiplier', 'borrow_id', 'quantity'):
                         try: val = int(val)
                         except: pass
-                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at', 'checked_at', 'started_at', 'stopped_at', 'completed_at', 'confirmed_at'):
+                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at', 'checked_at', 'started_at', 'stopped_at', 'completed_at', 'confirmed_at', 'ai_recap_generated_at'):
                         parsed = None
                         for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
                             try: parsed = datetime.strptime(val, fmt); break
@@ -3579,33 +3582,131 @@ def generate_ai_recap(evt, matos_lines, team_lines):
     if not api_key:
         return None
     notes = (evt.description or '').strip() or '(aucune note saisie)'
-    prompt = f"""Redige le recapitulatif de preparation de cet evenement, en francais, pour l'equipe de production.
+    today = tunisia_now().date()
 
-TITRE : {evt.title}
-DATES : {evt.date_label()} de {evt.start_time} a {evt.end_time}
-LIEU : {evt.location or 'non precise'}
-STATUT : {evt.status}
+    client_lines = []
+    if evt.client:
+        client_lines.append(f'Nom : {evt.client.name}')
+        if evt.client.contact_person: client_lines.append(f'Contact : {evt.client.contact_person}')
+        if evt.client.phone: client_lines.append(f'Telephone : {evt.client.phone}')
+        if evt.client.address: client_lines.append(f'Adresse : {evt.client.address}')
+    else:
+        client_lines.append('(aucun client lie)')
 
-DETAILS / NOTES SAISIS PAR L'EQUIPE :
+    task_lines = []
+    tasks = EventTask.query.filter_by(event_id=evt.id).order_by(EventTask.position, EventTask.due_date).all()
+    task_done = 0
+    task_overdue = 0
+    for task in tasks:
+        done = task.status == 'done'
+        if done: task_done += 1
+        overdue = bool(not done and task.due_date and task.due_date < today)
+        if overdue: task_overdue += 1
+        responsible = task.assignee.full_name if task.assignee else 'non affecte'
+        due = task.due_date.strftime('%d/%m/%Y') if task.due_date else 'sans echeance'
+        if task.due_time: due += ' ' + task.due_time
+        flags = []
+        if overdue: flags.append('EN RETARD')
+        if task.priority in ('high', 'urgent'): flags.append('PRIORITE ' + task.priority.upper())
+        suffix = (' — ' + ', '.join(flags)) if flags else ''
+        task_lines.append(f'- [{"TERMINEE" if done else "A FAIRE"}] {task.title} — responsable: {responsible} — echeance: {due}{suffix}')
+        if task.comments:
+            task_lines.append(f'  Commentaire: {task.comments[:300]}')
+
+    kit_lines = []
+    for proposal in EventKit.query.filter_by(event_id=evt.id).order_by(EventKit.created_at).all():
+        kit_lines.append(f'- {proposal.kit.name if proposal.kit else "Kit"} x{proposal.multiplier} — {"CONFIRME" if proposal.status == "confirmed" else "SUGGESTION NON CONFIRMEE"}')
+        for item in proposal.items:
+            if item.equipment:
+                kit_lines.append(f'  {item.equipment.name} x{item.quantity}')
+
+    transport_lines = [
+        f'Preparation: {evt.transport_load_time or "non renseignee"}',
+        f'Depart: {evt.transport_departure_time or "non renseigne"}',
+        f'Livraison: {evt.transport_delivery_time or "non renseignee"}',
+        f'Reprise du materiel: {evt.transport_recovery_time or "non renseignee"}',
+        f'Mode de tournee: {"ordre optimise" if evt.transport_optimize_stops else "ordre manuel"}',
+        f'Retour depot: {"oui" if evt.transport_return_depot else "non"}',
+    ]
+    for index, stop in enumerate(evt.transport_stops, 1):
+        transport_lines.append(f'Arret {index}: {stop.label} — {stop.address} — heure {stop.planned_time or "non renseignee"}')
+    if evt.transport_notes:
+        transport_lines.append('Consignes chauffeur: ' + evt.transport_notes[:500])
+
+    missing = []
+    if not evt.location: missing.append('lieu non renseigne')
+    if not evt.client_id: missing.append('client non lie')
+    if not evt.assignments: missing.append('equipe non affectee')
+    if not matos_lines: missing.append('aucun materiel reserve')
+    if not tasks: missing.append('checklist vide')
+    if not evt.transport_departure_time: missing.append('heure de depart transport non renseignee')
+
+    prompt = f"""Analyse le dossier complet ci-dessous et redige un recap operationnel fiable en francais pour Imagine Events Tunisia.
+
+DONNEES DE L'EVENEMENT
+Titre : {evt.title}
+Dates : {evt.date_label()}
+Horaires evenement : {evt.start_time or 'non renseigne'} a {evt.end_time or 'non renseigne'}
+Lieu : {evt.location or 'non renseigne'}
+Statut : {evt.status}
+
+CLIENT
+{chr(10).join(client_lines)}
+
+NOTES DE PRODUCTION
 {notes}
 
-MATERIEL RESERVE :
-{chr(10).join(matos_lines) or '(aucun materiel lie pour l\'instant)'}
+MATERIEL RESERVE ET DISPONIBILITE
+{chr(10).join(matos_lines) or '(aucun materiel lie)'}
 
-EQUIPE ASSIGNEE :
+KITS
+{chr(10).join(kit_lines) or '(aucun kit lie)'}
+
+EQUIPE
 {chr(10).join(team_lines) or '(aucun membre assigne)'}
 
-Structure exacte (puces "- " pour les listes, aucun tableau, aucune asterrisque) :
-1. RESUME — 2 a 3 phrases sur l'evenement et son contexte
-2. MATERIEL A PREPARER — liste par categorie avec les quantites totales
-3. EQUIPE MOBILISEE — 1 ou 2 phrases
-4. POINTS D'ATTENTION — delais, materiel critique, choses a verifier avant l'evenement
-Maximum 300 mots. Ton professionnel et concis."""
+CHECKLIST ({task_done}/{len(tasks)} terminees, {task_overdue} en retard)
+{chr(10).join(task_lines) or '(aucune tache)'}
+
+TRANSPORT ET CHAUFFEUR
+{chr(10).join(transport_lines)}
+
+INFORMATIONS MANQUANTES DETECTEES PAR LE SYSTEME
+{', '.join(missing) if missing else 'aucune information essentielle manquante detectee'}
+
+REGLES IMPERATIVES
+- Utilise uniquement les donnees fournies. N'invente aucun nom, horaire, materiel, quantite ou engagement.
+- Signale clairement les informations absentes au lieu de les supposer.
+- Distingue les faits confirmes, les suggestions non confirmees et les actions restantes.
+- Donne la priorite aux retards, conflits de stock, taches urgentes et dependances logistiques.
+- N'affiche pas ton raisonnement interne et n'utilise jamais de balises think.
+- Aucun tableau et aucune asterisque. Utilise des titres simples et des puces commencant par "- ".
+- Longueur cible : 300 a 400 mots.
+
+STRUCTURE OBLIGATOIRE
+SYNTHESE EXECUTIVE
+3 a 4 phrases donnant l'objectif, l'etat d'avancement et le niveau de preparation.
+
+CHIFFRES CLES
+- Date, lieu, materiel, equipe, checklist et kits.
+
+PLAN D'ACTION PRIORITAIRE
+- Actions classees par urgence, avec responsable et echeance lorsqu'ils sont connus.
+
+LOGISTIQUE ET TRANSPORT
+- Preparation, chargement, trajet, arrets, livraison et reprise du materiel.
+
+RISQUES ET INFORMATIONS MANQUANTES
+- Retards, stock, responsables absents, horaires ou informations a confirmer.
+
+DECISION OPERATIONNELLE
+Une seule conclusion parmi : PRET, PRET SOUS RESERVES ou NON PRET, suivie de raisons factuelles."""
     data = json.dumps({
         "model": model,
-        "temperature": 0.4,
+        "temperature": 0.2,
+        "max_tokens": 1200,
         "messages": [
-            {"role": "system", "content": "Tu es l'assistant interne de la societe d'evenements Imagine Events Tunisia (Tunis). Tu rediges des recaps de preparation professionnels, clairs et concis en francais."},
+            {"role": "system", "content": "Tu es un chef de projet evenementiel senior et l'assistant interne d'Imagine Events Tunisia. Tu produis une synthese executive suivie d'un plan d'action concret. Tu es rigoureux, tu n'inventes jamais de donnees et tu rends les risques immediatement visibles."},
             {"role": "user", "content": prompt}
         ]
     }).encode('utf-8')
@@ -3624,7 +3725,12 @@ Maximum 300 mots. Ton professionnel et concis."""
     try:
         with urllib.request.urlopen(req, timeout=90) as resp:
             out = json.loads(resp.read().decode('utf-8'))
-            return out['choices'][0]['message']['content'].strip()
+            content = out['choices'][0]['message']['content'].strip()
+            # Certains modeles Qwen peuvent renvoyer une zone <think> malgre le prompt.
+            import re
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL | re.IGNORECASE).strip()
+            content = content.replace('**', '')
+            return content
     except Exception as e:
         detail = ''
         try:
@@ -3679,7 +3785,8 @@ def recap_view(evid):
     ctx = _recap_context(evid)
     if not ctx: flash('Evenement introuvable.','error'); return redirect(url_for('recaps_list'))
     ctx.update(_recap_checklist_context(ctx['evt']))
-    ctx.update({'ai_text': None, 'ai_error': None, 'ai_configured': ai_configured(), 'now': tunisia_now()})
+    ctx.update({'ai_text': ctx['evt'].ai_recap_text or None, 'ai_error': None,
+                'ai_configured': ai_configured(), 'now': tunisia_now()})
     return render_template('recap.html', **ctx)
 
 
@@ -3696,23 +3803,29 @@ def recap_ai(evid):
         for b in g['rows']:
             p = b.pickup_date or b.expected_return_date
             who = b.user.full_name if b.user else '?'
-            matos_lines.append(f'    • {b.equipment.name} x{b.quantity} — {who} (prise {p.strftime("%d/%m/%Y")}, retour {b.expected_return_date.strftime("%d/%m/%Y")})')
+            remaining = min_availability_range(b.equipment, evt.event_date, evt.date_end())
+            repair = b.equipment.in_repair or 0
+            matos_lines.append(f'    - {b.equipment.name} x{b.quantity} — {who} (prise {p.strftime("%d/%m/%Y")}, retour {b.expected_return_date.strftime("%d/%m/%Y")}, stock restant sur periode {remaining}, en reparation {repair})')
     team_lines = [f'- {t["name"]} ({t["role"]})' for t in ctx['team']]
     configured = ai_configured()
     text = generate_ai_recap(evt, matos_lines, team_lines)
     ctx.update(_recap_checklist_context(evt))
     ctx.update({'ai_configured': configured, 'now': tunisia_now()})
     if text:
-        log_action('ai_recap', f'Recap IA genere pour "{evt.title}"', evt.title)
-        flash('Résumé IA généré !','success')
+        evt.ai_recap_text = text
+        evt.ai_recap_generated_at = tunisia_now()
+        evt.ai_recap_generated_by = current_user.id
+        db.session.commit()
+        log_action('ai_recap', f'Recap IA complet genere et sauvegarde pour "{evt.title}"', evt.title)
+        flash('Résumé IA amélioré généré et sauvegardé !','success')
         ctx.update({'ai_text': text, 'ai_error': None})
     elif not configured:
-        ctx.update({'ai_text': None, 'ai_error': 'not_configured'})
+        ctx.update({'ai_text': evt.ai_recap_text or None, 'ai_error': 'not_configured'})
     else:
         if ai_provider() == 'openai':
-            ctx.update({'ai_text': None, 'ai_error': "L'IA (OpenAI) n'a pas répondu. Vérifie la clé OPENAI_API_KEY, ou change le modèle via la variable OPENAI_MODEL, puis réessaie."})
+            ctx.update({'ai_text': evt.ai_recap_text or None, 'ai_error': "L'IA (OpenAI) n'a pas répondu. L'ancien résumé sauvegardé reste affiché. Vérifie la clé OPENAI_API_KEY ou le modèle OPENAI_MODEL."})
         else:
-            ctx.update({'ai_text': None, 'ai_error': "L'IA (Groq) n'a pas répondu. Vérifie la clé GROQ_API_KEY, ou change le modèle via la variable GROQ_MODEL, puis réessaie."})
+            ctx.update({'ai_text': evt.ai_recap_text or None, 'ai_error': "L'IA (Groq) n'a pas répondu. L'ancien résumé sauvegardé reste affiché. Vérifie la clé GROQ_API_KEY ou le modèle GROQ_MODEL."})
     return render_template('recap.html', **ctx)
 
 
@@ -4318,6 +4431,9 @@ def init_db():
             ensure_column('events', 'transport_notes', "ALTER TABLE events ADD COLUMN transport_notes TEXT DEFAULT ''")
             ensure_column('events', 'transport_optimize_stops', 'ALTER TABLE events ADD COLUMN transport_optimize_stops BOOLEAN DEFAULT TRUE')
             ensure_column('events', 'transport_return_depot', 'ALTER TABLE events ADD COLUMN transport_return_depot BOOLEAN DEFAULT FALSE')
+            ensure_column('events', 'ai_recap_text', "ALTER TABLE events ADD COLUMN ai_recap_text TEXT DEFAULT ''")
+            ensure_column('events', 'ai_recap_generated_at', 'ALTER TABLE events ADD COLUMN ai_recap_generated_at TIMESTAMP')
+            ensure_column('events', 'ai_recap_generated_by', 'ALTER TABLE events ADD COLUMN ai_recap_generated_by INTEGER')
             ensure_column('transport_stops', 'latitude', 'ALTER TABLE transport_stops ADD COLUMN latitude FLOAT')
             ensure_column('transport_stops', 'longitude', 'ALTER TABLE transport_stops ADD COLUMN longitude FLOAT')
             # ── Migration 1x : donner la permission 'manage_clients' aux roles
