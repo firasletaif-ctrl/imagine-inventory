@@ -16,6 +16,11 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <style>
       .brand-logo{height:52px;width:auto;display:block;margin:0 auto;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+      .nav-section-label{font-size:.66rem;text-transform:uppercase;color:rgba(255,255,255,.48);letter-spacing:1.6px;font-weight:800;padding:.55rem 1rem .3rem;border-bottom:1px solid rgba(255,255,255,.07);margin:0 .35rem .2rem}
+      .nav-section-spaced{margin-top:.8rem}
+      .nav-step{width:23px;height:23px;display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);font-size:.7rem;font-weight:800;color:white}
+      .nav-item.active .nav-step{background:white;color:var(--blue-deep);border-color:white}
+      .nav-subitem{font-size:.82rem!important;opacity:.82;padding-top:.42rem!important;padding-bottom:.42rem!important}
     </style>
     {% block head %}{% endblock %}
 </head>
@@ -27,55 +32,60 @@
             <img src="{{ url_for('static', filename='img/logo-chip.png') }}" alt="Imagine Events Tunisia" class="brand-logo">
         </div>
         <nav class="sidebar-nav">
+            <div class="nav-section-label">📦 Stock & matériel</div>
             <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                <span class="nav-icon">📋</span><span>Tout le materiel</span>
-            </a>
-            <a href="{{ url_for('borrows_page') }}" class="nav-item {% if request.endpoint == 'borrows_page' %}active{% endif %}">
-                <span class="nav-icon">📤</span><span>Emprunts</span>
-            </a>
-            <a href="{{ url_for('repairs_page') }}" class="nav-item {% if request.endpoint == 'repairs_page' %}active{% endif %}">
-                <span class="nav-icon">🔧</span><span>Reparations</span>
-            </a>
-            <a href="{{ url_for('inventory_page') }}" class="nav-item {% if request.endpoint in ('inventory_page', 'confirm_inventory_check') %}active{% endif %}">
-                <span class="nav-icon">📦</span><span>Inventaire</span>
-            </a>
-            {% if has_perm('view_logs','manage_equipment','manage_schedule') %}
-            <a href="{{ url_for('stats_page') }}" class="nav-item {% if request.endpoint == 'stats_page' %}active{% endif %}">
-                <span class="nav-icon">📊</span><span>Statistiques</span>
-            </a>
-            {% endif %}
-            <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
-                <span class="nav-icon">📅</span><span>Emploi du temps</span>
-            </a>
-            {% if has_perm('driver_access','manage_transport') %}
-            <a href="{{ url_for('driver_dashboard') }}" class="nav-item {% if request.endpoint in ('driver_dashboard','driver_mission','driver_print') %}active{% endif %}">
-                <span class="nav-icon">🚚</span><span>Chauffeur</span>
-            </a>
-            <a href="{{ url_for('driver_recaps') }}" class="nav-item {% if request.endpoint in ('driver_recaps','driver_recap') %}active{% endif %}">
-                <span class="nav-icon">📑</span><span>Récaps chauffeurs</span>
-            </a>
-            {% endif %}
-            {% if has_perm('manage_clients','manage_schedule') %}
-            <a href="{{ url_for('clients_list') }}" class="nav-item {% if request.endpoint in ('clients_list','client_detail','client_new','client_edit') %}active{% endif %}">
-                <span class="nav-icon">👤</span><span>Clients</span>
-            </a>
-            {% endif %}
-            <a href="{{ url_for('recaps_list') }}" class="nav-item {% if request.endpoint in ('recaps_list', 'recap_view', 'recap_ai') %}active{% endif %}">
-                <span class="nav-icon">📄</span><span>Récaps & checklists</span>
+                <span class="nav-icon">📋</span><span>Catalogue du matériel</span>
             </a>
             {% if has_perm('add_equipment','manage_equipment') %}
-            <a href="{{ url_for('add_equipment') }}" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
-                <span class="nav-icon">➕</span><span>Ajouter du materiel</span>
+            <a href="{{ url_for('add_equipment') }}" class="nav-item nav-subitem {% if request.endpoint == 'add_equipment' %}active{% endif %}">
+                <span class="nav-icon">➕</span><span>Ajouter du matériel</span>
             </a>
             {% endif %}
             {% if has_perm('manage_kits','manage_equipment') %}
             <a href="{{ url_for('kits_list') }}" class="nav-item {% if request.endpoint in ('kits_list','kit_detail') %}active{% endif %}">
-                <span class="nav-icon">🧰</span><span>Kits matériel</span>
+                <span class="nav-icon">🧰</span><span>Kits de matériel</span>
             </a>
             {% endif %}
+            <a href="{{ url_for('inventory_page') }}" class="nav-item {% if request.endpoint in ('inventory_page', 'confirm_inventory_check') %}active{% endif %}">
+                <span class="nav-icon">📦</span><span>Inventaire physique</span>
+            </a>
+            <a href="{{ url_for('borrows_page') }}" class="nav-item {% if request.endpoint == 'borrows_page' %}active{% endif %}">
+                <span class="nav-icon">📤</span><span>Emprunts & retours</span>
+            </a>
+            <a href="{{ url_for('repairs_page') }}" class="nav-item {% if request.endpoint == 'repairs_page' %}active{% endif %}">
+                <span class="nav-icon">🔧</span><span>Réparations</span>
+            </a>
             {% if has_perm('manage_orders','manage_equipment') %}
             <a href="{{ url_for('orders_page') }}" class="nav-item {% if request.endpoint == 'orders_page' %}active{% endif %}">
-                <span class="nav-icon">🛒</span><span>Commandes</span>
+                <span class="nav-icon">🛒</span><span>Commandes fournisseurs</span>
+            </a>
+            {% endif %}
+
+            <div class="nav-section-label nav-section-spaced">🎪 Événements — parcours</div>
+            {% if has_perm('manage_clients','manage_schedule') %}
+            <a href="{{ url_for('clients_list') }}" class="nav-item {% if request.endpoint in ('clients_list','client_detail','client_new','client_edit') %}active{% endif %}">
+                <span class="nav-step">1</span><span>Clients</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
+                <span class="nav-step">2</span><span>Créer & planifier</span>
+            </a>
+            <a href="{{ url_for('recaps_list') }}" class="nav-item {% if request.endpoint in ('recaps_list', 'recap_view', 'recap_ai') %}active{% endif %}">
+                <span class="nav-step">3</span><span>Préparer l'événement</span>
+            </a>
+            {% if has_perm('driver_access','manage_transport') %}
+            <a href="{{ url_for('driver_dashboard') }}" class="nav-item {% if request.endpoint in ('driver_dashboard','driver_mission','driver_print') %}active{% endif %}">
+                <span class="nav-step">4</span><span>Transport & chauffeur</span>
+            </a>
+            <a href="{{ url_for('driver_recaps') }}" class="nav-item {% if request.endpoint in ('driver_recaps','driver_recap') %}active{% endif %}">
+                <span class="nav-step">5</span><span>Clôture chauffeur</span>
+            </a>
+            {% endif %}
+
+            {% if has_perm('view_logs','manage_equipment','manage_schedule') %}
+            <div class="nav-section-label nav-section-spaced">📊 Pilotage</div>
+            <a href="{{ url_for('stats_page') }}" class="nav-item {% if request.endpoint == 'stats_page' %}active{% endif %}">
+                <span class="nav-icon">📈</span><span>Statistiques</span>
             </a>
             {% endif %}
             {% if has_perm('export_excel','export_pdf','manage_equipment') %}
