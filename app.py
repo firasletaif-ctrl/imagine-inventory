@@ -180,6 +180,8 @@ class Event(db.Model):
     transport_proofs = db.relationship('TransportProof', backref='event', lazy=True, cascade='all, delete-orphan')
     transport_trackers = db.relationship('TransportTracker', lazy=True, cascade='all, delete-orphan', overlaps='event')
     transport_stops = db.relationship('TransportStop', backref='event', lazy=True, cascade='all, delete-orphan', order_by='TransportStop.position')
+    checklist_tasks = db.relationship('EventTask', backref='event', lazy=True, cascade='all, delete-orphan', order_by='EventTask.position')
+    event_kits = db.relationship('EventKit', backref='event', lazy=True, cascade='all, delete-orphan')
     def date_end(self):
         return self.end_date or self.event_date
     def is_multiday(self):
@@ -279,6 +281,78 @@ class TransportStop(db.Model):
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, default=tunisia_now)
+
+
+# ── Checklist opérationnelle des événements ──
+class EventTask(db.Model):
+    __tablename__ = 'event_tasks'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    title = db.Column(db.String(250), nullable=False)
+    description = db.Column(db.Text, default='')
+    status = db.Column(db.String(20), default='pending')  # pending / done
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
+    due_time = db.Column(db.String(10), default='')
+    priority = db.Column(db.String(20), default='normal')  # low / normal / high / urgent
+    comments = db.Column(db.Text, default='')
+    position = db.Column(db.Integer, default=0)
+    completed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    last_reminder = db.Column(db.Date, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    assignee = db.relationship('User', foreign_keys=[assigned_to])
+    completer = db.relationship('User', foreign_keys=[completed_by])
+
+
+# ── Kits réutilisables de matériel ──
+class EquipmentKit(db.Model):
+    __tablename__ = 'equipment_kits'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), unique=True, nullable=False)
+    description = db.Column(db.Text, default='')
+    active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    items = db.relationship('KitItem', backref='kit', lazy=True, cascade='all, delete-orphan')
+
+
+class KitItem(db.Model):
+    __tablename__ = 'kit_items'
+    id = db.Column(db.Integer, primary_key=True)
+    kit_id = db.Column(db.Integer, db.ForeignKey('equipment_kits.id'), nullable=False)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    equipment = db.relationship('Equipment')
+    __table_args__ = (db.UniqueConstraint('kit_id', 'equipment_id', name='uq_kit_equipment'),)
+
+
+class EventKit(db.Model):
+    __tablename__ = 'event_kits'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    kit_id = db.Column(db.Integer, db.ForeignKey('equipment_kits.id'), nullable=False)
+    multiplier = db.Column(db.Integer, default=1)
+    status = db.Column(db.String(20), default='suggested')  # suggested / confirmed
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=tunisia_now)
+    confirmed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    confirmed_at = db.Column(db.DateTime, nullable=True)
+    kit = db.relationship('EquipmentKit')
+    creator = db.relationship('User', foreign_keys=[created_by])
+    confirmer = db.relationship('User', foreign_keys=[confirmed_by])
+    items = db.relationship('EventKitItem', backref='event_kit', lazy=True, cascade='all, delete-orphan')
+
+
+class EventKitItem(db.Model):
+    __tablename__ = 'event_kit_items'
+    id = db.Column(db.Integer, primary_key=True)
+    event_kit_id = db.Column(db.Integer, db.ForeignKey('event_kits.id'), nullable=False)
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    borrow_id = db.Column(db.Integer, nullable=True)
+    equipment = db.relationship('Equipment')
 
 # ── NEW: Notifications ──
 class Notification(db.Model):
@@ -758,6 +832,25 @@ def check_due_alerts():
                     msg = f"\"{evt.title}\" le {evt.event_date.strftime('%d/%m/%Y')} ({evt.start_time}-{evt.end_time}){', ' + (evt.location or '') if evt.location else ''}. Matériel lie : {need_txt}."
                     notify_user(u.id, f'⏰ J-{days_left} : {evt.title}', msg, '/schedule')
             log_action('event_reminder', f'Rappel {rtype} envoye pour "{evt.title}"')
+        # ── Tâches checklist : échéance aujourd'hui / demain / en retard ──
+        task_limit = today + timedelta(days=1)
+        due_tasks = EventTask.query.filter(EventTask.status != 'done', EventTask.due_date <= task_limit).all()
+        for task in due_tasks:
+            if not task.assigned_to or task.last_reminder == today:
+                continue
+            task.last_reminder = today
+            evt = db.session.get(Event, task.event_id)
+            if not evt:
+                continue
+            if task.due_date < today:
+                timing = f'en retard depuis le {task.due_date.strftime("%d/%m/%Y")}'
+            elif task.due_date == today:
+                timing = "à terminer aujourd'hui"
+            else:
+                timing = 'à terminer demain'
+            notify_user(task.assigned_to, f'✅ Tâche {timing} : {task.title}',
+                        f'Événement « {evt.title} » — {timing} {task.due_time or ""}.',
+                        f'/checklist/{evt.id}')
         # ── Emprunts en retard : 1 rappel par jour a l'emprunteur ──
         for b in Borrow.query.filter_by(status='late').all():
             if b.last_late_alert == today:
@@ -842,6 +935,7 @@ ALL_PERMISSIONS = [
     {"key":"manage_categories","label":"Gérer les catégories","desc":"Ajouter / supprimer des catégories","icon":"📂","group":"Matériel & Stock"},
     {"key":"repair_stock","label":"Remettre en stock","desc":"Marquer du matériel réparé et le remettre disponible","icon":"🔧","group":"Matériel & Stock"},
     {"key":"manage_orders","label":"Gérer les commandes","desc":"Commandes de matériel personnalisé (créer, statut, supprimer)","icon":"🛒","group":"Matériel & Stock"},
+    {"key":"manage_kits","label":"Gérer les kits de matériel","desc":"Créer les kits et définir leur contenu","icon":"🧰","group":"Matériel & Stock"},
     # ── 📤 Emprunts ──
     {"key":"borrow_equipment","label":"Emprunter","desc":"Sortir du matériel du dépôt","icon":"📤","group":"Emprunts"},
     {"key":"return_equipment","label":"Retourner","desc":"Enregistrer un retour (+ unités en réparation)","icon":"✅","group":"Emprunts"},
@@ -852,6 +946,7 @@ ALL_PERMISSIONS = [
     {"key":"schedule_assign","label":"Assigner l'équipe","desc":"Affecter / retirer des membres sur un événement","icon":"👥","group":"Planning"},
     {"key":"manage_clients","label":"Gérer les clients","desc":"Fiches clients : créer, modifier, supprimer, voir l'historique","icon":"👤","group":"Planning"},
     {"key":"schedule_clear","label":"Effacer les événements passés","desc":"Nettoyer le planning (évènements terminés)","icon":"🧹","group":"Planning"},
+    {"key":"manage_event_tasks","label":"Gérer les checklists événements","desc":"Tâches, responsables, échéances et rappels","icon":"✅","group":"Planning"},
     # ── 🚚 Chauffeur / Transport ──
     {"key":"driver_access","label":"Espace chauffeur","desc":"Voir ses missions, la navigation et cocher le matériel","icon":"🚚","group":"Chauffeur & Transport"},
     {"key":"manage_transport","label":"Gérer les transports","desc":"Voir toutes les missions et configurer horaires, dépôt et preuves","icon":"🗺️","group":"Chauffeur & Transport"},
@@ -1467,6 +1562,9 @@ def delete_equipment(eid):
         # ce materiel). Historique de ces emprunts : conserve dans les logs.
         Borrow.query.filter_by(equipment_id=eid).delete()
         InventoryCheck.query.filter_by(equipment_id=eid).delete()
+        TransportCheck.query.filter_by(equipment_id=eid).delete()
+        KitItem.query.filter_by(equipment_id=eid).delete()
+        EventKitItem.query.filter_by(equipment_id=eid).delete()
         db.session.delete(eq); db.session.commit()
         log_action('delete_equipment', f'Suppression de {eq.name} (emprunts et controles lies egalement supprimes)', eq.name)
         flash(f'"{eq.name}" supprimee.','info')
@@ -1619,7 +1717,9 @@ CSV_IMPORT_ORDER = [
     ('12_inventory_checks', 'inventory_checks'), ('13_event_reminders', 'event_reminders'),
     ('14_app_settings', 'app_settings'), ('15_transport_checks', 'transport_checks'),
     ('16_transport_proofs', 'transport_proofs'), ('17_transport_trackers', 'transport_trackers'),
-    ('18_transport_stops', 'transport_stops'),
+    ('18_transport_stops', 'transport_stops'), ('19_event_tasks', 'event_tasks'),
+    ('20_equipment_kits', 'equipment_kits'), ('21_kit_items', 'kit_items'),
+    ('22_event_kits', 'event_kits'), ('23_event_kit_items', 'event_kit_items'),
 ]
 
 def _import_csv_bytes(raw, table):
@@ -1636,7 +1736,9 @@ def _import_csv_bytes(raw, table):
         'inventory_checks': InventoryCheck, 'event_reminders': EventReminder,
         'app_settings': AppSetting, 'transport_checks': TransportCheck,
         'transport_proofs': TransportProof, 'transport_trackers': TransportTracker,
-        'transport_stops': TransportStop,
+        'transport_stops': TransportStop, 'event_tasks': EventTask,
+        'equipment_kits': EquipmentKit, 'kit_items': KitItem,
+        'event_kits': EventKit, 'event_kit_items': EventKitItem,
     }
     model = model_map.get(table)
     if not model:
@@ -1687,16 +1789,16 @@ def _import_csv_bytes(raw, table):
                     if table == 'users' and col == 'password':
                         plain_pw = val
                         continue
-                    if col.endswith('_id') or col == 'id' or col.endswith('_quantity'):
+                    if col.endswith('_id') or col == 'id' or col.endswith('_quantity') or col in ('assigned_to', 'completed_by', 'created_by', 'confirmed_by', 'position', 'multiplier', 'borrow_id', 'quantity'):
                         try: val = int(val)
                         except: pass
-                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at', 'checked_at', 'started_at', 'stopped_at'):
+                    if col in ('created_at', 'uploaded_at', 'borrow_date', 'actual_return_date', 'timestamp', 'sent_at', 'updated_at', 'checked_at', 'started_at', 'stopped_at', 'completed_at', 'confirmed_at'):
                         parsed = None
                         for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d'):
                             try: parsed = datetime.strptime(val, fmt); break
                             except: pass
                         val = parsed
-                    if col in ('expected_return_date', 'pickup_date', 'check_date', 'last_late_alert', 'event_date', 'end_date') and val:
+                    if col in ('expected_return_date', 'pickup_date', 'check_date', 'last_late_alert', 'event_date', 'end_date', 'due_date', 'last_reminder') and val:
                         try: val = datetime.strptime(val, '%Y-%m-%d').date()
                         except:
                             for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
@@ -1799,7 +1901,7 @@ def import_csv():
 @permission_required_any('import_csv', 'manage_database')
 def import_full():
     """IMPORT COMPLET EN 1 CLIC : televerse le ZIP du bouton 'Sauvegarde
-    complete' et tout est importe (14 tables dans le bon ordre + photos +
+    complete' et tout est importe (23 tables dans le bon ordre + photos +
     reseynchronisation des compteurs)."""
     if is_pending_user():
         flash('Votre compte est en attente de validation.','error')
@@ -1819,7 +1921,7 @@ def import_full():
         try:
             with zipfile.ZipFile(zf) as z:
                 names = z.namelist()
-                # 1) les 14 tables, dans le bon ordre (celles presentes dans le ZIP)
+                # 1) les tables, dans le bon ordre (celles presentes dans le ZIP)
                 for prefix, table in CSV_IMPORT_ORDER:
                     fname = prefix + '.csv'
                     if fname not in names:
@@ -1880,7 +1982,9 @@ def import_full():
                  'app_settings':'cles (push)','notifications':'notifications','material_orders':'commandes',
                  'equipment_images':'photos liees','activity_logs':'logs','roles':'roles','event_reminders':'rappels',
                  'transport_checks':'contrôles transport','transport_proofs':'preuves transport',
-                 'transport_trackers':'positions GPS transport','transport_stops':'arrêts transport'}
+                 'transport_trackers':'positions GPS transport','transport_stops':'arrêts transport',
+                 'event_tasks':'tâches checklist','equipment_kits':'kits','kit_items':'contenus kits',
+                 'event_kits':'kits événements','event_kit_items':'suggestions matériel'}
         parts = [f'{n} {label.get(t, t)}' for t, n in stats.items()]
         msg = '✅ IMPORT COMPLET : ' + ', '.join(parts) + f' + {photo_count} photos'
         msg += f' — {total_err} ligne(s) en erreur' if total_err else ' — 0 erreur'
@@ -1909,6 +2013,10 @@ def reset_all_tables():
         TransportProof.query.delete()
         TransportTracker.query.delete()
         TransportStop.query.delete()
+        EventKitItem.query.delete()
+        EventKit.query.delete()
+        EventTask.query.delete()
+        KitItem.query.delete()
         EventAssignment.query.delete()
         Event.query.delete()
         ActivityLog.query.delete()
@@ -1916,6 +2024,7 @@ def reset_all_tables():
         MaterialOrder.query.delete()
         Borrow.query.delete()
         EquipmentImage.query.delete()
+        EquipmentKit.query.delete()
         Equipment.query.delete()
         Category.query.delete()
         PushSubscription.query.delete()
@@ -2035,6 +2144,12 @@ def activity_logs():
         'transport_tracking_stop':'🔴 Suivi GPS arrêté',
         'transport_stop_update':'📍 Arrêts transport modifiés',
         'transport_print':'🖨️ Fiche transport imprimée',
+        'event_checklist_generate':'✅ Checklist générée',
+        'event_task_update':'📝 Tâche événement modifiée',
+        'event_task_toggle':'✅ Tâche événement validée',
+        'kit_update':'🧰 Kit matériel modifié',
+        'event_kit_suggest':'💡 Kit proposé',
+        'event_kit_confirm':'✅ Kit confirmé',
     }
     return render_template('activity_logs.html', logs=logs, action_filter=action_filter, user_filter=user_filter, total_today=total_today, total_week=total_week, all_actions=all_actions, ACTION_LABELS=ACTION_LABELS, all_users=User.query.order_by(User.full_name).all())
 
@@ -2168,6 +2283,36 @@ def _parse_client_id(val):
         return None
 
 
+DEFAULT_EVENT_TASKS = [
+    ('Confirmer les informations avec le client', -7, '10:00', 'high'),
+    ('Valider les besoins et réserver le matériel', -5, '12:00', 'high'),
+    ('Confirmer l’équipe affectée', -3, '12:00', 'normal'),
+    ('Préparer et contrôler le matériel', -1, '17:00', 'high'),
+    ('Charger le camion', 0, '07:00', 'urgent'),
+    ('Terminer l’installation sur le lieu', 0, '', 'high'),
+    ('Effectuer le démontage', 0, '', 'normal'),
+    ('Retourner et contrôler le matériel au dépôt', 1, '12:00', 'high'),
+]
+
+
+def create_default_event_tasks(evt, created_by=None):
+    """Ajoute la checklist standard sans doublons."""
+    existing = set((t.title or '').strip().lower() for t in evt.checklist_tasks)
+    added = 0
+    end_date = evt.date_end()
+    for position, item in enumerate(DEFAULT_EVENT_TASKS, 1):
+        title, day_offset, due_time, priority = item
+        if title.lower() in existing:
+            continue
+        base_date = end_date if title.startswith(('Effectuer le démontage', 'Retourner')) else evt.event_date
+        due_date = base_date + timedelta(days=day_offset if not title.startswith('Retourner') else 1)
+        db.session.add(EventTask(event_id=evt.id, title=title, due_date=due_date,
+                                 due_time=due_time, priority=priority, position=position,
+                                 created_by=created_by))
+        added += 1
+    return added
+
+
 @app.route('/schedule/create', methods=['POST'])
 @permission_required_any('schedule_create', 'manage_schedule')
 def create_event():
@@ -2190,6 +2335,7 @@ def create_event():
     user_ids = request.form.getlist('assigned_users')
     for uid in user_ids:
         db.session.add(EventAssignment(event_id=evt.id, user_id=int(uid), role='Staff'))
+    create_default_event_tasks(evt, current_user.id)
     db.session.commit()
     # Notify assigned users
     for uid in user_ids:
@@ -2240,8 +2386,20 @@ def delete_event(evid):
 def clear_past_events():
     count = Event.query.filter(Event.end_date < date.today()).count()
     past_ids = [e.id for e in Event.query.filter(Event.end_date < date.today()).all()]
-    EventAssignment.query.filter(EventAssignment.event_id.in_(past_ids)).delete(synchronize_session='fetch')
-    Event.query.filter(Event.end_date < date.today()).delete()
+    if past_ids:
+        event_kit_ids = [row[0] for row in db.session.query(EventKit.id).filter(EventKit.event_id.in_(past_ids)).all()]
+        if event_kit_ids:
+            EventKitItem.query.filter(EventKitItem.event_kit_id.in_(event_kit_ids)).delete(synchronize_session=False)
+        EventKit.query.filter(EventKit.event_id.in_(past_ids)).delete(synchronize_session=False)
+        EventTask.query.filter(EventTask.event_id.in_(past_ids)).delete(synchronize_session=False)
+        TransportCheck.query.filter(TransportCheck.event_id.in_(past_ids)).delete(synchronize_session=False)
+        TransportProof.query.filter(TransportProof.event_id.in_(past_ids)).delete(synchronize_session=False)
+        TransportTracker.query.filter(TransportTracker.event_id.in_(past_ids)).delete(synchronize_session=False)
+        TransportStop.query.filter(TransportStop.event_id.in_(past_ids)).delete(synchronize_session=False)
+        EventReminder.query.filter(EventReminder.event_id.in_(past_ids)).delete(synchronize_session=False)
+        Borrow.query.filter(Borrow.event_id.in_(past_ids)).update({Borrow.event_id: None}, synchronize_session=False)
+        EventAssignment.query.filter(EventAssignment.event_id.in_(past_ids)).delete(synchronize_session=False)
+        Event.query.filter(Event.id.in_(past_ids)).delete(synchronize_session=False)
     db.session.commit()
     log_action('clear_past_events', f'{count} evenements passes supprimes'); flash(f'{count} evenement(s) passes supprime(s).','success')
     return redirect(url_for('schedule'))
@@ -2261,6 +2419,357 @@ def unassign_user(evid, uid):
     ea = EventAssignment.query.filter_by(event_id=evid, user_id=uid).first()
     if ea: db.session.delete(ea); db.session.commit()
     return redirect(url_for('schedule'))
+
+
+# ═══════════ C H E C K L I S T S   E V E N E M E N T S ═══════════
+def _can_manage_tasks():
+    return current_user.has_permission('manage_event_tasks') or current_user.has_permission('manage_schedule')
+
+
+def _can_access_event_tasks(evt):
+    if not evt or not current_user.is_authenticated:
+        return False
+    if _can_manage_tasks():
+        return True
+    if EventAssignment.query.filter_by(event_id=evt.id, user_id=current_user.id).first():
+        return True
+    return EventTask.query.filter_by(event_id=evt.id, assigned_to=current_user.id).first() is not None
+
+
+@app.route('/checklists')
+@login_required
+def checklists_list():
+    if is_pending_user():
+        flash('Votre compte est en attente de validation.', 'error')
+        return redirect(url_for('dashboard'))
+    events = Event.query.order_by(Event.event_date.desc()).limit(200).all()
+    summaries = []
+    today = tunisia_now().date()
+    for evt in events:
+        if not _can_access_event_tasks(evt):
+            continue
+        tasks = evt.checklist_tasks
+        done = sum(1 for task in tasks if task.status == 'done')
+        overdue = sum(1 for task in tasks if task.status != 'done' and task.due_date and task.due_date < today)
+        total = len(tasks)
+        summaries.append({'event': evt, 'done': done, 'total': total,
+                          'pct': int(done * 100 / total) if total else 0, 'overdue': overdue})
+    return render_template('checklists.html', summaries=summaries,
+                           can_manage=_can_manage_tasks(), today=today)
+
+
+@app.route('/checklist/<int:evid>')
+@login_required
+def event_checklist(evid):
+    evt = db.session.get(Event, evid)
+    if not _can_access_event_tasks(evt):
+        flash('Accès refusé à cette checklist.', 'error')
+        return redirect(url_for('checklists_list'))
+    tasks = EventTask.query.filter_by(event_id=evid).order_by(EventTask.position, EventTask.due_date, EventTask.id).all()
+    done = sum(1 for task in tasks if task.status == 'done')
+    kits = EquipmentKit.query.filter_by(active=True).order_by(EquipmentKit.name).all()
+    event_kits = EventKit.query.filter_by(event_id=evid).order_by(EventKit.created_at.desc()).all()
+    return render_template('event_checklist.html', evt=evt, tasks=tasks, done=done,
+                           total=len(tasks), today=tunisia_now().date(), all_users=User.query.order_by(User.full_name).all(),
+                           can_manage=_can_manage_tasks(), kits=kits, event_kits=event_kits,
+                           can_manage_kits=current_user.has_permission('manage_kits') or current_user.has_permission('manage_equipment'))
+
+
+@app.route('/checklist/<int:evid>/generate', methods=['POST'])
+@permission_required_any('manage_event_tasks', 'manage_schedule')
+def event_checklist_generate(evid):
+    evt = db.session.get(Event, evid)
+    if not evt:
+        flash('Événement introuvable.', 'error')
+        return redirect(url_for('checklists_list'))
+    added = create_default_event_tasks(evt, current_user.id)
+    db.session.commit()
+    log_action('event_checklist_generate', f'{added} tâche(s) standard ajoutée(s) à « {evt.title} »')
+    flash(f'{added} tâche(s) standard ajoutée(s).', 'success')
+    return redirect(url_for('event_checklist', evid=evid))
+
+
+@app.route('/checklist/<int:evid>/task/save', methods=['POST'])
+@permission_required_any('manage_event_tasks', 'manage_schedule')
+def event_task_save(evid):
+    evt = db.session.get(Event, evid)
+    if not evt:
+        flash('Événement introuvable.', 'error')
+        return redirect(url_for('checklists_list'))
+    try:
+        tid = int(request.form.get('task_id', '0') or 0)
+    except (TypeError, ValueError):
+        tid = 0
+    task = db.session.get(EventTask, tid) if tid else None
+    if task and task.event_id != evid:
+        task = None
+    title = request.form.get('title', '').strip()
+    if not title:
+        flash('Titre de tâche requis.', 'error')
+        return redirect(url_for('event_checklist', evid=evid))
+    old_assignee = task.assigned_to if task else None
+    if not task:
+        max_pos = db.session.query(db.func.max(EventTask.position)).filter_by(event_id=evid).scalar() or 0
+        task = EventTask(event_id=evid, position=max_pos + 1, created_by=current_user.id)
+        db.session.add(task)
+        action_word = 'créée'
+    else:
+        action_word = 'modifiée'
+    task.title = title[:250]
+    task.description = request.form.get('description', '').strip()
+    task.comments = request.form.get('comments', '').strip()
+    task.priority = request.form.get('priority', 'normal') if request.form.get('priority') in ('low', 'normal', 'high', 'urgent') else 'normal'
+    task.due_time = request.form.get('due_time', '').strip()[:10]
+    try:
+        task.due_date = datetime.strptime(request.form.get('due_date', ''), '%Y-%m-%d').date() if request.form.get('due_date') else None
+    except (TypeError, ValueError):
+        task.due_date = None
+    try:
+        uid = int(request.form.get('assigned_to', '0') or 0)
+        task.assigned_to = uid if db.session.get(User, uid) else None
+    except (TypeError, ValueError):
+        task.assigned_to = None
+    db.session.commit()
+    if task.assigned_to and task.assigned_to != old_assignee:
+        due_label = task.due_date.strftime('%d/%m/%Y') if task.due_date else 'sans échéance'
+        notify_user(task.assigned_to, f'✅ Nouvelle tâche : {task.title}',
+                    f'Événement « {evt.title} » — échéance {due_label} {task.due_time or ""}.',
+                    url_for('event_checklist', evid=evid))
+    log_action('event_task_update', f'Tâche « {task.title} » {action_word} pour « {evt.title} »')
+    flash(f'Tâche {action_word}.', 'success')
+    return redirect(url_for('event_checklist', evid=evid))
+
+
+@app.route('/checklist/<int:evid>/task/<int:tid>/toggle', methods=['POST'])
+@login_required
+def event_task_toggle(evid, tid):
+    evt = db.session.get(Event, evid)
+    task = db.session.get(EventTask, tid)
+    if not evt or not task or task.event_id != evid or not _can_access_event_tasks(evt):
+        return jsonify({'ok': False, 'error': 'Accès refusé'}), 403
+    if not _can_manage_tasks() and task.assigned_to not in (None, current_user.id):
+        return jsonify({'ok': False, 'error': 'Tâche affectée à un autre utilisateur'}), 403
+    if task.status == 'done':
+        task.status = 'pending'; task.completed_by = None; task.completed_at = None
+        state = 'rouverte'
+    else:
+        task.status = 'done'; task.completed_by = current_user.id; task.completed_at = tunisia_now()
+        state = 'terminée'
+    db.session.commit()
+    log_action('event_task_toggle', f'Tâche « {task.title} » {state} pour « {evt.title} »')
+    tasks = EventTask.query.filter_by(event_id=evid).all()
+    done = sum(1 for item in tasks if item.status == 'done')
+    return jsonify({'ok': True, 'done': task.status == 'done', 'completed': done, 'total': len(tasks)})
+
+
+@app.route('/checklist/<int:evid>/task/<int:tid>/delete', methods=['POST'])
+@permission_required_any('manage_event_tasks', 'manage_schedule')
+def event_task_delete(evid, tid):
+    evt = db.session.get(Event, evid)
+    task = db.session.get(EventTask, tid)
+    if task and task.event_id == evid:
+        title = task.title
+        db.session.delete(task); db.session.commit()
+        log_action('event_task_update', f'Tâche « {title} » supprimée de « {evt.title} »')
+        flash('Tâche supprimée.', 'success')
+    return redirect(url_for('event_checklist', evid=evid))
+
+
+# ═══════════ K I T S   D E   M A T E R I E L ═══════════
+@app.route('/kits')
+@permission_required_any('manage_kits', 'manage_equipment')
+def kits_list():
+    return render_template('kits.html', kits=EquipmentKit.query.order_by(EquipmentKit.name).all())
+
+
+@app.route('/kits/save', methods=['POST'])
+@permission_required_any('manage_kits', 'manage_equipment')
+def kit_save():
+    try:
+        kid = int(request.form.get('kit_id', '0') or 0)
+    except (TypeError, ValueError):
+        kid = 0
+    kit = db.session.get(EquipmentKit, kid) if kid else None
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Nom du kit requis.', 'error')
+        return redirect(url_for('kits_list'))
+    duplicate = EquipmentKit.query.filter(db.func.lower(EquipmentKit.name) == name.lower()).first()
+    if duplicate and (not kit or duplicate.id != kit.id):
+        flash('Un kit porte déjà ce nom.', 'error')
+        return redirect(url_for('kits_list'))
+    if not kit:
+        kit = EquipmentKit(created_by=current_user.id)
+        db.session.add(kit); action_word = 'créé'
+    else:
+        action_word = 'modifié'
+    kit.name = name[:200]
+    kit.description = request.form.get('description', '').strip()
+    kit.active = request.form.get('active', '1') == '1'
+    db.session.commit()
+    log_action('kit_update', f'Kit « {kit.name} » {action_word}')
+    flash(f'Kit {action_word}. Ajoute maintenant son matériel.', 'success')
+    return redirect(url_for('kit_detail', kid=kit.id))
+
+
+@app.route('/kits/<int:kid>')
+@permission_required_any('manage_kits', 'manage_equipment')
+def kit_detail(kid):
+    kit = db.session.get(EquipmentKit, kid)
+    if not kit:
+        flash('Kit introuvable.', 'error')
+        return redirect(url_for('kits_list'))
+    return render_template('kit_detail.html', kit=kit,
+                           equipment=Equipment.query.order_by(Equipment.name).all())
+
+
+@app.route('/kits/<int:kid>/item/save', methods=['POST'])
+@permission_required_any('manage_kits', 'manage_equipment')
+def kit_item_save(kid):
+    kit = db.session.get(EquipmentKit, kid)
+    if not kit:
+        return redirect(url_for('kits_list'))
+    try:
+        equipment_id = int(request.form.get('equipment_id', '0'))
+        quantity = max(1, int(request.form.get('quantity', '1')))
+    except (TypeError, ValueError):
+        flash('Matériel ou quantité invalide.', 'error')
+        return redirect(url_for('kit_detail', kid=kid))
+    equipment = db.session.get(Equipment, equipment_id)
+    if not equipment:
+        flash('Matériel introuvable.', 'error')
+        return redirect(url_for('kit_detail', kid=kid))
+    item = KitItem.query.filter_by(kit_id=kid, equipment_id=equipment_id).first()
+    if not item:
+        item = KitItem(kit_id=kid, equipment_id=equipment_id)
+        db.session.add(item)
+    item.quantity = quantity
+    db.session.commit()
+    log_action('kit_update', f'{quantity}x {equipment.name} ajouté au kit « {kit.name} »')
+    flash('Contenu du kit enregistré.', 'success')
+    return redirect(url_for('kit_detail', kid=kid))
+
+
+@app.route('/kits/<int:kid>/item/<int:iid>/delete', methods=['POST'])
+@permission_required_any('manage_kits', 'manage_equipment')
+def kit_item_delete(kid, iid):
+    item = db.session.get(KitItem, iid)
+    kit = db.session.get(EquipmentKit, kid)
+    if item and kit and item.kit_id == kid:
+        name = item.equipment.name if item.equipment else 'matériel'
+        db.session.delete(item); db.session.commit()
+        log_action('kit_update', f'{name} retiré du kit « {kit.name} »')
+    return redirect(url_for('kit_detail', kid=kid))
+
+
+@app.route('/kits/<int:kid>/delete', methods=['POST'])
+@permission_required_any('manage_kits', 'manage_equipment')
+def kit_delete(kid):
+    kit = db.session.get(EquipmentKit, kid)
+    if kit:
+        if EventKit.query.filter_by(kit_id=kid).first():
+            kit.active = False; db.session.commit()
+            flash('Kit déjà utilisé : il a été archivé.', 'warning')
+        else:
+            name = kit.name; db.session.delete(kit); db.session.commit()
+            log_action('kit_update', f'Kit « {name} » supprimé')
+            flash('Kit supprimé.', 'success')
+    return redirect(url_for('kits_list'))
+
+
+@app.route('/checklist/<int:evid>/kit/suggest', methods=['POST'])
+@permission_required_any('manage_event_tasks', 'manage_schedule')
+def event_kit_suggest(evid):
+    evt = db.session.get(Event, evid)
+    try:
+        kit = db.session.get(EquipmentKit, int(request.form.get('kit_id', '0')))
+        multiplier = max(1, min(99, int(request.form.get('multiplier', '1'))))
+    except (TypeError, ValueError):
+        kit = None; multiplier = 1
+    if not evt or not kit or not kit.items:
+        flash('Événement ou kit vide/introuvable.', 'error')
+        return redirect(url_for('event_checklist', evid=evid))
+    proposal = EventKit(event_id=evid, kit_id=kit.id, multiplier=multiplier,
+                        status='suggested', created_by=current_user.id)
+    db.session.add(proposal); db.session.flush()
+    for item in kit.items:
+        db.session.add(EventKitItem(event_kit_id=proposal.id, equipment_id=item.equipment_id,
+                                    quantity=(item.quantity or 1) * multiplier))
+    db.session.commit()
+    log_action('event_kit_suggest', f'Kit « {kit.name} » proposé x{multiplier} pour « {evt.title} »')
+    flash('Kit ajouté comme suggestion. Ajuste les quantités puis confirme.', 'success')
+    return redirect(url_for('event_checklist', evid=evid))
+
+
+@app.route('/checklist/<int:evid>/kit/<int:ekid>/update', methods=['POST'])
+@permission_required_any('manage_event_tasks', 'manage_schedule')
+def event_kit_update(evid, ekid):
+    proposal = db.session.get(EventKit, ekid)
+    if not proposal or proposal.event_id != evid or proposal.status != 'suggested':
+        flash('Suggestion introuvable ou déjà confirmée.', 'error')
+        return redirect(url_for('event_checklist', evid=evid))
+    for item in proposal.items:
+        try:
+            item.quantity = max(0, min(9999, int(request.form.get(f'qty_{item.id}', item.quantity))))
+        except (TypeError, ValueError):
+            pass
+    db.session.commit()
+    log_action('event_kit_suggest', f'Quantités du kit « {proposal.kit.name} » ajustées pour « {proposal.event.title} »')
+    flash('Quantités ajustées.', 'success')
+    return redirect(url_for('event_checklist', evid=evid))
+
+
+@app.route('/checklist/<int:evid>/kit/<int:ekid>/confirm', methods=['POST'])
+@permission_required_any('manage_event_tasks', 'manage_schedule')
+def event_kit_confirm(evid, ekid):
+    evt = db.session.get(Event, evid)
+    proposal = db.session.get(EventKit, ekid)
+    if not evt or not proposal or proposal.event_id != evid or proposal.status != 'suggested':
+        flash('Suggestion introuvable ou déjà confirmée.', 'error')
+        return redirect(url_for('event_checklist', evid=evid))
+    shortages = []
+    for item in proposal.items:
+        if item.quantity <= 0 or not item.equipment:
+            continue
+        available = min_availability_range(item.equipment, evt.event_date, evt.date_end())
+        if item.quantity > available:
+            shortages.append(f'{item.equipment.name}: {item.quantity} demandé(s), {available} disponible(s)')
+    if shortages:
+        flash('Stock insuffisant : ' + ' | '.join(shortages[:8]), 'error')
+        return redirect(url_for('event_checklist', evid=evid))
+    affected_equipment = set()
+    for item in proposal.items:
+        if item.quantity <= 0 or not item.equipment:
+            continue
+        borrow = Borrow(user_id=current_user.id, equipment_id=item.equipment_id,
+                        quantity=item.quantity, pickup_date=evt.event_date,
+                        expected_return_date=evt.date_end() + timedelta(days=1),
+                        status='active', notes=f'Ajouté via kit : {proposal.kit.name}',
+                        event_name=evt.title, event_id=evt.id)
+        db.session.add(borrow); db.session.flush()
+        item.borrow_id = borrow.id
+        affected_equipment.add(item.equipment_id)
+    proposal.status = 'confirmed'; proposal.confirmed_by = current_user.id; proposal.confirmed_at = tunisia_now()
+    db.session.commit()
+    for equipment_id in affected_equipment:
+        update_availability(equipment_id)
+    log_action('event_kit_confirm', f'Kit « {proposal.kit.name} » confirmé pour « {evt.title} » ({len(affected_equipment)} article(s))')
+    flash('Kit confirmé : les emprunts ont été créés et liés à l’événement.', 'success')
+    return redirect(url_for('event_checklist', evid=evid))
+
+
+@app.route('/checklist/<int:evid>/kit/<int:ekid>/delete', methods=['POST'])
+@permission_required_any('manage_event_tasks', 'manage_schedule')
+def event_kit_delete(evid, ekid):
+    proposal = db.session.get(EventKit, ekid)
+    if proposal and proposal.event_id == evid and proposal.status == 'suggested':
+        name = proposal.kit.name if proposal.kit else 'kit'
+        db.session.delete(proposal); db.session.commit()
+        log_action('event_kit_suggest', f'Suggestion du kit « {name} » supprimée')
+        flash('Suggestion supprimée.', 'success')
+    else:
+        flash('Un kit confirmé ne peut pas être supprimé depuis cette page.', 'warning')
+    return redirect(url_for('event_checklist', evid=evid))
 
 
 # ═══════════ C L I E N T S ═══════════
@@ -3580,6 +4089,11 @@ def full_backup():
         ('16_transport_proofs', TransportProof),
         ('17_transport_trackers', TransportTracker),
         ('18_transport_stops', TransportStop),
+        ('19_event_tasks', EventTask),
+        ('20_equipment_kits', EquipmentKit),
+        ('21_kit_items', KitItem),
+        ('22_event_kits', EventKit),
+        ('23_event_kit_items', EventKitItem),
     ]
 
     def fmt(v):

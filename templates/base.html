@@ -47,6 +47,9 @@
             <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>
+            <a href="{{ url_for('checklists_list') }}" class="nav-item {% if request.endpoint in ('checklists_list','event_checklist') %}active{% endif %}">
+                <span class="nav-icon">✅</span><span>Checklists événements</span>
+            </a>
             {% if has_perm('driver_access','manage_transport') %}
             <a href="{{ url_for('driver_dashboard') }}" class="nav-item {% if request.endpoint in ('driver_dashboard','driver_mission','driver_print') %}active{% endif %}">
                 <span class="nav-icon">🚚</span><span>Chauffeur</span>
@@ -66,6 +69,11 @@
             {% if has_perm('add_equipment','manage_equipment') %}
             <a href="{{ url_for('add_equipment') }}" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">
                 <span class="nav-icon">➕</span><span>Ajouter du materiel</span>
+            </a>
+            {% endif %}
+            {% if has_perm('manage_kits','manage_equipment') %}
+            <a href="{{ url_for('kits_list') }}" class="nav-item {% if request.endpoint in ('kits_list','kit_detail') %}active{% endif %}">
+                <span class="nav-icon">🧰</span><span>Kits matériel</span>
             </a>
             {% endif %}
             {% if has_perm('manage_orders','manage_equipment') %}

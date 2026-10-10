@@ -96,6 +96,8 @@
                             {% elif log.action == 'transport_print' %}<span class="status-badge" style="background:#F1F5F9;color:#475569">🖨️ Fiche transport</span>
                             {% elif log.action == 'transport_settings' %}<span class="status-badge" style="background:#FEF3C7;color:#92400E">⚙️ Mission transport</span>
                             {% elif log.action == 'transport_depot_update' %}<span class="status-badge" style="background:#DBEAFE;color:#1E40AF">📍 Dépôt transport</span>
+                            {% elif log.action in ('event_checklist_generate','event_task_update','event_task_toggle') %}<span class="status-badge" style="background:#DCFCE7;color:#166534">✅ Checklist événement</span>
+                            {% elif log.action in ('kit_update','event_kit_suggest','event_kit_confirm') %}<span class="status-badge" style="background:#EDE9FE;color:#6D28D9">🧰 Kit matériel</span>
                             {% else %}<span class="status-badge">{{ log.action }}</span>
                             {% endif %}
                         </td>
