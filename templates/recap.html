@@ -36,6 +36,8 @@
 .ai-box.info{background:var(--blue-pale);color:var(--blue-deep)}
 .ai-box.err{background:var(--red-pale);color:var(--red-dark)}
 .recap-footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--gray-200);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;font-size:.72rem;color:var(--gray-400);line-height:1.7}
+.merged-progress{height:10px;background:var(--gray-100);border-radius:20px;overflow:hidden;margin-top:.7rem}.merged-progress>div{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .2s}.merged-task{display:flex;gap:.7rem;align-items:flex-start;border:1px solid var(--gray-200);border-radius:10px;padding:.7rem;margin-bottom:.55rem}.merged-task.done{background:#F0FDF4;opacity:.78}.merged-check{width:30px;height:30px;border:2px solid var(--gray-300);border-radius:50%;background:white;flex:none;cursor:pointer;font-weight:800}.merged-task.done .merged-check{background:#22C55E;border-color:#22C55E;color:white}.merged-task.done .merged-task-title{text-decoration:line-through}.task-priority{font-size:.67rem;font-weight:800;text-transform:uppercase}.p-urgent{color:#B91C1C}.p-high{color:#C2410C}.p-normal{color:#1D4ED8}.p-low{color:#64748B}.task-comment{font-size:.78rem;background:var(--gray-50);padding:.4rem;border-radius:7px;margin-top:.35rem;white-space:pre-line}.kit-suggest-form{display:flex;gap:.5rem;align-items:end;margin-top:.7rem;flex-wrap:wrap}.merged-kit{border:1px solid var(--gray-200);border-radius:10px;padding:.75rem;margin-bottom:.6rem}.merged-kit-row{display:grid;grid-template-columns:1fr 90px 110px;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--gray-100)}
+@media(max-width:650px){.merged-kit-row{grid-template-columns:1fr 80px}.merged-kit-row small{grid-column:1/3}}
 /* Impression : seulement le document */
 @media print{
     .sidebar, .mobile-header, .app-footer, .flash-container, .no-print, .breadcrumb { display:none !important }
@@ -109,6 +111,9 @@
                 <div class="ai-box err">⚠️ {{ ai_error }}</div>
                 {% endif %}
             </div>
+
+            <!-- Checklist + kits : fusionnés dans le récapitulatif unique -->
+            {% include '_recap_checklist.html' %}
 
             <!-- Materiel -->
             <div class="recap-section">
@@ -290,6 +295,24 @@ async function aiConfirmBorrow(eid){
         alert(e.message);
         btn.disabled = false;
         btn.textContent = "✅ Confirmer l'emprunt";
+    }
+}
+
+async function toggleMergedTask(taskId, btn){
+    btn.disabled = true;
+    try {
+        var r = await fetch('/checklist/' + AI_EVT_ID + '/task/' + taskId + '/toggle', {method:'POST'});
+        var data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || 'Erreur');
+        var card = document.getElementById('merged-task-' + taskId);
+        card.classList.toggle('done', data.done);
+        btn.textContent = data.done ? '✓' : '';
+        document.getElementById('taskProgressText').textContent = data.completed + '/' + data.total;
+        document.getElementById('taskProgressBar').style.width = (data.total ? Math.round(data.completed * 100 / data.total) : 0) + '%';
+    } catch(e) {
+        alert(e.message);
+    } finally {
+        btn.disabled = false;
     }
 }
 </script>

@@ -47,9 +47,6 @@
             <a href="{{ url_for('schedule') }}" class="nav-item {% if request.endpoint == 'schedule' %}active{% endif %}">
                 <span class="nav-icon">📅</span><span>Emploi du temps</span>
             </a>
-            <a href="{{ url_for('checklists_list') }}" class="nav-item {% if request.endpoint in ('checklists_list','event_checklist') %}active{% endif %}">
-                <span class="nav-icon">✅</span><span>Checklists événements</span>
-            </a>
             {% if has_perm('driver_access','manage_transport') %}
             <a href="{{ url_for('driver_dashboard') }}" class="nav-item {% if request.endpoint in ('driver_dashboard','driver_mission','driver_print') %}active{% endif %}">
                 <span class="nav-icon">🚚</span><span>Chauffeur</span>
@@ -64,7 +61,7 @@
             </a>
             {% endif %}
             <a href="{{ url_for('recaps_list') }}" class="nav-item {% if request.endpoint in ('recaps_list', 'recap_view', 'recap_ai') %}active{% endif %}">
-                <span class="nav-icon">📄</span><span>Recaps evenements</span>
+                <span class="nav-icon">📄</span><span>Récaps & checklists</span>
             </a>
             {% if has_perm('add_equipment','manage_equipment') %}
             <a href="{{ url_for('add_equipment') }}" class="nav-item {% if request.endpoint == 'add_equipment' %}active{% endif %}">

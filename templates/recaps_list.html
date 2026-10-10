@@ -4,8 +4,8 @@
 {% block content %}
 <div class="form-page" style="max-width:900px">
     <div class="page-header">
-        <h1>📄 Récaps d'événements</h1>
-        <p>Choisis un événement pour générer son récapitulatif : matériel réservé, notes, équipe, et résumé par IA.</p>
+        <h1>📄 Récaps & checklists d'événements</h1>
+        <p>Une page unique pour les tâches, les kits, le matériel réservé, les notes, l'équipe et le résumé IA.</p>
     </div>
 
     {% if not ai_configured %}
@@ -23,7 +23,7 @@
     {% if events %}
     <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm)">
         <table class="history-table">
-            <thead><tr><th>Événement</th><th> Dates</th><th>Lieu</th><th>Matos lié</th><th>Statut</th><th></th></tr></thead>
+            <thead><tr><th>Événement</th><th>Dates</th><th>Lieu</th><th>Matériel</th><th>Checklist</th><th>Statut</th><th></th></tr></thead>
             <tbody>
                 {% for e in events %}
                 <tr>
@@ -31,13 +31,14 @@
                     <td>{{ e.event_date.strftime('%d/%m/%Y') }}{% if e.is_multiday() %} → {{ e.date_end().strftime('%d/%m/%Y') }}{% endif %}<br><small style="color:var(--gray-400)">{{ e.start_time }}-{{ e.end_time }}</small></td>
                     <td>{{ e.location or '—' }}</td>
                     <td>{% if e.recap_count %}<strong>{{ e.recap_count }}</strong> matériel(s){% else %}<span style="color:var(--gray-400)">0</span>{% endif %}</td>
+                    <td>{% if e.task_total %}<strong>{{ e.task_done }}/{{ e.task_total }}</strong>{% if e.task_done == e.task_total %} ✅{% endif %}{% else %}<span style="color:var(--gray-400)">0/0</span>{% endif %}</td>
                     <td>
                         {% if e.status == 'upcoming' %}<span class="status-badge status-active">À venir</span>
                         {% elif e.status == 'ongoing' %}<span class="status-badge status-late">En cours</span>
                         {% elif e.status == 'completed' %}<span class="status-badge status-returned">Terminé</span>
                         {% else %}<span class="status-badge" style="background:var(--gray-100);color:var(--gray-500)">Annulé</span>{% endif %}
                     </td>
-                    <td><a href="{{ url_for('recap_view', evid=e.id) }}" class="btn btn-sm btn-accent">📄 Récap</a></td>
+                    <td><a href="{{ url_for('recap_view', evid=e.id) }}" class="btn btn-sm btn-accent">📄 Ouvrir</a></td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -2439,23 +2439,8 @@ def _can_access_event_tasks(evt):
 @app.route('/checklists')
 @login_required
 def checklists_list():
-    if is_pending_user():
-        flash('Votre compte est en attente de validation.', 'error')
-        return redirect(url_for('dashboard'))
-    events = Event.query.order_by(Event.event_date.desc()).limit(200).all()
-    summaries = []
-    today = tunisia_now().date()
-    for evt in events:
-        if not _can_access_event_tasks(evt):
-            continue
-        tasks = evt.checklist_tasks
-        done = sum(1 for task in tasks if task.status == 'done')
-        overdue = sum(1 for task in tasks if task.status != 'done' and task.due_date and task.due_date < today)
-        total = len(tasks)
-        summaries.append({'event': evt, 'done': done, 'total': total,
-                          'pct': int(done * 100 / total) if total else 0, 'overdue': overdue})
-    return render_template('checklists.html', summaries=summaries,
-                           can_manage=_can_manage_tasks(), today=today)
+    """Ancienne entrée : les checklists sont maintenant fusionnées aux récaps."""
+    return redirect(url_for('recaps_list'))
 
 
 @app.route('/checklist/<int:evid>')
@@ -2465,14 +2450,7 @@ def event_checklist(evid):
     if not _can_access_event_tasks(evt):
         flash('Accès refusé à cette checklist.', 'error')
         return redirect(url_for('checklists_list'))
-    tasks = EventTask.query.filter_by(event_id=evid).order_by(EventTask.position, EventTask.due_date, EventTask.id).all()
-    done = sum(1 for task in tasks if task.status == 'done')
-    kits = EquipmentKit.query.filter_by(active=True).order_by(EquipmentKit.name).all()
-    event_kits = EventKit.query.filter_by(event_id=evid).order_by(EventKit.created_at.desc()).all()
-    return render_template('event_checklist.html', evt=evt, tasks=tasks, done=done,
-                           total=len(tasks), today=tunisia_now().date(), all_users=User.query.order_by(User.full_name).all(),
-                           can_manage=_can_manage_tasks(), kits=kits, event_kits=event_kits,
-                           can_manage_kits=current_user.has_permission('manage_kits') or current_user.has_permission('manage_equipment'))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 @app.route('/checklist/<int:evid>/generate', methods=['POST'])
@@ -2486,7 +2464,7 @@ def event_checklist_generate(evid):
     db.session.commit()
     log_action('event_checklist_generate', f'{added} tâche(s) standard ajoutée(s) à « {evt.title} »')
     flash(f'{added} tâche(s) standard ajoutée(s).', 'success')
-    return redirect(url_for('event_checklist', evid=evid))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 @app.route('/checklist/<int:evid>/task/save', methods=['POST'])
@@ -2506,7 +2484,7 @@ def event_task_save(evid):
     title = request.form.get('title', '').strip()
     if not title:
         flash('Titre de tâche requis.', 'error')
-        return redirect(url_for('event_checklist', evid=evid))
+        return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
     old_assignee = task.assigned_to if task else None
     if not task:
         max_pos = db.session.query(db.func.max(EventTask.position)).filter_by(event_id=evid).scalar() or 0
@@ -2534,10 +2512,10 @@ def event_task_save(evid):
         due_label = task.due_date.strftime('%d/%m/%Y') if task.due_date else 'sans échéance'
         notify_user(task.assigned_to, f'✅ Nouvelle tâche : {task.title}',
                     f'Événement « {evt.title} » — échéance {due_label} {task.due_time or ""}.',
-                    url_for('event_checklist', evid=evid))
+                    url_for('recap_view', evid=evid, _anchor='checklist'))
     log_action('event_task_update', f'Tâche « {task.title} » {action_word} pour « {evt.title} »')
     flash(f'Tâche {action_word}.', 'success')
-    return redirect(url_for('event_checklist', evid=evid))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 @app.route('/checklist/<int:evid>/task/<int:tid>/toggle', methods=['POST'])
@@ -2572,7 +2550,7 @@ def event_task_delete(evid, tid):
         db.session.delete(task); db.session.commit()
         log_action('event_task_update', f'Tâche « {title} » supprimée de « {evt.title} »')
         flash('Tâche supprimée.', 'success')
-    return redirect(url_for('event_checklist', evid=evid))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 # ═══════════ K I T S   D E   M A T E R I E L ═══════════
@@ -2688,7 +2666,7 @@ def event_kit_suggest(evid):
         kit = None; multiplier = 1
     if not evt or not kit or not kit.items:
         flash('Événement ou kit vide/introuvable.', 'error')
-        return redirect(url_for('event_checklist', evid=evid))
+        return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
     proposal = EventKit(event_id=evid, kit_id=kit.id, multiplier=multiplier,
                         status='suggested', created_by=current_user.id)
     db.session.add(proposal); db.session.flush()
@@ -2698,7 +2676,7 @@ def event_kit_suggest(evid):
     db.session.commit()
     log_action('event_kit_suggest', f'Kit « {kit.name} » proposé x{multiplier} pour « {evt.title} »')
     flash('Kit ajouté comme suggestion. Ajuste les quantités puis confirme.', 'success')
-    return redirect(url_for('event_checklist', evid=evid))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 @app.route('/checklist/<int:evid>/kit/<int:ekid>/update', methods=['POST'])
@@ -2707,7 +2685,7 @@ def event_kit_update(evid, ekid):
     proposal = db.session.get(EventKit, ekid)
     if not proposal or proposal.event_id != evid or proposal.status != 'suggested':
         flash('Suggestion introuvable ou déjà confirmée.', 'error')
-        return redirect(url_for('event_checklist', evid=evid))
+        return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
     for item in proposal.items:
         try:
             item.quantity = max(0, min(9999, int(request.form.get(f'qty_{item.id}', item.quantity))))
@@ -2716,7 +2694,7 @@ def event_kit_update(evid, ekid):
     db.session.commit()
     log_action('event_kit_suggest', f'Quantités du kit « {proposal.kit.name} » ajustées pour « {proposal.event.title} »')
     flash('Quantités ajustées.', 'success')
-    return redirect(url_for('event_checklist', evid=evid))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 @app.route('/checklist/<int:evid>/kit/<int:ekid>/confirm', methods=['POST'])
@@ -2726,7 +2704,7 @@ def event_kit_confirm(evid, ekid):
     proposal = db.session.get(EventKit, ekid)
     if not evt or not proposal or proposal.event_id != evid or proposal.status != 'suggested':
         flash('Suggestion introuvable ou déjà confirmée.', 'error')
-        return redirect(url_for('event_checklist', evid=evid))
+        return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
     shortages = []
     for item in proposal.items:
         if item.quantity <= 0 or not item.equipment:
@@ -2736,7 +2714,7 @@ def event_kit_confirm(evid, ekid):
             shortages.append(f'{item.equipment.name}: {item.quantity} demandé(s), {available} disponible(s)')
     if shortages:
         flash('Stock insuffisant : ' + ' | '.join(shortages[:8]), 'error')
-        return redirect(url_for('event_checklist', evid=evid))
+        return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
     affected_equipment = set()
     for item in proposal.items:
         if item.quantity <= 0 or not item.equipment:
@@ -2755,7 +2733,7 @@ def event_kit_confirm(evid, ekid):
         update_availability(equipment_id)
     log_action('event_kit_confirm', f'Kit « {proposal.kit.name} » confirmé pour « {evt.title} » ({len(affected_equipment)} article(s))')
     flash('Kit confirmé : les emprunts ont été créés et liés à l’événement.', 'success')
-    return redirect(url_for('event_checklist', evid=evid))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 @app.route('/checklist/<int:evid>/kit/<int:ekid>/delete', methods=['POST'])
@@ -2769,7 +2747,7 @@ def event_kit_delete(evid, ekid):
         flash('Suggestion supprimée.', 'success')
     else:
         flash('Un kit confirmé ne peut pas être supprimé depuis cette page.', 'warning')
-    return redirect(url_for('event_checklist', evid=evid))
+    return redirect(url_for('recap_view', evid=evid, _anchor='checklist'))
 
 
 # ═══════════ C L I E N T S ═══════════
@@ -3674,7 +3652,24 @@ def recaps_list():
                 counts['name:' + key] = counts.get('name:' + key, 0) + 1
     for e in events:
         e.recap_count = counts.get(e.id, 0) + counts.get('name:' + (e.title or '').strip().lower(), 0)
+        e.task_total = len(e.checklist_tasks)
+        e.task_done = sum(1 for task in e.checklist_tasks if task.status == 'done')
     return render_template('recaps_list.html', events=events, ai_configured=ai_configured())
+
+
+def _recap_checklist_context(evt):
+    """Ajoute checklist + kits au récapitulatif unique de l'événement."""
+    tasks = EventTask.query.filter_by(event_id=evt.id).order_by(EventTask.position, EventTask.due_date, EventTask.id).all()
+    done = sum(1 for task in tasks if task.status == 'done')
+    return {
+        'tasks': tasks, 'tasks_done': done, 'tasks_total': len(tasks),
+        'today': tunisia_now().date(), 'all_users': User.query.order_by(User.full_name).all(),
+        'can_manage_tasks': _can_manage_tasks(),
+        'can_toggle_tasks': _can_access_event_tasks(evt),
+        'kits': EquipmentKit.query.filter_by(active=True).order_by(EquipmentKit.name).all(),
+        'event_kits': EventKit.query.filter_by(event_id=evt.id).order_by(EventKit.created_at.desc()).all(),
+        'can_manage_kits': current_user.has_permission('manage_kits') or current_user.has_permission('manage_equipment')
+    }
 
 
 @app.route('/recap/<int:evid>')
@@ -3683,6 +3678,7 @@ def recap_view(evid):
     if is_pending_user(): flash('Votre compte est en attente de validation.','error'); return redirect(url_for('dashboard'))
     ctx = _recap_context(evid)
     if not ctx: flash('Evenement introuvable.','error'); return redirect(url_for('recaps_list'))
+    ctx.update(_recap_checklist_context(ctx['evt']))
     ctx.update({'ai_text': None, 'ai_error': None, 'ai_configured': ai_configured(), 'now': tunisia_now()})
     return render_template('recap.html', **ctx)
 
@@ -3704,6 +3700,7 @@ def recap_ai(evid):
     team_lines = [f'- {t["name"]} ({t["role"]})' for t in ctx['team']]
     configured = ai_configured()
     text = generate_ai_recap(evt, matos_lines, team_lines)
+    ctx.update(_recap_checklist_context(evt))
     ctx.update({'ai_configured': configured, 'now': tunisia_now()})
     if text:
         log_action('ai_recap', f'Recap IA genere pour "{evt.title}"', evt.title)
