@@ -4,13 +4,13 @@
 {% block content %}
 <div class="form-page" style="max-width:900px">
     <div class="page-header">
-        <h1>📤 Emprunts à préparer</h1>
+        <h1><span class="ui-icon" aria-hidden="true">outbox</span> Emprunts à préparer</h1>
         <p>{{ active_count }} emprunt(s) en cours. Préparez le matériel pour chaque événement.</p>
     </div>
 
     {% if not by_event and not no_event %}
     <div class="empty-state">
-        <div class="empty-icon">🎉</div>
+        <div class="empty-icon"><span class="ui-icon" aria-hidden="true">celebration</span></div>
         <h3>Aucun emprunt en cours</h3>
         <p>Tout est rentré. Vous pouvez emprunter du matériel depuis la page d'accueil.</p>
     </div>
@@ -21,9 +21,9 @@
     <div class="borrow-group">
         <div class="borrow-group-head">
             <div>
-                <span class="group-icon">🎯</span>
+                <span class="group-icon"><span class="ui-icon" aria-hidden="true">gps_fixed</span></span>
                 <strong>{{ grp.event.title if grp.event else 'Evenement' }}</strong>
-                {% if grp.event %}<span class="group-date">{{ grp.event.event_date.strftime('%d/%m/%Y') }}{% if grp.event.is_multiday() %} → {{ grp.event.date_end().strftime('%d/%m/%Y') }}{% endif %} · {{ grp.event.start_time }}-{{ grp.event.end_time }} · 📍 {{ grp.event.location }}</span>{% endif %}
+                {% if grp.event %}<span class="group-date">{{ grp.event.event_date.strftime('%d/%m/%Y') }}{% if grp.event.is_multiday() %} → {{ grp.event.date_end().strftime('%d/%m/%Y') }}{% endif %} · {{ grp.event.start_time }}-{{ grp.event.end_time }} · <span class="ui-icon" aria-hidden="true">location_on</span> {{ grp.event.location }}</span>{% endif %}
             </div>
             <span class="group-count">{{ grp.borrows | length }} matériel(s)</span>
         </div>
@@ -34,19 +34,19 @@
                 <a class="bt-name bt-link" href="{{ url_for('equipment_detail', eid=b.equipment_id) }}" title="Voir la fiche materiel">{{ b.equipment.name if b.equipment else 'Matériel supprime' }} <em>{{ b.equipment.reference if b.equipment else '' }}</em></a>
                 <span class="bt-qty">×{{ b.quantity }}</span>
                 <span class="bt-user">{{ b.user.full_name }}</span>
-                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}📦 Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}⏰ Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
+                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}<span class="ui-icon" aria-hidden="true">inventory_2</span> Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}<span class="ui-icon" aria-hidden="true">schedule</span> Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} <span class="ui-icon" aria-hidden="true">warning</span>{% endif %}</span>
                 <span class="bt-action">
                     {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
                     <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
                         <input type="number" name="repair_qty" value="0" min="0" max="{{ b.quantity }}" style="width:52px" title="Quantité en réparation">
-                        <span style="font-size:.65rem;color:#64748B">🔧 répa</span>
-                        <button class="btn btn-sm btn-success">✅ Retourner</button>
+                        <span style="font-size:.65rem;color:#64748B"><span class="ui-icon" aria-hidden="true">build</span> répa</span>
+                        <button class="btn btn-sm btn-success"><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner</button>
                     </form>
                     {% else %}
-                    <span style="color:var(--gray-400);font-size:.72rem">🔒 {{ b.user.full_name }}</span>
+                    <span style="color:var(--gray-400);font-size:.72rem"><span class="ui-icon" aria-hidden="true">lock</span> {{ b.user.full_name }}</span>
                     {% endif %}
                 </span>
-                {% if b.notes %}<span class="bt-note">📝 {{ b.notes }}</span>{% endif %}
+                {% if b.notes %}<span class="bt-note"><span class="ui-icon" aria-hidden="true">edit_note</span> {{ b.notes }}</span>{% endif %}
             </div>
             {% endfor %}
         </div>
@@ -57,7 +57,7 @@
     {% if no_event %}
     <div class="borrow-group" style="border-left:4px solid #F59E0B">
         <div class="borrow-group-head">
-            <div><span class="group-icon">📦</span><strong>Sans événement</strong><span class="group-date">Associez-les à un événement pour mieux organiser la préparation.</span></div>
+            <div><span class="group-icon"><span class="ui-icon" aria-hidden="true">inventory_2</span></span><strong>Sans événement</strong><span class="group-date">Associez-les à un événement pour mieux organiser la préparation.</span></div>
             <span class="group-count">{{ no_event | length }} emprunt(s)</span>
         </div>
         <div class="borrows-table">
@@ -67,7 +67,7 @@
                 <a class="bt-name bt-link" href="{{ url_for('equipment_detail', eid=b.equipment_id) }}" title="Voir la fiche materiel">{{ b.equipment.name if b.equipment else 'Matériel supprime' }} <em>{{ b.equipment.reference if b.equipment else '' }}</em></a>
                 <span class="bt-qty">×{{ b.quantity }}</span>
                 <span class="bt-user">{{ b.user.full_name }}</span>
-                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}📦 Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}⏰ Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️{% endif %}</span>
+                <span class="bt-date {% if b.status == 'late' %}red{% endif %}">{% if b.pickup_date %}<span class="ui-icon" aria-hidden="true">inventory_2</span> Prise : {{ b.pickup_date.strftime('%d/%m/%Y') }}<br>{% endif %}<span class="ui-icon" aria-hidden="true">schedule</span> Retour : {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} <span class="ui-icon" aria-hidden="true">warning</span>{% endif %}</span>
                 <span class="bt-action">
                     <form method="POST" action="{{ url_for('assign_event_to_borrow', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;flex-wrap:wrap">
                         <select name="event_id" style="max-width:170px;font-size:.75rem">
@@ -76,16 +76,16 @@
                             <option value="{{ ev.id }}">{{ ev.title }} ({{ ev.event_date.strftime('%d/%m') }}{% if ev.is_multiday() %} → {{ ev.date_end().strftime('%d/%m') }}{% endif %})</option>
                             {% endfor %}
                         </select>
-                        <button class="btn btn-sm btn-secondary" style="font-size:.7rem">🎯 Associer</button>
+                        <button class="btn btn-sm btn-secondary" style="font-size:.7rem"><span class="ui-icon" aria-hidden="true">gps_fixed</span> Associer</button>
                     </form>
                     {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
                     <form method="POST" action="{{ url_for('return_equipment', bid=b.id) }}" style="display:flex;gap:.3rem;align-items:center;margin-top:.3rem">
                         <input type="number" name="repair_qty" value="0" min="0" max="{{ b.quantity }}" style="width:52px" title="Quantité en réparation">
-                        <button class="btn btn-sm btn-success" style="font-size:.7rem">✅ Retourner</button>
+                        <button class="btn btn-sm btn-success" style="font-size:.7rem"><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner</button>
                     </form>
                     {% endif %}
                 </span>
-                {% if b.notes %}<span class="bt-note">📝 {{ b.notes }}</span>{% endif %}
+                {% if b.notes %}<span class="bt-note"><span class="ui-icon" aria-hidden="true">edit_note</span> {{ b.notes }}</span>{% endif %}
             </div>
             {% endfor %}
         </div>

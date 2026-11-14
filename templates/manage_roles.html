@@ -4,17 +4,17 @@
 {% block content %}
 <div class="form-page" style="max-width:1000px">
     <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
-    <div class="page-header"><h1>🔐 Gerer les roles et permissions</h1><p>Creez des roles personnalises avec les permissions de votre choix.</p></div>
+    <div class="page-header"><h1><span class="ui-icon" aria-hidden="true">admin_panel_settings</span> Gerer les roles et permissions</h1><p>Creez des roles personnalises avec les permissions de votre choix.</p></div>
 
     <div class="form-card" style="margin-bottom:1.5rem">
-        <h3 style="font-size:1.05rem;color:var(--blue-deep);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--gray-100)">➕ Creer un nouveau role</h3>
+        <h3 style="font-size:1.05rem;color:var(--blue-deep);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid var(--gray-100)"><span class="ui-icon" aria-hidden="true">add</span> Creer un nouveau role</h3>
         <form method="POST" action="{{ url_for('create_role') }}">
             <div class="form-row" style="grid-template-columns:1fr 1fr 2fr">
-                <div class="form-group"><label>Icone</label><select name="icon"><option>👑</option><option>👷</option><option>🛡️</option><option>👤</option><option>🔧</option><option>📋</option><option>👀</option><option>💼</option></select></div>
+                <div class="form-group"><label>Icone</label><select name="icon"><option value="👑">Administrateur</option><option value="👷">Équipe terrain</option><option value="🛡️">Manager</option><option value="👤">Utilisateur</option><option value="🔧">Technicien</option><option value="📋">Planning</option><option value="👀">Consultation</option><option value="💼">Commercial</option></select></div>
                 <div class="form-group"><label>Nom du role *</label><input type="text" name="name" required placeholder="Ex: Superviseur"></div>
                 <div class="form-group"><label>Description</label><input type="text" name="description" placeholder="Ex: Gerer le depot sans supprimer"></div>
             </div>
-            <div style="margin:1rem 0"><strong style="font-size:0.9rem;color:var(--gray-700)">📋 Permissions :</strong></div>
+            <div style="margin:1rem 0"><strong style="font-size:0.9rem;color:var(--gray-700)"><span class="ui-icon" aria-hidden="true">assignment</span> Permissions :</strong></div>
             {% for group_name, perms in perm_groups.items() %}
             <div style="margin-bottom:1.1rem">
                 <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray-400);font-weight:700;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--gray-100)">{{ group_name }}</div>
@@ -22,36 +22,36 @@
                     {% for p in perms %}
                     <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.6rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
                         <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:18px;height:18px;margin-top:2px">
-                        <div><span style="font-weight:600;font-size:0.9rem">{{ p.icon }} {{ p.label }}</span><br><small style="color:var(--gray-500)">{{ p.desc }}</small></div>
+                        <div><span style="font-weight:600;font-size:0.9rem">{{ p.icon|material_icon }} {{ p.label }}</span><br><small style="color:var(--gray-500)">{{ p.desc }}</small></div>
                     </label>
                     {% endfor %}
                 </div>
             </div>
             {% endfor %}
-            <div style="display:flex;justify-content:flex-end;padding-top:1rem"><button class="btn btn-accent">✅ Creer le role</button></div>
+            <div style="display:flex;justify-content:flex-end;padding-top:1rem"><button class="btn btn-accent"><span class="ui-icon" aria-hidden="true">check_circle</span> Creer le role</button></div>
         </form>
     </div>
 
-    <div class="detail-section"><h2>📋 Roles existants ({{ roles|length }})</h2>
+    <div class="detail-section"><h2><span class="ui-icon" aria-hidden="true">assignment</span> Roles existants ({{ roles|length }})</h2>
         {% for role in roles %}
         <div style="border:1px solid var(--gray-200);border-radius:12px;padding:1.25rem;margin-bottom:1rem;background:var(--white)">
             <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:1rem">
                 <div>
-                    <h3 style="font-size:1.1rem;margin-bottom:.25rem">{{ role.icon }} {{ role.name }}</h3>
+                    <h3 style="font-size:1.1rem;margin-bottom:.25rem">{{ role.icon|material_icon }} {{ role.name }}</h3>
                     <p style="color:var(--gray-500);font-size:.85rem">{{ role.description or 'Aucune description' }}</p>
                     <div style="margin-top:.5rem">
                         <small style="color:var(--gray-400)">{{ role.users|length }} utilisateur(s) · Créé le {{ role.created_at.strftime('%d/%m/%Y') }}</small>
                     </div>
                 </div>
                 <div style="display:flex;gap:.5rem">
-                    <button class="btn btn-sm btn-secondary edit-role-btn" data-role='{"id":{{ role.id }},"name":{{ role.name | tojson }},"icon":{{ role.icon | tojson }},"desc":{{ (role.description or '') | tojson }},"perms":{{ role.get_permissions() | tojson }}}'>✏️ Modifier</button>
-                    <form method="POST" action="{{ url_for('delete_role',rid=role.id) }}" onsubmit="return confirm('Supprimer le role {{ role.name | replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                    <button class="btn btn-sm btn-secondary edit-role-btn" data-role='{"id":{{ role.id }},"name":{{ role.name | tojson }},"icon":{{ role.icon | tojson }},"desc":{{ (role.description or '') | tojson }},"perms":{{ role.get_permissions() | tojson }}}'><span class="ui-icon" aria-hidden="true">edit</span> Modifier</button>
+                    <form method="POST" action="{{ url_for('delete_role',rid=role.id) }}" onsubmit="return confirm('Supprimer le role {{ role.name | replace("'","\\'") }} ?')"><button class="btn btn-sm btn-danger"><span class="ui-icon" aria-hidden="true">delete</span></button></form>
                 </div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.75rem">
                 {% for p in role.get_permissions() %}
                 {% set pinfo = all_permissions | selectattr("key","equalto",p) | first %}
-                <span style="background:var(--blue-pale);color:var(--blue);padding:.2rem .6rem;border-radius:100px;font-size:.75rem;font-weight:600">{{ pinfo.icon if pinfo else '⚙️' }} {{ pinfo.label if pinfo else p }}</span>
+                <span style="background:var(--blue-pale);color:var(--blue);padding:.2rem .6rem;border-radius:100px;font-size:.75rem;font-weight:600">{{ (pinfo.icon if pinfo else '⚙️')|material_icon }} {{ pinfo.label if pinfo else p }}</span>
                 {% endfor %}
             </div>
         </div>
@@ -62,15 +62,15 @@
 <!-- Edit Role Modal -->
 <div class="modal-overlay" id="editRoleModal">
     <div class="modal" style="max-width:650px">
-        <div class="modal-header"><h2>✏️ Modifier le role</h2><button class="modal-close" onclick="closeModal('editRoleModal')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">edit</span> Modifier le role</h2><button class="modal-close" onclick="closeModal('editRoleModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form id="editRoleForm" method="POST">
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group"><label>Icone</label><select name="icon" id="editIcon"><option>👑</option><option>👷</option><option>🛡️</option><option>👤</option><option>🔧</option><option>📋</option><option>👀</option><option>💼</option></select></div>
+                    <div class="form-group"><label>Icone</label><select name="icon" id="editIcon"><option value="👑">Administrateur</option><option value="👷">Équipe terrain</option><option value="🛡️">Manager</option><option value="👤">Utilisateur</option><option value="🔧">Technicien</option><option value="📋">Planning</option><option value="👀">Consultation</option><option value="💼">Commercial</option></select></div>
                     <div class="form-group" style="flex:2"><label>Nom *</label><input type="text" name="name" id="editName" required></div>
                 </div>
                 <div class="form-group"><label>Description</label><input type="text" name="description" id="editDesc"></div>
-                <div style="margin:1rem 0"><strong style="font-size:0.9rem">📋 Permissions :</strong></div>
+                <div style="margin:1rem 0"><strong style="font-size:0.9rem"><span class="ui-icon" aria-hidden="true">assignment</span> Permissions :</strong></div>
                 <div id="editPerms">
                     {% for group_name, perms in perm_groups.items() %}
                     <div style="margin-bottom:0.9rem">
@@ -79,7 +79,7 @@
                             {% for p in perms %}
                             <label style="display:flex;align-items:start;gap:0.5rem;font-weight:400;cursor:pointer;padding:0.5rem;border:1px solid var(--gray-200);border-radius:8px;background:var(--gray-50)">
                                 <input type="checkbox" name="permissions" value="{{ p.key }}" style="width:16px;height:16px;margin-top:2px">
-                                <div><span style="font-weight:600;font-size:.85rem">{{ p.icon }} {{ p.label }}</span></div>
+                                <div><span style="font-weight:600;font-size:.85rem">{{ p.icon|material_icon }} {{ p.label }}</span></div>
                             </label>
                             {% endfor %}
                         </div>
@@ -87,7 +87,7 @@
                     {% endfor %}
                 </div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editRoleModal')">Annuler</button><button class="btn btn-accent">💾 Enregistrer</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editRoleModal')">Annuler</button><button class="btn btn-accent"><span class="ui-icon" aria-hidden="true">save</span> Enregistrer</button></div>
         </form>
     </div>
 </div>

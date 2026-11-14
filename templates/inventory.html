@@ -3,8 +3,8 @@
 
 {% block head %}
 <style>
-.inv-today-card{background:white;border:1px solid var(--gray-200);border-radius:14px;box-shadow:var(--shadow-sm);overflow:hidden}
-.inv-today-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.25rem;background:var(--blue-deep);color:white;flex-wrap:wrap}
+.inv-today-card{background:white;border:1px solid var(--gray-200);border-radius:16px;box-shadow:var(--shadow-md);overflow:hidden}
+.inv-today-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.05rem 1.3rem;background:linear-gradient(135deg,var(--blue-deep),var(--blue-dark));color:white;flex-wrap:wrap}
 .inv-today-head .sub{font-size:.75rem;opacity:.75;margin-top:2px}
 .inv-progress-wrap{display:flex;align-items:center;gap:.6rem}
 .inv-progress{width:140px;height:10px;background:rgba(255,255,255,.2);border-radius:100px;overflow:hidden}
@@ -15,12 +15,12 @@
 .inv-row:last-child{border-bottom:none}
 .inv-row.verified{background:#F7FDF9}
 .inv-eq{display:flex;align-items:center;gap:.85rem;min-width:0}
-.inv-eq-icon{width:44px;height:44px;border-radius:10px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.inv-eq-icon{width:46px;height:46px;border-radius:12px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
 .inv-eq-name{font-weight:700;color:var(--blue-deep);text-decoration:none;font-size:.98rem}
 .inv-eq-name:hover{text-decoration:underline}
 .inv-eq-sub{font-size:.76rem;color:var(--gray-500);margin-top:2px}
 .inv-state{flex-shrink:0}
-.inv-verified{font-size:.8rem;color:#166534;font-weight:600;background:var(--green-pale);padding:.4rem .8rem;border-radius:100px;white-space:nowrap}
+.inv-verified{font-size:.8rem;color:#166534;font-weight:700;background:var(--green-pale);padding:.45rem .85rem;border-radius:100px;white-space:nowrap}
 .inv-hist-row{display:flex;align-items:center;gap:1rem;padding:.7rem 1rem;border-bottom:1px solid var(--gray-100);flex-wrap:wrap;font-size:.85rem}
 .inv-hist-row:last-child{border-bottom:none}
 .inv-hist-date{font-weight:700;color:var(--gray-700);min-width:85px}
@@ -33,7 +33,7 @@
 {% block content %}
 <div class="form-page" style="max-width:900px">
     <div class="page-header">
-        <h1>📦 Inventaire permanent</h1>
+        <h1><span class="ui-icon" aria-hidden="true">inventory_2</span> Inventaire permanent</h1>
         <p>Chaque jour, <strong>5 matériels sont tirés au hasard</strong> pour un contrôle physique (rotation de tout le dépôt).
            Vérifie le matériel et confirme avec le bouton.</p>
     </div>
@@ -42,14 +42,14 @@
     <div class="inv-today-card">
         <div class="inv-today-head">
             <div>
-                <div>📅 Aujourd'hui — {{ today.strftime('%d/%m/%Y') }}</div>
+                <div><span class="ui-icon" aria-hidden="true">calendar_month</span> Aujourd'hui — {{ today.strftime('%d/%m/%Y') }}</div>
                 <div class="sub">Tirage aléatoire · matériel des 4 derniers jours évité si possible</div>
             </div>
             <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
                 {% if can_manage %}
                 <form method="POST" action="{{ url_for('regenerate_inventory') }}"
                       onsubmit="return confirm('Générer un NOUVEAU tirage du jour ? La liste en cours ({{ done_today }}/{{ todays|length }} confirmée(s)) sera remplacée.')">
-                    <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white" title="Nouveau tirage aléatoire sans attendre demain">🎲 Nouveau tirage</button>
+                    <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white" title="Nouveau tirage aléatoire sans attendre demain"><span class="ui-icon" aria-hidden="true">casino</span> Nouveau tirage</button>
                 </form>
                 {% endif %}
                 <div class="inv-progress-wrap">
@@ -60,17 +60,17 @@
         </div>
 
         {% if todays|length > 0 and done_today == todays|length %}
-        <div class="inv-done-banner">🎉 Inventaire du jour terminé ! Les 5 matériels ont été confirmés.</div>
+        <div class="inv-done-banner"><span class="ui-icon" aria-hidden="true">celebration</span> Inventaire du jour terminé ! Les 5 matériels ont été confirmés.</div>
         {% endif %}
 
         {% for c in todays %}
         <div class="inv-row {% if c.status == 'verified' %}verified{% endif %}">
             <div class="inv-eq">
-                <span class="inv-eq-icon">{{ c.equipment.category.icon if (c.equipment and c.equipment.category) else '📦' }}</span>
+                <span class="inv-eq-icon">{{ (c.equipment.category.icon if (c.equipment and c.equipment.category) else '📦')|material_icon }}</span>
                 <div style="min-width:0">
                     {% if c.equipment %}
                     <a href="{{ url_for('equipment_detail', eid=c.equipment.id) }}" class="inv-eq-name">{{ c.equipment.name }}</a>
-                    <div class="inv-eq-sub">{{ c.equipment.reference or '' }} · 📍 {{ c.equipment.location }} · {{ c.equipment.available_quantity }}/{{ c.equipment.total_quantity }} dispo</div>
+                    <div class="inv-eq-sub">{{ c.equipment.reference or '' }} · <span class="ui-icon" aria-hidden="true">location_on</span> {{ c.equipment.location }} · {{ c.equipment.available_quantity }}/{{ c.equipment.total_quantity }} dispo</div>
                     {% else %}
                     <span class="inv-eq-name">Matériel supprimé</span>
                     <div class="inv-eq-sub">Cet article n'existe plus au dépôt.</div>
@@ -79,12 +79,12 @@
             </div>
             <div class="inv-state">
                 {% if c.status == 'verified' %}
-                <span class="inv-verified">✅ Testé par {{ c.verifier.full_name if c.verifier else '—' }}{% if c.verified_at %} à {{ c.verified_at.strftime('%H:%M') }}{% endif %}{% if c.in_repair_qty %} · 🔧 {{ c.in_repair_qty }} en répa{% endif %}</span>
+                <span class="inv-verified"><span class="ui-icon" aria-hidden="true">check_circle</span> Testé par {{ c.verifier.full_name if c.verifier else '—' }}{% if c.verified_at %} à {{ c.verified_at.strftime('%H:%M') }}{% endif %}{% if c.in_repair_qty %} · <span class="ui-icon" aria-hidden="true">build</span> {{ c.in_repair_qty }} en répa{% endif %}</span>
                 {% else %}
                 <form method="POST" action="{{ url_for('confirm_inventory_check', cid=c.id) }}" style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap">
                     <input type="number" name="repair_qty" value="0" min="0" max="{{ (c.equipment.total_quantity - (c.equipment.in_repair or 0)) if c.equipment else 0 }}" style="width:58px" title="Unités cassées : partent en réparation">
-                    <span style="font-size:.7rem;color:var(--gray-500)">🔧 répa</span>
-                    <button class="btn btn-accent" style="font-size:.85rem;padding:.55rem 1.1rem">✅ Confirmé testé</button>
+                    <span style="font-size:.7rem;color:var(--gray-500)"><span class="ui-icon" aria-hidden="true">build</span> répa</span>
+                    <button class="btn btn-accent" style="font-size:.85rem;padding:.55rem 1.1rem"><span class="ui-icon" aria-hidden="true">check_circle</span> Confirmé testé</button>
                 </form>
                 {% endif %}
             </div>
@@ -99,9 +99,9 @@
     <!-- Historique -->
     <div style="margin-top:1.75rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;gap:.5rem;flex-wrap:wrap">
-            <h2 style="color:var(--blue-deep);font-size:1.05rem;margin:0">📜 Historique des contrôles</h2>
+            <h2 style="color:var(--blue-deep);font-size:1.05rem;margin:0"><span class="ui-icon" aria-hidden="true">history</span> Historique des contrôles</h2>
             {% if can_manage and history %}
-            <button class="btn btn-sm btn-danger" onclick="document.getElementById('clearInvHistModal').classList.add('open')">🗑️ Supprimer l'historique</button>
+            <button class="btn btn-sm btn-danger" onclick="document.getElementById('clearInvHistModal').classList.add('open')"><span class="ui-icon" aria-hidden="true">delete</span> Supprimer l'historique</button>
             {% endif %}
         </div>
         {% if history %}
@@ -111,16 +111,16 @@
             <div class="inv-hist-row">
                 <span class="inv-hist-date">{{ d.strftime('%d/%m/%Y') }}</span>
                 {% if done == cs|length %}
-                <span class="status-badge status-returned">✅ Terminé</span>
+                <span class="status-badge status-returned"><span class="ui-icon" aria-hidden="true">check_circle</span> Terminé</span>
                 {% elif done > 0 %}
-                <span class="status-badge status-late">🟡 En cours</span>
+                <span class="status-badge status-late"><span class="ui-icon" aria-hidden="true">circle</span> En cours</span>
                 {% else %}
-                <span class="status-badge" style="background:var(--gray-100);color:var(--gray-500)">⏳ Non traité</span>
+                <span class="status-badge" style="background:var(--gray-100);color:var(--gray-500)"><span class="ui-icon" aria-hidden="true">hourglass_top</span> Non traité</span>
                 {% endif %}
                 <span class="inv-hist-count">{{ done }}/{{ cs|length }}</span>
                 <span class="inv-hist-items">
                     {% for c in cs %}
-                    <b>{{ c.equipment.name if c.equipment else 'Supprimé' }}</b> {{ '✅' if c.status == 'verified' else '⏳' }}{% if not loop.last %} · {% endif %}
+                    <b>{{ c.equipment.name if c.equipment else 'Supprimé' }}</b> {% if c.status == 'verified' %}<span class="ui-icon" aria-hidden="true">check_circle</span>{% else %}<span class="ui-icon" aria-hidden="true">hourglass_top</span>{% endif %}{% if not loop.last %} · {% endif %}
                     {% endfor %}
                 </span>
             </div>
@@ -136,16 +136,16 @@
 {% if can_manage %}
 <div class="modal-overlay" id="clearInvHistModal">
     <div class="modal">
-        <div class="modal-header"><h2>⚠️ Supprimer l'historique</h2><button class="modal-close" onclick="document.getElementById('clearInvHistModal').classList.remove('open')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">warning</span> Supprimer l'historique</h2><button class="modal-close" onclick="document.getElementById('clearInvHistModal').classList.remove('open')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form method="POST" action="{{ url_for('clear_inventory_history') }}">
             <div class="modal-body">
                 <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin-bottom:1rem">
-                    <strong>⚠️ Attention :</strong> ceci supprimera définitivement l'historique des contrôles des jours précédents
+                    <strong><span class="ui-icon" aria-hidden="true">warning</span> Attention :</strong> ceci supprimera définitivement l'historique des contrôles des jours précédents
                     ({{ history|length }} jour(s)). Le tirage du jour est conservé.
                 </div>
-                <div class="form-group"><label>✅ Confirmez votre mot de passe</label><input type="password" name="password" required placeholder="Votre mot de passe"></div>
+                <div class="form-group"><label><span class="ui-icon" aria-hidden="true">check_circle</span> Confirmez votre mot de passe</label><input type="password" name="password" required placeholder="Votre mot de passe"></div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="document.getElementById('clearInvHistModal').classList.remove('open')">Annuler</button><button class="btn btn-danger">🗑️ Confirmer la suppression</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="document.getElementById('clearInvHistModal').classList.remove('open')">Annuler</button><button class="btn btn-danger"><span class="ui-icon" aria-hidden="true">delete</span> Confirmer la suppression</button></div>
         </form>
     </div>
 </div>

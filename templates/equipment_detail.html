@@ -3,8 +3,8 @@
 
 {% block head %}
 <style>
-.eqcal-card{background:white;border-radius:14px;border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);overflow:hidden}
-.cal-toolbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1.1rem;background:var(--blue-deep);color:white;flex-wrap:wrap}
+.eqcal-card{background:white;border-radius:16px;border:1px solid var(--gray-200);box-shadow:var(--shadow-md);overflow:hidden}
+.cal-toolbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.85rem 1.15rem;background:linear-gradient(135deg,var(--blue-deep),var(--blue-dark));color:white;flex-wrap:wrap}
 .cal-nav{display:flex;align-items:center;gap:.5rem}
 .cal-month-label{font-size:1.05rem;font-weight:800;letter-spacing:.5px;min-width:175px;text-align:center;text-transform:capitalize}
 .cal-navbtn{background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;width:32px;height:32px;font-size:1rem;cursor:pointer;transition:background .15s}
@@ -37,8 +37,8 @@
 .eqday-row{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;padding:.55rem .7rem;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:.5rem;font-size:.88rem;background:var(--gray-50)}
 .eqday-row .muted{color:var(--gray-400);font-size:.8rem}
 /* Hub d'actions rapides (page destinee au scan QR) */
-.hub-actions{background:linear-gradient(135deg,#0B1D3A,#13294B);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1.5rem;box-shadow:var(--shadow-md)}
-.hub-btn{display:inline-flex;align-items:center;gap:.45rem;border:none;color:white;font-weight:700;font-size:.9rem;padding:.75rem 1.15rem;border-radius:10px;cursor:pointer;text-decoration:none;transition:filter .15s,transform .1s}
+.hub-actions{background:linear-gradient(135deg,#0B1D3A,#1A3A6B);border-radius:16px;padding:1.15rem 1.4rem;margin-bottom:1.5rem;box-shadow:var(--shadow-md)}
+.hub-btn{display:inline-flex;align-items:center;gap:.45rem;border:none;color:white;font-weight:700;font-size:.9rem;padding:.8rem 1.2rem;min-height:46px;border-radius:12px;cursor:pointer;text-decoration:none;transition:filter .15s,transform .12s}
 .hub-btn:hover{filter:brightness(1.12)}
 .hub-btn:active{transform:scale(.98)}
 .hub-btn small{font-weight:500;opacity:.85}
@@ -73,7 +73,7 @@
             {% else %}
             <div class="gallery-placeholder">
                 <span class="placeholder-icon large">
-                    {{ eq.category.icon if eq.category else '📦' }}
+                    {{ (eq.category.icon if eq.category else '📦')|material_icon }}
                 </span>
                 <p>Aucune image</p>
             </div>
@@ -83,7 +83,7 @@
         <div class="detail-info">
             <div class="detail-header">
                 {% if eq.category %}
-                <span class="detail-cat">{{ eq.category.icon }} {{ eq.category.name }}</span>
+                <span class="detail-cat">{{ eq.category.icon|material_icon }} {{ eq.category.name }}</span>
                 {% endif %}
                 {% if eq.condition == 'Excellent' %}
                 <span class="quality-badge">Premium</span>
@@ -100,7 +100,7 @@
             <!-- Availability -->
             <div class="availability-box {% if eq.available_quantity > 0 %}available{% else %}unavailable{% endif %}">
                 <div class="avail-icon">
-                    {% if eq.available_quantity > 0 %}✅{% else %}🔴{% endif %}
+                    {% if eq.available_quantity > 0 %}<span class="ui-icon" aria-hidden="true">check_circle</span>{% else %}<span class="ui-icon" aria-hidden="true">circle</span>{% endif %}
                 </div>
                 <div class="avail-info">
                     <div class="avail-status">
@@ -119,10 +119,10 @@
             <!-- En reparation : remettre en stock -->
             {% if eq.in_repair and has_perm('repair_stock','manage_equipment') %}
             <div style="background:#FDF2F4;border:1px solid #F5C2CB;border-radius:10px;padding:.75rem 1rem;display:flex;align-items:center;gap:.6rem;justify-content:space-between;flex-wrap:wrap">
-                <div style="font-size:.85rem;color:#C41E3A"><strong>🔧 {{ eq.in_repair }} en réparation</strong></div>
+                <div style="font-size:.85rem;color:#C41E3A"><strong><span class="ui-icon" aria-hidden="true">build</span> {{ eq.in_repair }} en réparation</strong></div>
                 <form method="POST" action="{{ url_for('mark_repaired', eid=eq.id) }}" style="display:flex;gap:.4rem;align-items:center">
                     <input type="number" name="qty" value="{{ eq.in_repair }}" min="1" max="{{ eq.in_repair }}" style="width:60px">
-                    <button class="btn btn-sm btn-success" style="font-size:.75rem">🔧 Réparé, remettre en stock</button>
+                    <button class="btn btn-sm btn-success" style="font-size:.75rem"><span class="ui-icon" aria-hidden="true">build</span> Réparé, remettre en stock</button>
                 </form>
             </div>
             {% endif %}
@@ -130,7 +130,7 @@
             <!-- Quick borrow -->
             {% if eq.available_quantity > 0 and has_perm('borrow_equipment') %}
             <button class="btn btn-accent btn-full" onclick="openDetailBorrow()">
-                📤 Emprunter ce matériel
+                <span class="ui-icon" aria-hidden="true">outbox</span> Emprunter ce matériel
             </button>
             {% endif %}
 
@@ -142,7 +142,7 @@
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Emplacement</span>
-                    <span class="meta-value">📍 {{ eq.location }}</span>
+                    <span class="meta-value"><span class="ui-icon" aria-hidden="true">location_on</span> {{ eq.location }}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Quantité totale</span>
@@ -150,7 +150,7 @@
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">En réparation</span>
-                    <span class="meta-value">{% if eq.in_repair %}<span style="color:#C41E3A;font-weight:700">🔧 {{ eq.in_repair }}</span>{% else %}0{% endif %}</span>
+                    <span class="meta-value">{% if eq.in_repair %}<span style="color:#C41E3A;font-weight:700"><span class="ui-icon" aria-hidden="true">build</span> {{ eq.in_repair }}</span>{% else %}0{% endif %}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Ajouté le</span>
@@ -161,14 +161,14 @@
             <!-- Actions -->
             <div class="detail-actions">
                 <a href="{{ url_for('edit_equipment', eid=eq.id) }}" class="btn btn-secondary">
-                    ✏️ Modifier
+                    <span class="ui-icon" aria-hidden="true">edit</span> Modifier
                 </a>
                 <form method="POST" action="{{ url_for('delete_equipment', eid=eq.id) }}"
                       onsubmit="return confirm('Supprimer definitivement {{ eq.name | escape }} ?')" style="display:inline">
-                    <button type="submit" class="btn btn-danger">🗑️ Supprimer</button>
+                    <button type="submit" class="btn btn-danger"><span class="ui-icon" aria-hidden="true">delete</span> Supprimer</button>
                 </form>
                 <a href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" class="btn btn-secondary" target="_blank">
-                    🔲 QR Code
+                    <span class="ui-icon" aria-hidden="true">qr_code_2</span> QR Code
                 </a>
             </div>
         </div>
@@ -178,20 +178,20 @@
     <div class="hub-actions">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
             <div style="color:white;min-width:0">
-                <div style="font-size:.68rem;letter-spacing:2px;text-transform:uppercase;opacity:.6">⚡ Actions rapides</div>
+                <div style="font-size:.68rem;letter-spacing:2px;text-transform:uppercase;opacity:.6"><span class="ui-icon" aria-hidden="true">bolt</span> Actions rapides</div>
                 <div style="font-weight:700;font-size:1.05rem;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45vw">{{ eq.name }}</div>
             </div>
             <div style="display:flex;gap:.6rem;flex-wrap:wrap">
                 {% if has_perm('borrow_equipment') and eq.available_quantity > 0 %}
-                <button class="hub-btn" style="background:#22C55E" onclick="openDetailBorrow()">📤 Emprunter <small>{{ eq.available_quantity }} dispo</small></button>
+                <button class="hub-btn" style="background:#22C55E" onclick="openDetailBorrow()"><span class="ui-icon" aria-hidden="true">outbox</span> Emprunter <small>{{ eq.available_quantity }} dispo</small></button>
                 {% endif %}
                 {% if has_perm('return_equipment') and active_borrows %}
-                <button class="hub-btn" style="background:#3A7BD5" onclick="document.getElementById('activeBorrows').scrollIntoView({behavior:'smooth',block:'center'})">✅ Retourner <small>{{ active_borrows|length }} en cours</small></button>
+                <button class="hub-btn" style="background:#3A7BD5" onclick="document.getElementById('activeBorrows').scrollIntoView({behavior:'smooth',block:'center'})"><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner <small>{{ active_borrows|length }} en cours</small></button>
                 {% endif %}
                 {% if has_perm('repair_stock','manage_equipment') %}
-                <button class="hub-btn" style="background:#F59E0B" onclick="openReportRepairModal()">🔧 Signaler en réparation</button>
+                <button class="hub-btn" style="background:#F59E0B" onclick="openReportRepairModal()"><span class="ui-icon" aria-hidden="true">build</span> Signaler en réparation</button>
                 {% endif %}
-                <a class="hub-btn" style="background:#C41E3A" href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" target="_blank">🔲 Étiquette</a>
+                <a class="hub-btn" style="background:#C41E3A" href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" target="_blank"><span class="ui-icon" aria-hidden="true">qr_code_2</span> Étiquette</a>
             </div>
         </div>
     </div>
@@ -199,7 +199,7 @@
     <!-- Specifications -->
     {% if eq.specifications %}
     <div class="detail-section">
-        <h2>📋 Spécifications</h2>
+        <h2><span class="ui-icon" aria-hidden="true">assignment</span> Spécifications</h2>
         <div class="specs-card">
             {% for line in eq.specifications.split('\n') if line.strip() %}
             <div class="spec-row">
@@ -218,7 +218,7 @@
     <!-- Disponibilite & emprunts (calendrier) -->
     <div class="detail-section">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.6rem">
-            <h2 style="margin:0">📅 Disponibilité du materiel</h2>
+            <h2 style="margin:0"><span class="ui-icon" aria-hidden="true">calendar_month</span> Disponibilité du materiel</h2>
             <div class="avail-legend">
                 <span><i style="background:var(--green)"></i>Tout dispo</span>
                 <span><i style="background:var(--amber)"></i>Partiel</span>
@@ -244,14 +244,14 @@
             </div>
         </div>
         <p style="font-size:.8rem;color:var(--gray-500);margin-top:.7rem;line-height:1.6">
-            💡 Clique sur un jour pour le detail (par qui, combien). Pour <strong>reserver ce materiel pour un evenement confirme</strong>,
-            utilise « 📤 Emprunter ce materiel » avec la date de prise et la date de retour de l'evenement :
+            <span class="ui-icon" aria-hidden="true">lightbulb</span> Clique sur un jour pour le detail (par qui, combien). Pour <strong>reserver ce materiel pour un evenement confirme</strong>,
+            utilise « <span class="ui-icon" aria-hidden="true">outbox</span> Emprunter ce materiel » avec la date de prise et la date de retour de l'evenement :
             le stock sera alors <strong>bloque sur toute la periode</strong> (impossible de double-emprunter).
         </p>
 
         {% if cal_borrows %}
         <div style="margin-top:1.4rem">
-            <h3 style="color:var(--blue-deep);font-size:1rem;margin-bottom:.7rem">📤 Emprunts en cours et a venir</h3>
+            <h3 style="color:var(--blue-deep);font-size:1rem;margin-bottom:.7rem"><span class="ui-icon" aria-hidden="true">outbox</span> Emprunts en cours et a venir</h3>
             <div class="history-table-wrapper">
                 <table class="history-table">
                     <thead><tr><th>Par qui</th><th>Qté</th><th>Du</th><th>Au</th><th>Événement</th><th>Statut</th></tr></thead>
@@ -265,7 +265,7 @@
                             <td>{{ b.event or '—' }}</td>
                             <td>
                                 {% if b.status == 'late' %}
-                                <span class="status-badge status-late">⚠️ En retard</span>
+                                <span class="status-badge status-late"><span class="ui-icon" aria-hidden="true">warning</span> En retard</span>
                                 {% else %}
                                 <span class="status-badge status-active">Actif</span>
                                 {% endif %}
@@ -282,9 +282,9 @@
     <!-- Borrow History -->
     <div class="detail-section" id="activeBorrows">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-            <h2 style="margin:0">📜 Historique des emprunts</h2>
+            <h2 style="margin:0"><span class="ui-icon" aria-hidden="true">history</span> Historique des emprunts</h2>
             {% if has_perm('clear_borrow_history','clear_history') and borrows | selectattr('status','eq','returned') | list | length > 0 %}
-            <button class="btn btn-sm btn-danger" onclick="document.getElementById('clearEqHistoryModal').classList.add('open')">🗑️ Effacer l'historique</button>
+            <button class="btn btn-sm btn-danger" onclick="document.getElementById('clearEqHistoryModal').classList.add('open')"><span class="ui-icon" aria-hidden="true">delete</span> Effacer l'historique</button>
             {% endif %}
         </div>
         {% if borrows %}
@@ -313,14 +313,14 @@
                             {% if b.status == 'active' %}
                             <span class="status-badge status-active">Actif</span>
                             {% elif b.status == 'late' %}
-                            <span class="status-badge status-late">⚠️ En retard</span>
+                            <span class="status-badge status-late"><span class="ui-icon" aria-hidden="true">warning</span> En retard</span>
                             {% else %}
-                            <span class="status-badge status-returned">✅ Retourné</span>
+                            <span class="status-badge status-returned"><span class="ui-icon" aria-hidden="true">check_circle</span> Retourné</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if b.status in ('active','late') and (b.user_id == current_user.id or has_perm('manage_users')) %}
-                            <button class="btn btn-sm btn-success" onclick='openReturnModal({{ b.id }}, {{ b.quantity }}, "{{ b.user.full_name | e }}", "{{ b.expected_return_date.strftime("%d/%m/%Y") }}")'>✅ Retourner</button>
+                            <button class="btn btn-sm btn-success" onclick='openReturnModal({{ b.id }}, {{ b.quantity }}, "{{ b.user.full_name | e }}", "{{ b.expected_return_date.strftime("%d/%m/%Y") }}")'><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner</button>
                             {% endif %}
                         </td>
                     </tr>
@@ -338,15 +338,15 @@
 {% if has_perm('clear_borrow_history','clear_history') %}
 <div class="modal-overlay" id="clearEqHistoryModal">
     <div class="modal">
-        <div class="modal-header"><h2>⚠️ Effacer l'historique de {{ eq.name }}</h2><button class="modal-close" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">warning</span> Effacer l'historique de {{ eq.name }}</h2><button class="modal-close" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form method="POST" action="{{ url_for('clear_equipment_history', eid=eq.id) }}">
             <div class="modal-body">
                 <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin-bottom:1rem">
-                    <strong>⚠️ Attention :</strong> Ceci supprimera definitivement l'historique des emprunts termines pour <strong>{{ eq.name }}</strong> uniquement.
+                    <strong><span class="ui-icon" aria-hidden="true">warning</span> Attention :</strong> Ceci supprimera definitivement l'historique des emprunts termines pour <strong>{{ eq.name }}</strong> uniquement.
                 </div>
-                <div class="form-group"><label>✅ Confirmez votre mot de passe administrateur</label><input type="password" name="password" required placeholder="Votre mot de passe"></div>
+                <div class="form-group"><label><span class="ui-icon" aria-hidden="true">check_circle</span> Confirmez votre mot de passe administrateur</label><input type="password" name="password" required placeholder="Votre mot de passe"></div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')">Annuler</button><button class="btn btn-danger">🗑️ Confirmer la suppression</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="document.getElementById('clearEqHistoryModal').classList.remove('open')">Annuler</button><button class="btn btn-danger"><span class="ui-icon" aria-hidden="true">delete</span> Confirmer la suppression</button></div>
         </form>
     </div>
 </div>
@@ -356,8 +356,8 @@
 <div class="modal-overlay" id="detailBorrowModal">
     <div class="modal">
         <div class="modal-header">
-            <h2>📤 Emprunter : {{ eq.name }}</h2>
-            <button class="modal-close" onclick="closeDetailBorrow()">✕</button>
+            <h2><span class="ui-icon" aria-hidden="true">outbox</span> Emprunter : {{ eq.name }}</h2>
+            <button class="modal-close" onclick="closeDetailBorrow()"><span class="ui-icon" aria-hidden="true">close</span></button>
         </div>
         <form method="POST" action="{{ url_for('borrow_equipment', eid=eq.id) }}">
             <div class="modal-body">
@@ -369,20 +369,20 @@
                         <small>Max: {{ eq.available_quantity }}</small>
                     </div>
                     <div class="form-group">
-                        <label for="dPickupDate">📦 Date de prise</label>
+                        <label for="dPickupDate"><span class="ui-icon" aria-hidden="true">inventory_2</span> Date de prise</label>
                         <input type="date" id="dPickupDate" name="pickup_date"
                                value="{{ today.strftime('%Y-%m-%d') }}">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="dReturnDate">⏰ Date de retour</label>
+                        <label for="dReturnDate"><span class="ui-icon" aria-hidden="true">schedule</span> Date de retour</label>
                         <input type="date" id="dReturnDate" name="return_date" required
                                min="{{ today.strftime('%Y-%m-%d') }}">
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="dEventId">🎯 Associer à un événement</label>
+                    <label for="dEventId"><span class="ui-icon" aria-hidden="true">gps_fixed</span> Associer à un événement</label>
                     <select id="dEventId" name="event_id" onchange="fillDetailEventName()">
                         <option value="">— Aucun —</option>
                         {% for ev in upcoming_events %}
@@ -410,19 +410,19 @@
 <!-- Return Modal (retour avec unites en reparation) -->
 <div class="modal-overlay" id="returnBorrowModal">
     <div class="modal">
-        <div class="modal-header"><h2>✅ Retourner : {{ eq.name }}</h2><button class="modal-close" onclick="closeReturnModal()">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner : {{ eq.name }}</h2><button class="modal-close" onclick="closeReturnModal()"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form id="returnBorrowForm" method="POST" action="">
             <div class="modal-body">
                 <p id="returnBorrowInfo" style="font-size:.9rem;color:var(--gray-600);margin-bottom:1rem;line-height:1.6"></p>
                 <div class="form-group">
-                    <label>🔧 Quantité en réparation (0 si tout est propre)</label>
+                    <label><span class="ui-icon" aria-hidden="true">build</span> Quantité en réparation (0 si tout est propre)</label>
                     <input type="number" id="returnRepairQty" name="repair_qty" min="0" value="0" required>
                     <small id="returnRepairMax" style="color:var(--gray-400)"></small>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeReturnModal()">Annuler</button>
-                <button class="btn btn-accent">✅ Confirmer le retour</button>
+                <button class="btn btn-accent"><span class="ui-icon" aria-hidden="true">check_circle</span> Confirmer le retour</button>
             </div>
         </form>
     </div>
@@ -431,7 +431,7 @@
 <!-- Report Repair Modal (signaler des unites casseees) -->
 <div class="modal-overlay" id="reportRepairModal">
     <div class="modal">
-        <div class="modal-header"><h2>🔧 Signaler en réparation</h2><button class="modal-close" onclick="closeReportRepairModal()">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">build</span> Signaler en réparation</h2><button class="modal-close" onclick="closeReportRepairModal()"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form method="POST" action="{{ url_for('report_repair', eid=eq.id) }}">
             <div class="modal-body">
                 <p style="font-size:.9rem;color:var(--gray-600);margin-bottom:1rem;line-height:1.6">
@@ -445,7 +445,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeReportRepairModal()">Annuler</button>
-                <button class="btn btn-accent">🔧 Passer en réparation</button>
+                <button class="btn btn-accent"><span class="ui-icon" aria-hidden="true">build</span> Passer en réparation</button>
             </div>
         </form>
     </div>
@@ -454,7 +454,7 @@
 <!-- Day Modal : detail du jour (qui sort, combien) -->
 <div class="modal-overlay" id="eqDayModal">
     <div class="modal" style="max-width:540px">
-        <div class="modal-header"><h2 id="eqDayTitle"></h2><button class="modal-close" onclick="closeEqDay()">✕</button></div>
+        <div class="modal-header"><h2 id="eqDayTitle"></h2><button class="modal-close" onclick="closeEqDay()"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <div class="modal-body" id="eqDayBody"></div>
         <div class="modal-footer" id="eqDayFoot"></div>
     </div>
@@ -523,20 +523,20 @@ function eqOpenDay(iso){
     var d = new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
     var dayName = EQ_DOWS[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + EQ_MONTHS[d.getMonth()] + ' ' + d.getFullYear();
     var avail = eqAvailOn(iso);
-    document.getElementById('eqDayTitle').textContent = '📅 ' + dayName + ' — ' + avail + '/' + TOTAL_QTY + ' disponible(s)';
+    document.getElementById('eqDayTitle').textContent = dayName + ' — ' + avail + '/' + TOTAL_QTY + ' disponible(s)';
     var rows = '';
     CAL_BORROWS.forEach(function(b){
         if (!eqBorrowOutOn(b, iso)) return;
-        rows += '<div class="eqday-row"><span>📤</span> <strong>' + eqEsc(String(b.qty)) + 'x</strong>&nbsp;par ' + eqEsc(b.user)
+        rows += '<div class="eqday-row"><span class="ui-icon">outbox</span> <strong>' + eqEsc(String(b.qty)) + 'x</strong>&nbsp;par ' + eqEsc(b.user)
               + ' <span class="muted">(' + b.start_fmt + ' → ' + b.end_fmt + ')</span>'
-              + (b.event ? ' <span class="muted">🎯 ' + eqEsc(b.event) + '</span>' : '')
-              + (b.status === 'late' ? ' <span style="color:var(--red);font-weight:700">⚠️ en retard</span>' : '') + '</div>';
+              + (b.event ? ' <span class="muted"><span class="ui-icon">gps_fixed</span> ' + eqEsc(b.event) + '</span>' : '')
+              + (b.status === 'late' ? ' <span style="color:var(--red);font-weight:700"><span class="ui-icon">warning</span> en retard</span>' : '') + '</div>';
     });
-    if (IN_REPAIR_QTY > 0) rows += '<div class="eqday-row"><span>🔧</span> ' + IN_REPAIR_QTY + ' en réparation</div>';
-    if (!rows) rows = '<div style="text-align:center;padding:1.2rem;color:var(--gray-500)"><div style="font-size:2.2rem;margin-bottom:.4rem">✅</div>Tout le matériel est disponible ce jour-là.</div>';
+    if (IN_REPAIR_QTY > 0) rows += '<div class="eqday-row"><span class="ui-icon">build</span> ' + IN_REPAIR_QTY + ' en réparation</div>';
+    if (!rows) rows = '<div style="text-align:center;padding:1.2rem;color:var(--gray-500)"><div style="font-size:2.2rem;margin-bottom:.4rem"><span class="ui-icon">check_circle</span></div>Tout le matériel est disponible ce jour-là.</div>';
     document.getElementById('eqDayBody').innerHTML = rows;
     var foot = '';
-    if (avail > 0) foot = '<button class="btn btn-accent" onclick="closeEqDay();openDetailBorrow();var pp=document.getElementById(\'dPickupDate\');if(pp)pp.value=\'' + iso + '\';">📤 Emprunter / réserver pour ce jour</button>';
+    if (avail > 0) foot = '<button class="btn btn-accent" onclick="closeEqDay();openDetailBorrow();var pp=document.getElementById(\'dPickupDate\');if(pp)pp.value=\'' + iso + '\';"><span class="ui-icon">outbox</span> Emprunter / réserver pour ce jour</button>';
     document.getElementById('eqDayFoot').innerHTML = foot;
     document.getElementById('eqDayModal').classList.add('open');
 }

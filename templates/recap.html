@@ -4,8 +4,8 @@
 {% block head %}
 <style>
 .recap-actions{display:flex;gap:.6rem;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap}
-.recap-doc{background:white;border:1px solid var(--gray-200);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden}
-.recap-letterhead{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.5rem 2rem;border-bottom:3px solid var(--blue-deep);flex-wrap:wrap}
+.recap-doc{background:white;border:1px solid var(--gray-200);border-radius:18px;box-shadow:var(--shadow-lg);overflow:hidden}
+.recap-letterhead{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.5rem 2rem;border-bottom:4px solid var(--blue-deep);background:linear-gradient(180deg,#F8FAFC,white);flex-wrap:wrap}
 .recap-logo{display:flex;align-items:center;gap:.8rem}
 .recap-logo-icon{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#0B1D3A,#13294B);color:#E63946;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;flex-shrink:0}
 .recap-logo-name{font-family:var(--font-display);font-size:1.25rem;font-weight:700;color:var(--blue-deep);letter-spacing:1px;line-height:1.1}
@@ -23,7 +23,7 @@
 .recap-section{margin-top:1.75rem}
 .recap-section > h2{font-size:1.05rem;color:var(--blue-deep);border-bottom:2px solid var(--gray-100);padding-bottom:.5rem;margin-bottom:1rem}
 .matos-cat{margin-bottom:1.1rem}
-.matos-cat-head{background:var(--blue-deep);color:white;font-weight:700;font-size:.85rem;padding:.5rem .9rem;border-radius:8px 8px 0 0}
+.matos-cat-head{background:linear-gradient(135deg,var(--blue-deep),var(--blue-dark));color:white;font-weight:700;font-size:.85rem;padding:.55rem .95rem;border-radius:10px 10px 0 0}
 .matos-table{width:100%;border-collapse:collapse;font-size:.85rem}
 .matos-table th{background:var(--gray-100);color:var(--gray-600);text-align:left;padding:.45rem .8rem;font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
 .matos-table td{padding:.5rem .8rem;border-bottom:1px solid var(--gray-100);color:var(--gray-800)}
@@ -31,12 +31,12 @@
 .recap-notes{background:var(--gray-50);border-left:4px solid var(--blue);padding:1rem 1.2rem;border-radius:0 8px 8px 0;font-size:.92rem;color:var(--gray-700);line-height:1.7;white-space:pre-line}
 .team-chip{display:inline-flex;align-items:center;gap:.45rem;background:var(--blue-pale);color:var(--blue-deep);border-radius:100px;padding:.4rem .9rem;margin:.25rem .3rem .25rem 0;font-weight:600;font-size:.88rem}
 .team-chip small{color:var(--gray-500);font-weight:500}
-.ai-text{background:#F6F8FC;border:1px solid var(--blue-pale);border-radius:10px;padding:1.1rem 1.3rem;font-size:.93rem;line-height:1.75;color:var(--gray-800);white-space:pre-line}
-.ai-box{border-radius:10px;padding:.9rem 1.1rem;font-size:.88rem;line-height:1.65;margin-bottom:.9rem}
+.ai-text{background:#F6F8FC;border:1px solid var(--blue-pale);border-radius:14px;padding:1.1rem 1.3rem;font-size:.93rem;line-height:1.75;color:var(--gray-800);white-space:pre-line}
+.ai-box{border-radius:14px;padding:.9rem 1.1rem;font-size:.88rem;line-height:1.65;margin-bottom:.9rem}
 .ai-box.info{background:var(--blue-pale);color:var(--blue-deep)}
 .ai-box.err{background:var(--red-pale);color:var(--red-dark)}
 .recap-footer{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--gray-200);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;font-size:.72rem;color:var(--gray-400);line-height:1.7}
-.merged-progress{height:10px;background:var(--gray-100);border-radius:20px;overflow:hidden;margin-top:.7rem}.merged-progress>div{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .2s}.merged-task{display:flex;gap:.7rem;align-items:flex-start;border:1px solid var(--gray-200);border-radius:10px;padding:.7rem;margin-bottom:.55rem}.merged-task.done{background:#F0FDF4;opacity:.78}.merged-check{width:30px;height:30px;border:2px solid var(--gray-300);border-radius:50%;background:white;flex:none;cursor:pointer;font-weight:800}.merged-task.done .merged-check{background:#22C55E;border-color:#22C55E;color:white}.merged-task.done .merged-task-title{text-decoration:line-through}.task-priority{font-size:.67rem;font-weight:800;text-transform:uppercase}.p-urgent{color:#B91C1C}.p-high{color:#C2410C}.p-normal{color:#1D4ED8}.p-low{color:#64748B}.task-comment{font-size:.78rem;background:var(--gray-50);padding:.4rem;border-radius:7px;margin-top:.35rem;white-space:pre-line}.kit-suggest-form{display:flex;gap:.5rem;align-items:end;margin-top:.7rem;flex-wrap:wrap}.merged-kit{border:1px solid var(--gray-200);border-radius:10px;padding:.75rem;margin-bottom:.6rem}.merged-kit-row{display:grid;grid-template-columns:1fr 90px 110px;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--gray-100)}
+.merged-progress{height:10px;background:var(--gray-100);border-radius:20px;overflow:hidden;margin-top:.7rem}.merged-progress>div{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .2s}.merged-task{display:flex;gap:.7rem;align-items:flex-start;border:1px solid var(--gray-200);border-radius:14px;padding:.7rem;margin-bottom:.55rem}.merged-task.done{background:#F0FDF4;opacity:.78}.merged-check{width:30px;height:30px;border:2px solid var(--gray-300);border-radius:50%;background:white;flex:none;cursor:pointer;font-weight:800}.merged-task.done .merged-check{background:#22C55E;border-color:#22C55E;color:white}.merged-task.done .merged-task-title{text-decoration:line-through}.task-priority{font-size:.67rem;font-weight:800;text-transform:uppercase}.p-urgent{color:#B91C1C}.p-high{color:#C2410C}.p-normal{color:#1D4ED8}.p-low{color:#64748B}.task-comment{font-size:.78rem;background:var(--gray-50);padding:.4rem;border-radius:7px;margin-top:.35rem;white-space:pre-line}.kit-suggest-form{display:flex;gap:.5rem;align-items:end;margin-top:.7rem;flex-wrap:wrap}.merged-kit{border:1px solid var(--gray-200);border-radius:14px;padding:.75rem;margin-bottom:.6rem}.merged-kit-row{display:grid;grid-template-columns:1fr 90px 110px;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--gray-100)}
 @media(max-width:650px){.merged-kit-row{grid-template-columns:1fr 80px}.merged-kit-row small{grid-column:1/3}}
 /* Impression : seulement le document */
 @media print{
@@ -60,9 +60,9 @@
         <span style="font-size:.85rem;color:var(--gray-500)">Document généré le {{ now.strftime('%d/%m/%Y à %H:%M') }}</span>
         <span style="flex:1"></span>
         <form method="POST" action="{{ url_for('recap_ai', evid=evt.id) }}">
-            <button class="btn btn-secondary" {% if not ai_configured %}title="Configure GROQ_API_KEY (gratuit) ou OPENAI_API_KEY dans Render pour activer l'IA"{% endif %}>🤖 {{ "Mettre à jour la synthèse IA" if ai_text else "Générer la synthèse IA" }}</button>
+            <button class="btn btn-secondary" {% if not ai_configured %}title="Configure GROQ_API_KEY (gratuit) ou OPENAI_API_KEY dans Render pour activer l'IA"{% endif %}><span class="ui-icon" aria-hidden="true">smart_toy</span> {{ "Mettre à jour la synthèse IA" if ai_text else "Générer la synthèse IA" }}</button>
         </form>
-        <button class="btn btn-accent" onclick="window.print()">🖨️ Imprimer / PDF</button>
+        <button class="btn btn-accent" onclick="window.print()"><span class="ui-icon" aria-hidden="true">print</span> Imprimer / PDF</button>
     </div>
 
     <div class="recap-doc">
@@ -90,26 +90,26 @@
                 <div><div class="k">Horaires</div><div class="v">{{ evt.start_time }} – {{ evt.end_time }}</div></div>
                 <div><div class="k">Lieu</div><div class="v">{{ evt.location or 'Non précisé' }}</div></div>
                 {% if evt.client %}
-                <div><div class="k">Client</div><div class="v">👤 {{ evt.client.name }}</div></div>
+                <div><div class="k">Client</div><div class="v"><span class="ui-icon" aria-hidden="true">person</span> {{ evt.client.name }}</div></div>
                 {% endif %}
                 <div><div class="k">Matériel lié</div><div class="v">{{ total_units }} unité(s) — {{ borrows|length }} emprunt(s)</div></div>
             </div>
 
             <!-- Resume IA -->
             <div class="recap-section">
-                <h2>🤖 Synthèse opérationnelle IA</h2>
+                <h2><span class="ui-icon" aria-hidden="true">smart_toy</span> Synthèse opérationnelle IA</h2>
                 {% if evt.ai_recap_generated_at %}<p style="font-size:.75rem;color:var(--gray-500);margin-top:-.6rem">Dernière génération : {{ evt.ai_recap_generated_at.strftime('%d/%m/%Y à %H:%M') }} · résumé sauvegardé</p>{% endif %}
                 {% if ai_text %}
                 <div class="ai-text">{{ ai_text }}</div>
                 {% endif %}
                 {% if ai_error == 'not_configured' %}
                 <div class="ai-box info">
-                    ℹ️ <strong>IA non configurée.</strong> Pour l'activer, ajoute une variable d'environnement dans ton service Render :
+                    <span class="ui-icon" aria-hidden="true">info</span> <strong>IA non configurée.</strong> Pour l'activer, ajoute une variable d'environnement dans ton service Render :
                     <strong>GROQ_API_KEY</strong> (gratuit — console.groq.com/keys, sans carte bancaire) ou <strong>OPENAI_API_KEY</strong> (payant).
                     Puis appuie sur « Générer le résumé IA ». Le récap structuré ci-dessous fonctionne dans tous les cas.
                 </div>
                 {% elif ai_error %}
-                <div class="ai-box err">⚠️ {{ ai_error }}</div>
+                <div class="ai-box err"><span class="ui-icon" aria-hidden="true">warning</span> {{ ai_error }}</div>
                 {% endif %}
             </div>
 
@@ -118,12 +118,12 @@
 
             <!-- Materiel -->
             <div class="recap-section">
-                <h2>📦 Matériel réservé — {{ total_units }} unité(s) au total</h2>
+                <h2><span class="ui-icon" aria-hidden="true">inventory_2</span> Matériel réservé — {{ total_units }} unité(s) au total</h2>
                 {% if matos_groups %}
                 {% for g in matos_groups %}
                 <div class="matos-cat">
                     <div class="matos-cat-head">
-                        {{ g.icon }} {{ g.name }}
+                        {{ g.icon|material_icon }} {{ g.name }}
                         <span style="float:right;font-weight:500">{{ g.total }} unité(s)</span>
                     </div>
                     <table class="matos-table">
@@ -136,7 +136,7 @@
                                 <td>{{ b.user.full_name if b.user else '—' }}</td>
                                 <td>{{ (b.pickup_date or b.expected_return_date).strftime('%d/%m/%Y') }}</td>
                                 <td>{{ b.expected_return_date.strftime('%d/%m/%Y') }}</td>
-                                <td>{% if b.status == 'late' %}⚠️ En retard{% elif b.status == 'returned' %}✅ Retourné{% else %}📤 Sorti{% endif %}</td>
+                                <td>{% if b.status == 'late' %}<span class="ui-icon" aria-hidden="true">warning</span> En retard{% elif b.status == 'returned' %}<span class="ui-icon" aria-hidden="true">check_circle</span> Retourné{% else %}<span class="ui-icon" aria-hidden="true">outbox</span> Sorti{% endif %}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -144,13 +144,13 @@
                 </div>
                 {% endfor %}
                 {% else %}
-                <p style="color:var(--gray-500);font-size:.9rem">Aucun matériel lié à cet événement pour l'instant. Associez des emprunts à cet événement (onglet 📤 Emprunts) pour qu'ils apparaissent ici.</p>
+                <p style="color:var(--gray-500);font-size:.9rem">Aucun matériel lié à cet événement pour l'instant. Associez des emprunts à cet événement (onglet <span class="ui-icon" aria-hidden="true">outbox</span> Emprunts) pour qu'ils apparaissent ici.</p>
                 {% endif %}
             </div>
 
             <!-- Detection IA des besoins (actions : masquee a l'impression) -->
             <div class="recap-section no-print">
-                <h2>🤖 Besoins détectés dans les notes (IA)</h2>
+                <h2><span class="ui-icon" aria-hidden="true">smart_toy</span> Besoins détectés dans les notes (IA)</h2>
                 <div class="ai-box info">
                     L'IA lit les notes de l'équipe ci-dessous et les compare au stock du dépôt.
                     Ce qui est demandé apparaît ici avec un bouton : <strong>confirme d'un clic</strong> et
@@ -158,14 +158,14 @@
                     Rien n'est créé sans ta validation.
                 </div>
                 <div style="margin-bottom:1rem">
-                    <button class="btn btn-primary" id="aiNeedsBtn" onclick="aiDetectNeeds()">🔍 Détecter les besoins dans les notes</button>
+                    <button class="btn btn-primary" id="aiNeedsBtn" onclick="aiDetectNeeds()"><span class="ui-icon" aria-hidden="true">search</span> Détecter les besoins dans les notes</button>
                 </div>
                 <div id="aiNeedsOut"></div>
             </div>
 
             <!-- Notes -->
             <div class="recap-section">
-                <h2>📝 Notes & détails</h2>
+                <h2><span class="ui-icon" aria-hidden="true">edit_note</span> Notes & détails</h2>
                 {% if evt.description and evt.description.strip() %}
                 <div class="recap-notes">{{ evt.description }}</div>
                 {% else %}
@@ -175,7 +175,7 @@
 
             <!-- Equipe -->
             <div class="recap-section">
-                <h2>👥 Équipe mobilisée — {{ team|length }} personne(s)</h2>
+                <h2><span class="ui-icon" aria-hidden="true">groups</span> Équipe mobilisée — {{ team|length }} personne(s)</h2>
                 {% if team %}
                 {% for t in team %}
                 <span class="team-chip">{{ t.name }} <small>({{ t.role }})</small></span>
@@ -210,7 +210,7 @@ async function aiDetectNeeds(){
     var out = document.getElementById('aiNeedsOut');
     var failed = false;
     btn.disabled = true;
-    btn.textContent = '🤖 Lecture des notes + comparaison avec le stock... (quelques secondes)';
+    btn.innerHTML = '<span class="ui-icon">smart_toy</span> Lecture des notes + comparaison avec le stock... (quelques secondes)';
     out.innerHTML = '';
     try {
         var r = await fetch('/schedule/' + AI_EVT_ID + '/ai-detect-needs', {
@@ -224,34 +224,34 @@ async function aiDetectNeeds(){
         if (data.already_borrowed && data.already_borrowed.length) {
             var names = [];
             data.already_borrowed.forEach(function(a){ names.push(aiEsc(a.name) + ' ×' + a.quantity); });
-            html += '<div class="ai-box info" style="margin-bottom:.8rem">ℹ️ <strong>Déjà emprunté(s) pour cet événement</strong> — exclus de la détection : ' + names.join(', ') + '</div>';
+            html += '<div class="ai-box info" style="margin-bottom:.8rem"><span class="ui-icon">info</span> <strong>Déjà emprunté(s) pour cet événement</strong> — exclus de la détection : ' + names.join(', ') + '</div>';
         }
         if (!data.suggestions || data.suggestions.length === 0) {
-            html += '<div class="ai-box info">✅ Aucune <strong>nouvelle</strong> demande de matériel détectée (tout ce qui est demandé dans les notes est déjà emprunté pour cet événement, ou rien ne correspond au stock).</div>';
+            html += '<div class="ai-box info"><span class="ui-icon">check_circle</span> Aucune <strong>nouvelle</strong> demande de matériel détectée (tout ce qui est demandé dans les notes est déjà emprunté pour cet événement, ou rien ne correspond au stock).</div>';
             out.innerHTML = html;
             return;
         }
         html += '<div style="display:grid;gap:.6rem;margin-bottom:.5rem">';
         data.suggestions.forEach(function(s){
             var stock = s.quantity > s.available
-                ? ' <span style="color:var(--red);font-weight:700">⚠️ stock : ' + s.available + ' disponible(s)</span>'
+                ? ' <span style="color:var(--red);font-weight:700"><span class="ui-icon">warning</span> stock : ' + s.available + ' disponible(s)</span>'
                 : ' <small style="color:var(--gray-500)">(' + s.available + ' disponible(s) sur ' + s.total + ')</small>';
             html += '<div id="aiRow_' + s.equipment_id + '" style="background:#F6F8FC;border:1px solid var(--blue-pale);border-radius:10px;padding:.75rem 1rem;display:flex;gap:.7rem;align-items:center;flex-wrap:wrap">'
                 + '<div style="flex:1;min-width:220px"><strong style="font-size:.95rem">' + aiEsc(s.name) + '</strong>' + stock
-                + (s.already_qty > 0 ? '<br><small style="color:#B45309;font-weight:600">🔁 dont ' + s.already_qty + ' déjà emprunté(s) pour cet événement — la suggestion est un complément</small>' : '')
-                + (s.reason ? '<br><small style="color:var(--gray-500)">📝 ' + aiEsc(s.reason) + '</small>' : '')
+                + (s.already_qty > 0 ? '<br><small style="color:#B45309;font-weight:600"><span class="ui-icon">sync</span> dont ' + s.already_qty + ' déjà emprunté(s) pour cet événement — la suggestion est un complément</small>' : '')
+                + (s.reason ? '<br><small style="color:var(--gray-500)"><span class="ui-icon">edit_note</span> ' + aiEsc(s.reason) + '</small>' : '')
                 + '</div>'
                 + '<label style="font-size:.85rem;color:var(--gray-600)">Qté '
                 + '<input type="number" min="1" max="999" value="' + s.quantity + '" id="aiQty_' + s.equipment_id + '" style="width:70px;padding:.4rem .5rem;border:1px solid var(--gray-200);border-radius:6px;font-weight:700"></label>'
-                + '<button class="btn btn-success" id="aiBtn_' + s.equipment_id + '" style="padding:.55rem 1.1rem" onclick="aiConfirmBorrow(' + s.equipment_id + ')">✅ Confirmer l\'emprunt</button>'
+                + '<button class="btn btn-success" id="aiBtn_' + s.equipment_id + '" style="padding:.55rem 1.1rem" onclick="aiConfirmBorrow(' + s.equipment_id + ')"><span class="ui-icon">check_circle</span> Confirmer l\'emprunt</button>'
                 + '</div>';
         });
         html += '</div>';
-        html += '<small style="color:var(--gray-500)">💡 Après une confirmation, recharge la page pour voir le matériel apparaître dans le tableau « Matériel réservé ».</small>';
+        html += '<small style="color:var(--gray-500)"><span class="ui-icon">lightbulb</span> Après une confirmation, recharge la page pour voir le matériel apparaître dans le tableau « Matériel réservé ».</small>';
         out.innerHTML = html;
     } catch (e) {
         failed = true;
-        out.innerHTML = '<div class="ai-box err">⚠️ ' + aiEsc(e.message) + '</div>';
+        out.innerHTML = '<div class="ai-box err"><span class="ui-icon">warning</span> ' + aiEsc(e.message) + '</div>';
     } finally {
         if (failed) {
             var wait = 30;
@@ -260,14 +260,14 @@ async function aiDetectNeeds(){
                 if (wait <= 0) {
                     clearInterval(tick);
                     btn.disabled = false;
-                    btn.textContent = '🔍 Détecter les besoins dans les notes';
+                    btn.innerHTML = '<span class="ui-icon">search</span> Détecter les besoins dans les notes';
                 } else {
-                    btn.textContent = '⏳ Réessaie dans ' + wait + 's';
+                    btn.textContent = 'Réessaie dans ' + wait + 's';
                 }
             }, 1000);
         } else {
             btn.disabled = false;
-            btn.textContent = '🔍 Re-détecter les besoins';
+            btn.innerHTML = '<span class="ui-icon">search</span> Re-détecter les besoins';
         }
     }
 }
@@ -291,11 +291,11 @@ async function aiConfirmBorrow(eid){
         if (!r.ok || !data.ok) throw new Error(data.error || 'Erreur inconnue.');
         row.style.background = '#EAF7EE';
         row.style.borderColor = '#16A34A';
-        row.innerHTML = '<div style="color:#15803D;font-weight:600">✅ ' + aiEsc(data.msg) + ' — emprunt créé et lié à l\'événement.</div>';
+        row.innerHTML = '<div style="color:#15803D;font-weight:600"><span class="ui-icon">check_circle</span> ' + aiEsc(data.msg) + ' — emprunt créé et lié à l\'événement.</div>';
     } catch (e) {
         alert(e.message);
         btn.disabled = false;
-        btn.textContent = "✅ Confirmer l'emprunt";
+        btn.innerHTML = '<span class="ui-icon">check_circle</span> Confirmer l\'emprunt';
     }
 }
 
@@ -307,7 +307,7 @@ async function toggleMergedTask(taskId, btn){
         if (!r.ok || !data.ok) throw new Error(data.error || 'Erreur');
         var card = document.getElementById('merged-task-' + taskId);
         card.classList.toggle('done', data.done);
-        btn.textContent = data.done ? '✓' : '';
+        btn.innerHTML = data.done ? '<span class="ui-icon">check</span>' : '';
         document.getElementById('taskProgressText').textContent = data.completed + '/' + data.total;
         document.getElementById('taskProgressBar').style.width = (data.total ? Math.round(data.completed * 100 / data.total) : 0) + '%';
     } catch(e) {

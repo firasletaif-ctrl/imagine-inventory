@@ -3,30 +3,30 @@
 {% block head %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-.mission-hero{background:linear-gradient(135deg,var(--blue-deep),#163a70);color:white;border-radius:18px;padding:1.3rem;margin-bottom:1rem}.mission-hero h1{color:white;margin:.2rem 0}.mission-meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.86rem;opacity:.9;margin-top:.6rem}
-.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem}.time-box{background:var(--gray-50);border:1px solid var(--gray-200);padding:.7rem;border-radius:10px;text-align:center}.time-box small{display:block;color:var(--gray-500);font-size:.7rem}.time-box b{font-size:1.05rem;color:var(--blue-deep)}
-#routeMap{height:390px;border-radius:14px;background:#e9eef5}.map-tools{display:flex;gap:.5rem;flex-wrap:wrap;margin:.7rem 0}.route-info{padding:.65rem .85rem;background:var(--blue-pale);color:var(--blue-deep);border-radius:9px;font-size:.85rem}
+.mission-hero{background:linear-gradient(135deg,var(--blue-deep),#1A3A6B);color:white;border-radius:20px;padding:1.3rem;margin-bottom:1rem}.mission-hero h1{color:white;margin:.2rem 0}.mission-meta{display:flex;gap:1rem;flex-wrap:wrap;font-size:.86rem;opacity:.9;margin-top:.6rem}
+.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem}.time-box{background:var(--gray-50);border:1px solid var(--gray-200);padding:.8rem;border-radius:12px;text-align:center}.time-box small{display:block;color:var(--gray-500);font-size:.7rem}.time-box b{font-size:1.05rem;color:var(--blue-deep)}
+#routeMap{height:390px;border-radius:16px;background:#e9eef5}.map-tools{display:flex;gap:.5rem;flex-wrap:wrap;margin:.7rem 0}.route-info{padding:.65rem .85rem;background:var(--blue-pale);color:var(--blue-deep);border-radius:9px;font-size:.85rem}
 .check-progress{height:11px;border-radius:20px;background:var(--gray-100);overflow:hidden}.check-progress>div{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .25s}
-.material-card{border:1px solid var(--gray-200);border-radius:13px;padding:.85rem;margin-bottom:.7rem;background:white}.material-head{display:flex;justify-content:space-between;gap:.5rem}.stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem;margin-top:.7rem}.stage-btn{border:1px solid var(--gray-200);background:var(--gray-50);border-radius:9px;padding:.6rem .3rem;font-size:.72rem;font-weight:700;cursor:pointer;color:var(--gray-600)}.stage-btn.done{background:#DCFCE7;border-color:#86EFAC;color:#166534}.stage-btn.busy{opacity:.55}
-.signature-wrap{border:1px solid var(--gray-300);border-radius:10px;background:#fff;overflow:hidden}.signature-wrap canvas{width:100%;height:180px;display:block;touch-action:none}
+.material-card{border:1px solid var(--gray-200);border-radius:14px;padding:.85rem;margin-bottom:.7rem;background:white}.material-head{display:flex;justify-content:space-between;gap:.5rem}.stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.45rem;margin-top:.7rem}.stage-btn{border:1px solid var(--gray-200);background:var(--gray-50);border-radius:10px;padding:.65rem .3rem;min-height:44px;font-size:.72rem;font-weight:700;cursor:pointer;color:var(--gray-600);transition:background .15s,border-color .15s}.stage-btn.done{background:#DCFCE7;border-color:#86EFAC;color:#166534}.stage-btn.busy{opacity:.55}
+.signature-wrap{border:1px solid var(--gray-300);border-radius:12px;background:#fff;overflow:hidden}.signature-wrap canvas{width:100%;height:180px;display:block;touch-action:none}
 .proof-preview{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}.proof-preview img{max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--gray-200)}
-.tracking-panel{border:2px solid #BBF7D0;background:#F0FDF4;border-radius:14px;padding:1rem;margin-bottom:1rem}.tracking-panel.off{border-color:var(--gray-200);background:var(--gray-50)}.tracking-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#16A34A;margin-right:.35rem;box-shadow:0 0 0 4px #DCFCE7}.tracking-panel.off .tracking-dot{background:#94A3B8;box-shadow:none}
+.tracking-panel{border:2px solid #BBF7D0;background:#F0FDF4;border-radius:16px;padding:1rem;margin-bottom:1rem}.tracking-panel.off{border-color:var(--gray-200);background:var(--gray-50)}.tracking-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#16A34A;margin-right:.35rem;box-shadow:0 0 0 4px #DCFCE7}.tracking-panel.off .tracking-dot{background:#94A3B8;box-shadow:none}
 @media(max-width:700px){.time-grid{grid-template-columns:repeat(2,1fr)}#routeMap{height:320px}.stage-grid{grid-template-columns:repeat(2,1fr)}.proof-preview{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 {% block content %}
 <div class="form-page" style="max-width:1150px">
-  <div class="breadcrumb" style="display:flex;justify-content:space-between;gap:.5rem;align-items:center"><a href="{{ url_for('driver_dashboard') }}">← Toutes les missions</a><a class="btn btn-secondary btn-sm" href="{{ url_for('driver_recap', evid=evt.id) }}">📑 Récap complet</a></div>
+  <div class="breadcrumb" style="display:flex;justify-content:space-between;gap:.5rem;align-items:center"><a href="{{ url_for('driver_dashboard') }}">← Toutes les missions</a><a class="btn btn-secondary btn-sm" href="{{ url_for('driver_recap', evid=evt.id) }}"><span class="ui-icon" aria-hidden="true">article</span> Récap complet</a></div>
   <section class="mission-hero">
     <small>MISSION TRANSPORT · {{ evt.date_label() }}</small>
-    <h1>🚚 {{ evt.title }}</h1>
-    <div class="mission-meta"><span>📍 {{ evt.location or 'Destination non renseignée' }}</span>{% if evt.client %}<span>👤 {{ evt.client.name }}</span>{% endif %}<span>🕐 Événement {{ evt.start_time }}–{{ evt.end_time }}</span></div>
+    <h1><span class="ui-icon" aria-hidden="true">local_shipping</span> {{ evt.title }}</h1>
+    <div class="mission-meta"><span><span class="ui-icon" aria-hidden="true">location_on</span> {{ evt.location or 'Destination non renseignée' }}</span>{% if evt.client %}<span><span class="ui-icon" aria-hidden="true">person</span> {{ evt.client.name }}</span>{% endif %}<span><span class="ui-icon" aria-hidden="true">schedule</span> Événement {{ evt.start_time }}–{{ evt.end_time }}</span></div>
   </section>
 
   <section class="tracking-panel {% if not tracker or not tracker.active %}off{% endif %}" id="trackingPanel">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:.7rem;flex-wrap:wrap">
       <div><strong><span class="tracking-dot"></span><span id="trackingTitle">{% if tracker and tracker.active %}Suivi GPS actif{% else %}Suivi GPS arrêté{% endif %}</span></strong><div id="trackingStatus" style="font-size:.8rem;color:var(--gray-600);margin-top:.2rem">{% if tracker and tracker.active %}La position du camion est visible par les gestionnaires transport.{% else %}Démarre le partage au moment du départ.{% endif %}</div></div>
-      <div style="display:flex;gap:.5rem"><button type="button" class="btn btn-success" id="trackingStart" onclick="startTracking()" {% if tracker and tracker.active %}style="display:none"{% endif %}>📡 Démarrer le suivi</button><button type="button" class="btn btn-danger" id="trackingStop" onclick="stopTracking()" {% if not tracker or not tracker.active %}style="display:none"{% endif %}>⏹ Arrêter</button></div>
+      <div style="display:flex;gap:.5rem"><button type="button" class="btn btn-success" id="trackingStart" onclick="startTracking()" {% if tracker and tracker.active %}style="display:none"{% endif %}><span class="ui-icon" aria-hidden="true">sensors</span> Démarrer le suivi</button><button type="button" class="btn btn-danger" id="trackingStop" onclick="stopTracking()" {% if not tracker or not tracker.active %}style="display:none"{% endif %}>⏹ Arrêter</button></div>
     </div>
     <small style="display:block;margin-top:.55rem;color:var(--gray-500)">Garde cette mission ouverte pendant le trajet. La position est envoyée toutes les 15 secondes et le suivi s’arrête uniquement avec le bouton Arrêter.</small>
   </section>
@@ -38,27 +38,27 @@
       <div class="time-box"><small>LIVRAISON</small><b>{{ evt.transport_delivery_time or evt.start_time or '—' }}</b></div>
       <div class="time-box"><small>REPRISE DU MATÉRIEL</small><b>{{ evt.transport_recovery_time or '—' }}</b></div>
     </div>
-    {% if evt.transport_notes %}<div style="margin-top:.8rem;padding:.7rem;background:#FFF7ED;border-radius:9px;white-space:pre-line">📝 {{ evt.transport_notes }}</div>{% endif %}
+    {% if evt.transport_notes %}<div style="margin-top:.8rem;padding:.7rem;background:#FFF7ED;border-radius:9px;white-space:pre-line"><span class="ui-icon" aria-hidden="true">edit_note</span> {{ evt.transport_notes }}</div>{% endif %}
     {% if can_manage %}
-    <details style="margin-top:1rem"><summary style="cursor:pointer;font-weight:700;color:var(--blue-deep)">⚙️ Configurer les horaires et consignes</summary>
+    <details style="margin-top:1rem"><summary style="cursor:pointer;font-weight:700;color:var(--blue-deep)"><span class="ui-icon" aria-hidden="true">settings</span> Configurer les horaires et consignes</summary>
       <form method="POST" action="{{ url_for('driver_mission_settings', evid=evt.id) }}" style="margin-top:.8rem">
         <div class="form-row"><div class="form-group"><label>Heure préparation</label><input type="time" name="transport_load_time" value="{{ evt.transport_load_time or '' }}"></div><div class="form-group"><label>Heure départ</label><input type="time" name="transport_departure_time" value="{{ evt.transport_departure_time or '' }}"></div></div>
         <div class="form-row"><div class="form-group"><label>Heure livraison</label><input type="time" name="transport_delivery_time" value="{{ evt.transport_delivery_time or '' }}"></div><div class="form-group"><label>Heure de reprise du matériel <small>(facultatif)</small></label><input type="time" name="transport_recovery_time" value="{{ evt.transport_recovery_time or '' }}"></div></div>
-        <div class="form-row"><div class="form-group"><label>Ordre des arrêts</label><select name="transport_route_mode"><option value="optimized" {% if evt.transport_optimize_stops %}selected{% endif %}>⚡ Optimiser automatiquement</option><option value="manual" {% if not evt.transport_optimize_stops %}selected{% endif %}>🔢 Respecter l’ordre saisi</option></select></div><div class="form-group"><label>Après le dernier arrêt</label><label style="display:flex;align-items:center;gap:.5rem;margin-top:.65rem"><input type="checkbox" name="transport_return_depot" value="1" {% if evt.transport_return_depot %}checked{% endif %}> Retour automatique au dépôt</label></div></div>
+        <div class="form-row"><div class="form-group"><label>Ordre des arrêts</label><select name="transport_route_mode"><option value="optimized" {% if evt.transport_optimize_stops %}selected{% endif %}>Optimiser automatiquement</option><option value="manual" {% if not evt.transport_optimize_stops %}selected{% endif %}>Respecter l’ordre saisi</option></select></div><div class="form-group"><label>Après le dernier arrêt</label><label style="display:flex;align-items:center;gap:.5rem;margin-top:.65rem"><input type="checkbox" name="transport_return_depot" value="1" {% if evt.transport_return_depot %}checked{% endif %}> Retour automatique au dépôt</label></div></div>
         <div class="form-group"><label>Consignes chauffeur</label><textarea name="transport_notes" rows="3">{{ evt.transport_notes or '' }}</textarea></div>
-        <button class="btn btn-primary">💾 Enregistrer</button>
+        <button class="btn btn-primary"><span class="ui-icon" aria-hidden="true">save</span> Enregistrer</button>
       </form>
     </details>
-    <details style="margin-top:1rem" open><summary style="cursor:pointer;font-weight:700;color:var(--blue-deep)">📍 Points d’arrêt intermédiaires ({{ evt.transport_stops|length }})</summary>
+    <details style="margin-top:1rem" open><summary style="cursor:pointer;font-weight:700;color:var(--blue-deep)"><span class="ui-icon" aria-hidden="true">location_on</span> Points d’arrêt intermédiaires ({{ evt.transport_stops|length }})</summary>
       <div style="margin-top:.8rem">
         {% for stop in evt.transport_stops %}
         <div style="border:1px solid var(--gray-200);border-radius:10px;padding:.7rem;margin-bottom:.55rem;background:var(--gray-50)">
           <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap">
-            <div><b>{{ loop.index }}. {{ stop.label }}</b>{% if stop.planned_time %} · 🕐 {{ stop.planned_time }}{% endif %}<br><small style="color:var(--gray-500)">{{ stop.address }}</small></div>
+            <div><b>{{ loop.index }}. {{ stop.label }}</b>{% if stop.planned_time %} · <span class="ui-icon" aria-hidden="true">schedule</span> {{ stop.planned_time }}{% endif %}<br><small style="color:var(--gray-500)">{{ stop.address }}</small></div>
             <div style="display:flex;gap:.3rem">
               <form method="POST" action="{{ url_for('driver_stop_move', evid=evt.id, sid=stop.id) }}"><input type="hidden" name="direction" value="up"><button class="btn btn-secondary btn-sm" title="Monter">↑</button></form>
               <form method="POST" action="{{ url_for('driver_stop_move', evid=evt.id, sid=stop.id) }}"><input type="hidden" name="direction" value="down"><button class="btn btn-secondary btn-sm" title="Descendre">↓</button></form>
-              <form method="POST" action="{{ url_for('driver_stop_delete', evid=evt.id, sid=stop.id) }}" onsubmit="return confirm('Supprimer cet arrêt ?')"><button class="btn btn-danger btn-sm">✕</button></form>
+              <form method="POST" action="{{ url_for('driver_stop_delete', evid=evt.id, sid=stop.id) }}" onsubmit="return confirm('Supprimer cet arrêt ?')"><button class="btn btn-danger btn-sm"><span class="ui-icon" aria-hidden="true">close</span></button></form>
             </div>
           </div>
           <details style="margin-top:.45rem"><summary style="cursor:pointer;font-size:.78rem;color:var(--blue)">Modifier</summary>
@@ -66,18 +66,18 @@
           </details>
         </div>
         {% endfor %}
-        <form method="POST" action="{{ url_for('driver_stop_save', evid=evt.id) }}" style="border:1px dashed var(--gray-300);border-radius:10px;padding:.75rem;margin-top:.7rem"><b>➕ Ajouter un arrêt</b><div class="form-row" style="margin-top:.55rem"><div class="form-group"><label>Nom</label><input name="label" placeholder="Ex. Fournisseur, client 2…" required></div><div class="form-group"><label>Heure prévue</label><input type="time" name="planned_time"></div></div><div class="form-group"><label>Adresse ou Plus Code</label><input name="address" placeholder="Adresse complète" required></div><button class="btn btn-accent btn-sm">Ajouter l’arrêt</button></form>
+        <form method="POST" action="{{ url_for('driver_stop_save', evid=evt.id) }}" style="border:1px dashed var(--gray-300);border-radius:10px;padding:.75rem;margin-top:.7rem"><b><span class="ui-icon" aria-hidden="true">add</span> Ajouter un arrêt</b><div class="form-row" style="margin-top:.55rem"><div class="form-group"><label>Nom</label><input name="label" placeholder="Ex. Fournisseur, client 2…" required></div><div class="form-group"><label>Heure prévue</label><input type="time" name="planned_time"></div></div><div class="form-group"><label>Adresse ou Plus Code</label><input name="address" placeholder="Adresse complète" required></div><button class="btn btn-accent btn-sm">Ajouter l’arrêt</button></form>
       </div>
     </details>
     {% endif %}
   </section>
 
   <section class="detail-section" style="margin-bottom:1rem">
-    <h2>🗺️ Navigation</h2>
+    <h2><span class="ui-icon" aria-hidden="true">map</span> Navigation</h2>
     {% if evt.location %}
     <div class="map-tools">
-      <button class="btn btn-primary" type="button" onclick="routeFromDepot()">🏢 Depuis le dépôt</button>
-      <button class="btn btn-secondary" type="button" onclick="routeFromGPS()">📱 Depuis ma position</button>
+      <button class="btn btn-primary" type="button" onclick="routeFromDepot()"><span class="ui-icon" aria-hidden="true">business</span> Depuis le dépôt</button>
+      <button class="btn btn-secondary" type="button" onclick="routeFromGPS()"><span class="ui-icon" aria-hidden="true">smartphone</span> Depuis ma position</button>
       <button class="btn btn-secondary" type="button" onclick="openExternal('google')">Google Maps</button>
       <button class="btn btn-secondary" type="button" onclick="openExternal('waze')">Waze</button>
     </div>
@@ -89,7 +89,7 @@
   </section>
 
   <section class="detail-section" style="margin-bottom:1rem">
-    <div style="display:flex;justify-content:space-between;gap:.7rem;align-items:center;flex-wrap:wrap"><div><h2>📦 Fiche matériel</h2><p style="color:var(--gray-500);font-size:.85rem">Préparé → chargé → livré → récupéré</p></div><a class="btn btn-secondary" target="_blank" href="{{ url_for('driver_print', evid=evt.id) }}">🖨️ Imprimer</a></div>
+    <div style="display:flex;justify-content:space-between;gap:.7rem;align-items:center;flex-wrap:wrap"><div><h2><span class="ui-icon" aria-hidden="true">inventory_2</span> Fiche matériel</h2><p style="color:var(--gray-500);font-size:.85rem">Préparé → chargé → livré → récupéré</p></div><a class="btn btn-secondary" target="_blank" href="{{ url_for('driver_print', evid=evt.id) }}"><span class="ui-icon" aria-hidden="true">print</span> Imprimer</a></div>
     <div style="display:flex;justify-content:space-between;font-size:.8rem;margin:.7rem 0 .35rem"><span>Progression globale</span><b id="progressText">{{ done }}/{{ total }}</b></div>
     <div class="check-progress"><div id="progressBar" style="width:{{ pct }}%"></div></div>
     <div style="margin-top:1rem">
@@ -100,17 +100,17 @@
         <div class="stage-grid">
           {% for stage in stages %}
           {% set check = row.checks.get(stage) %}
-          <button type="button" class="stage-btn {% if check and check.checked_quantity >= row.quantity %}done{% endif %}" data-equipment="{{ row.equipment.id }}" data-stage="{{ stage }}" data-quantity="{{ row.quantity }}" onclick="toggleCheck(this)">{% if check and check.checked_quantity >= row.quantity %}✅{% else %}⬜{% endif %} {{ stage_labels.get(stage) }}</button>
+          <button type="button" class="stage-btn {% if check and check.checked_quantity >= row.quantity %}done{% endif %}" data-equipment="{{ row.equipment.id }}" data-stage="{{ stage }}" data-quantity="{{ row.quantity }}" onclick="toggleCheck(this)">{% if check and check.checked_quantity >= row.quantity %}<span class="ui-icon" aria-hidden="true">check_circle</span>{% else %}<span class="ui-icon" aria-hidden="true">check_box_outline_blank</span>{% endif %} {{ stage_labels.get(stage) }}</button>
           {% endfor %}
         </div>
       </article>
       {% endfor %}
-    {% else %}<div class="empty-state"><div class="empty-icon">📦</div><h3>Aucun matériel lié</h3><p>Lie d’abord les emprunts à cet événement.</p></div>{% endif %}
+    {% else %}<div class="empty-state"><div class="empty-icon"><span class="ui-icon" aria-hidden="true">inventory_2</span></div><h3>Aucun matériel lié</h3><p>Lie d’abord les emprunts à cet événement.</p></div>{% endif %}
     </div>
   </section>
 
   <section class="detail-section">
-    <h2>✍️ Preuve de livraison / récupération</h2>
+    <h2><span class="ui-icon" aria-hidden="true">draw</span> Preuve de livraison / récupération</h2>
     <form method="POST" action="{{ url_for('driver_proof', evid=evt.id) }}" id="proofForm">
       <div class="form-group"><label>Étape</label><select name="stage" required><option value="delivery">Livraison</option><option value="recovery">Récupération</option></select></div>
       <label style="font-weight:700;font-size:.85rem">Signature client</label>
@@ -118,15 +118,15 @@
       <input type="hidden" name="signature_data" id="signatureData"><button type="button" class="btn btn-secondary btn-sm" style="margin:.4rem 0 .8rem" onclick="clearSignature()">Effacer la signature</button>
       <div class="form-group"><label>Photo de preuve</label><input type="file" id="proofPhoto" accept="image/*" capture="environment"><input type="hidden" name="photo_data" id="photoData"><small id="photoStatus"></small></div>
       <div class="form-group"><label>Note</label><textarea name="proof_notes" rows="2" placeholder="Nom du réceptionnaire, remarque..."></textarea></div>
-      <button class="btn btn-accent" id="proofSubmit">✅ Enregistrer la preuve</button>
+      <button class="btn btn-accent" id="proofSubmit"><span class="ui-icon" aria-hidden="true">check_circle</span> Enregistrer la preuve</button>
     </form>
     {% if proofs %}
     <hr style="margin:1.2rem 0;border:none;border-top:1px solid var(--gray-200)"><h3>Preuves enregistrées</h3>
     {% for proof_stage, proof in proofs.items() %}
     <div style="margin-top:1rem"><b>{% if proof_stage == 'delivery' %}Livraison{% else %}Récupération{% endif %}</b> · {{ proof.created_at.strftime('%d/%m/%Y %H:%M') if proof.created_at else '—' }}{% if proof.creator %} par {{ proof.creator.full_name }}{% endif %}
       <div class="proof-preview" style="margin-top:.5rem">
-        {% if proof.signature_data %}<div><small>Signature</small><br><img src="{{ proof.signature_data }}" alt="Signature"><form method="POST" action="{{ url_for('driver_proof_delete_part', evid=evt.id, pid=proof.id) }}" onsubmit="return confirm('Supprimer cette signature ?')" style="margin-top:.45rem"><input type="hidden" name="part" value="signature"><button class="btn btn-danger btn-sm">🗑️ Supprimer la signature</button></form></div>{% endif %}
-        {% if proof.photo_data %}<div><small>Photo</small><br><img src="{{ proof.photo_data }}" alt="Photo de preuve"><form method="POST" action="{{ url_for('driver_proof_delete_part', evid=evt.id, pid=proof.id) }}" onsubmit="return confirm('Supprimer cette photo de preuve ?')" style="margin-top:.45rem"><input type="hidden" name="part" value="photo"><button class="btn btn-danger btn-sm">🗑️ Supprimer la photo</button></form></div>{% endif %}
+        {% if proof.signature_data %}<div><small>Signature</small><br><img src="{{ proof.signature_data }}" alt="Signature"><form method="POST" action="{{ url_for('driver_proof_delete_part', evid=evt.id, pid=proof.id) }}" onsubmit="return confirm('Supprimer cette signature ?')" style="margin-top:.45rem"><input type="hidden" name="part" value="signature"><button class="btn btn-danger btn-sm"><span class="ui-icon" aria-hidden="true">delete</span> Supprimer la signature</button></form></div>{% endif %}
+        {% if proof.photo_data %}<div><small>Photo</small><br><img src="{{ proof.photo_data }}" alt="Photo de preuve"><form method="POST" action="{{ url_for('driver_proof_delete_part', evid=evt.id, pid=proof.id) }}" onsubmit="return confirm('Supprimer cette photo de preuve ?')" style="margin-top:.45rem"><input type="hidden" name="part" value="photo"><button class="btn btn-danger btn-sm"><span class="ui-icon" aria-hidden="true">delete</span> Supprimer la photo</button></form></div>{% endif %}
       </div>
       {% if proof.notes %}<p style="white-space:pre-line">{{ proof.notes }}</p>{% endif %}
     </div>
@@ -159,8 +159,8 @@ function startPositionWatch(){
   if(trackingWatch!==null||!navigator.geolocation)return;
   trackingWatch=navigator.geolocation.watchPosition(async function(p){
     var now=Date.now();if(now-trackingLastSent<14000)return;trackingLastSent=now;
-    try{var d=await trackingPost('location',{latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy||0,speed:p.coords.speed||0,heading:p.coords.heading||0});setTrackingUI(true,'Position envoyée à '+d.updated_at+' · précision ±'+Math.round(p.coords.accuracy||0)+' m');}catch(e){document.getElementById('trackingStatus').textContent='⚠️ '+e.message;}
-  },function(e){document.getElementById('trackingStatus').textContent='⚠️ Autorise la localisation précise pour Imagine Events.';},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+    try{var d=await trackingPost('location',{latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy||0,speed:p.coords.speed||0,heading:p.coords.heading||0});setTrackingUI(true,'Position envoyée à '+d.updated_at+' · précision ±'+Math.round(p.coords.accuracy||0)+' m');}catch(e){document.getElementById('trackingStatus').textContent=e.message;}
+  },function(e){document.getElementById('trackingStatus').textContent='Autorise la localisation précise pour Imagine Events.';},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
 }
 async function stopTracking(){
   try{await trackingPost('stop',{});}catch(e){alert(e.message);return;}
@@ -180,19 +180,19 @@ async function drawRoute(start){
     if(optimizeStops&&points.length>2){url='https://router.project-osrm.org/trip/v1/driving/'+coords+'?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson&steps=true';data=await(await fetch(url)).json();if(!data.trips||!data.trips.length)throw new Error('Aucune tournée optimisée trouvée');route=data.trips[0];ordered=new Array(points.length);data.waypoints.forEach(function(w,index){ordered[w.waypoint_index]=points[index]});}
     else{url='https://router.project-osrm.org/route/v1/driving/'+coords+'?overview=full&geometries=geojson&steps=true';data=await(await fetch(url)).json();if(!data.routes||!data.routes.length)throw new Error('Aucun itinéraire trouvé');route=data.routes[0];}
     if(routeLayer)map.removeLayer(routeLayer);markers.forEach(function(m){map.removeLayer(m)});markers=[];routeLayer=L.geoJSON(route.geometry,{style:{color:'#E63946',weight:6,opacity:.85}}).addTo(map);
-    var html='<div style="display:grid;gap:.3rem">';ordered.forEach(function(p,index){markers.push(L.marker(p.coord).addTo(map).bindPopup('<b>'+(index+1)+'. '+escapeRoute(p.label)+'</b><br>'+escapeRoute(p.address)+(p.time?'<br>🕐 '+p.time:'')));html+='<div style="padding:.45rem .65rem;background:var(--gray-50);border-radius:8px;font-size:.82rem"><b>'+(index+1)+'. '+escapeRoute(p.label)+'</b>'+(p.time?' · 🕐 '+p.time:'')+(p.address?'<br><small>'+escapeRoute(p.address)+'</small>':'')+'</div>';});html+='</div>';document.getElementById('routeOrder').innerHTML=html;
-    map.fitBounds(routeLayer.getBounds(),{padding:[25,25]});var km=(route.distance/1000).toFixed(1),min=Math.round(route.duration/60),mode=optimizeStops?'ordre optimisé':'ordre saisi';document.getElementById('routeInfo').innerHTML='🚚 <b>'+km+' km</b> · environ <b>'+min+' min</b> · '+mode+(returnToDepot?' · retour dépôt':'')+' · hors trafic réel';
-  }catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message;}
+    var html='<div style="display:grid;gap:.3rem">';ordered.forEach(function(p,index){markers.push(L.marker(p.coord).addTo(map).bindPopup('<b>'+(index+1)+'. '+escapeRoute(p.label)+'</b><br>'+escapeRoute(p.address)+(p.time?'<br><span class="ui-icon">schedule</span> '+p.time:'')));html+='<div style="padding:.45rem .65rem;background:var(--gray-50);border-radius:8px;font-size:.82rem"><b>'+(index+1)+'. '+escapeRoute(p.label)+'</b>'+(p.time?' · <span class="ui-icon">schedule</span> '+p.time:'')+(p.address?'<br><small>'+escapeRoute(p.address)+'</small>':'')+'</div>';});html+='</div>';document.getElementById('routeOrder').innerHTML=html;
+    map.fitBounds(routeLayer.getBounds(),{padding:[25,25]});var km=(route.distance/1000).toFixed(1),min=Math.round(route.duration/60),mode=optimizeStops?'ordre optimisé':'ordre saisi';document.getElementById('routeInfo').innerHTML='<span class="ui-icon">local_shipping</span> <b>'+km+' km</b> · environ <b>'+min+' min</b> · '+mode+(returnToDepot?' · retour dépôt':'')+' · hors trafic réel';
+  }catch(e){document.getElementById('routeInfo').textContent=e.message;}
 }
 function escapeRoute(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
-async function routeFromDepot(){try{if(Number.isFinite(depotLat)&&Number.isFinite(depotLng)){drawRoute([depotLat,depotLng]);}else{drawRoute(await geocode(depotAddress));}}catch(e){document.getElementById('routeInfo').textContent='⚠️ '+e.message+' — enregistre la position GPS du dépôt dans la rubrique Chauffeur.';}}
-function routeFromGPS(){if(!navigator.geolocation){document.getElementById('routeInfo').textContent='Géolocalisation indisponible.';return;}document.getElementById('routeInfo').textContent='Recherche de ta position...';navigator.geolocation.getCurrentPosition(function(p){drawRoute([p.coords.latitude,p.coords.longitude]);},function(){document.getElementById('routeInfo').textContent='⚠️ Autorise la localisation dans les réglages du téléphone.';},{enableHighAccuracy:true,timeout:12000});}
+async function routeFromDepot(){try{if(Number.isFinite(depotLat)&&Number.isFinite(depotLng)){drawRoute([depotLat,depotLng]);}else{drawRoute(await geocode(depotAddress));}}catch(e){document.getElementById('routeInfo').textContent=e.message+' — enregistre la position GPS du dépôt dans la rubrique Chauffeur.';}}
+function routeFromGPS(){if(!navigator.geolocation){document.getElementById('routeInfo').textContent='Géolocalisation indisponible.';return;}document.getElementById('routeInfo').textContent='Recherche de ta position...';navigator.geolocation.getCurrentPosition(function(p){drawRoute([p.coords.latitude,p.coords.longitude]);},function(){document.getElementById('routeInfo').textContent='Autorise la localisation dans les réglages du téléphone.';},{enableHighAccuracy:true,timeout:12000});}
 function openExternal(app){fetch('/driver/event/'+EVENT_ID+'/navigation-log',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'app='+encodeURIComponent(app),keepalive:true});var finalDestination=returnToDepot?depotAddress:destination,url;if(app==='waze'){url='https://www.waze.com/ul?q='+encodeURIComponent(finalDestination)+'&navigate=yes';}else{var wp=[];missionStops.forEach(function(s){wp.push(s.address)});if(returnToDepot)wp.push(destination);url='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(finalDestination)+'&travelmode=driving'+(wp.length?'&waypoints='+encodeURIComponent(wp.join('|')):'');}window.open(url,'_blank');}
-async function toggleCheck(btn){if(btn.classList.contains('busy'))return;btn.classList.add('busy');var checked=btn.classList.contains('done');var body=new URLSearchParams({equipment_id:btn.dataset.equipment,stage:btn.dataset.stage,quantity:checked?'0':btn.dataset.quantity});try{var r=await fetch('/driver/event/'+EVENT_ID+'/check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body});var d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Erreur');btn.classList.toggle('done',d.checked);btn.innerHTML=(d.checked?'✅ ':'⬜ ')+btn.textContent.replace(/^✅ |^⬜ /,'');document.getElementById('progressText').textContent=d.done+'/'+d.total;document.getElementById('progressBar').style.width=d.pct+'%';}catch(e){alert(e.message);}finally{btn.classList.remove('busy');}}
+async function toggleCheck(btn){if(btn.classList.contains('busy'))return;btn.classList.add('busy');var checked=btn.classList.contains('done');var body=new URLSearchParams({equipment_id:btn.dataset.equipment,stage:btn.dataset.stage,quantity:checked?'0':btn.dataset.quantity});try{var r=await fetch('/driver/event/'+EVENT_ID+'/check',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body});var d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Erreur');btn.classList.toggle('done',d.checked);btn.innerHTML=(d.checked?'<span class="ui-icon">check_circle</span> ':'<span class="ui-icon">check_box_outline_blank</span> ')+btn.textContent.replace(/^(?:check_circle|check_box_outline_blank) ?/,'');document.getElementById('progressText').textContent=d.done+'/'+d.total;document.getElementById('progressBar').style.width=d.pct+'%';}catch(e){alert(e.message);}finally{btn.classList.remove('busy');}}
 var canvas=document.getElementById('signatureCanvas'),ctx=canvas.getContext('2d'),drawing=false,hasSignature=false;
 function sizeCanvas(){var saved=hasSignature?canvas.toDataURL():null;canvas.width=canvas.clientWidth*window.devicePixelRatio;canvas.height=180*window.devicePixelRatio;ctx.scale(window.devicePixelRatio,window.devicePixelRatio);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#0B1D3A';if(saved){var i=new Image();i.onload=function(){ctx.drawImage(i,0,0,canvas.clientWidth,180)};i.src=saved;}}
 function point(e){var r=canvas.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}function startDraw(e){e.preventDefault();drawing=true;var p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y)}function moveDraw(e){if(!drawing)return;e.preventDefault();var p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke();hasSignature=true}function endDraw(){drawing=false}['mousedown','touchstart'].forEach(function(n){canvas.addEventListener(n,startDraw,{passive:false})});['mousemove','touchmove'].forEach(function(n){canvas.addEventListener(n,moveDraw,{passive:false})});['mouseup','mouseleave','touchend'].forEach(function(n){canvas.addEventListener(n,endDraw)});function clearSignature(){ctx.clearRect(0,0,canvas.width,canvas.height);hasSignature=false;}
-document.getElementById('proofPhoto').addEventListener('change',function(){var f=this.files[0];if(!f)return;var img=new Image(),reader=new FileReader();reader.onload=function(e){img.onload=function(){var max=1200,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);document.getElementById('photoData').value=c.toDataURL('image/jpeg',.75);document.getElementById('photoStatus').textContent='Photo prête ✓';};img.src=e.target.result};reader.readAsDataURL(f)});
+document.getElementById('proofPhoto').addEventListener('change',function(){var f=this.files[0];if(!f)return;var img=new Image(),reader=new FileReader();reader.onload=function(e){img.onload=function(){var max=1200,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);document.getElementById('photoData').value=c.toDataURL('image/jpeg',.75);document.getElementById('photoStatus').textContent='Photo prête';};img.src=e.target.result};reader.readAsDataURL(f)});
 document.getElementById('proofForm').addEventListener('submit',function(){if(hasSignature)document.getElementById('signatureData').value=canvas.toDataURL('image/png');document.getElementById('proofSubmit').disabled=true;});
 window.addEventListener('load',async function(){sizeCanvas();initMap();if(trackingActive){startPositionWatch();if(navigator.wakeLock){try{wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}}});window.addEventListener('resize',sizeCanvas);
 </script>

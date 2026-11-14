@@ -11,17 +11,17 @@
                 <div style="font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:.4rem">Fiche client</div>
                 <h1 style="margin:0 0 .6rem;font-size:1.7rem">{{ c.name }}</h1>
                 <div style="display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.92rem">
-                    {% if c.contact_person %}<span>👤 {{ c.contact_person }}</span>{% endif %}
-                    {% if c.phone %}<span>📞 {{ c.phone }}</span>{% endif %}
-                    {% if c.email %}<span>✉️ {{ c.email }}</span>{% endif %}
-                    {% if c.address %}<span>📍 {{ c.address }}</span>{% endif %}
+                    {% if c.contact_person %}<span><span class="ui-icon" aria-hidden="true">person</span> {{ c.contact_person }}</span>{% endif %}
+                    {% if c.phone %}<span><span class="ui-icon" aria-hidden="true">call</span> {{ c.phone }}</span>{% endif %}
+                    {% if c.email %}<span><span class="ui-icon" aria-hidden="true">mail</span> {{ c.email }}</span>{% endif %}
+                    {% if c.address %}<span><span class="ui-icon" aria-hidden="true">location_on</span> {{ c.address }}</span>{% endif %}
                 </div>
             </div>
             {% if can_manage %}
             <div style="display:flex;gap:.5rem">
-                <a class="btn btn-secondary" href="{{ url_for('client_edit', cid=c.id) }}">✏️ Modifier</a>
+                <a class="btn btn-secondary" href="{{ url_for('client_edit', cid=c.id) }}"><span class="ui-icon" aria-hidden="true">edit</span> Modifier</a>
                 <form method="POST" action="{{ url_for('client_delete', cid=c.id) }}" onsubmit="return confirm('Supprimer ce client ? Ses événements seront conservés (sans lien client).')">
-                    <button class="btn btn-danger" type="submit">🗑️ Supprimer</button>
+                    <button class="btn btn-danger" type="submit"><span class="ui-icon" aria-hidden="true">delete</span> Supprimer</button>
                 </form>
             </div>
             {% endif %}
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <h2 style="font-size:1.05rem;color:var(--blue-deep);margin:0 0 .8rem">📅 Historique des événements</h2>
+    <h2 style="font-size:1.05rem;color:var(--blue-deep);margin:0 0 .8rem"><span class="ui-icon" aria-hidden="true">calendar_month</span> Historique des événements</h2>
     {% if detail_rows %}
     <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm)">
         <table class="history-table">
@@ -64,7 +64,7 @@
                         {% else %}<span class="status-badge" style="background:var(--gray-100);color:var(--gray-500)">Annulé</span>{% endif %}
                     </td>
                     <td>{% if r.units %}<span style="font-weight:700">{{ r.units }}</span> unité(s){% else %}—{% endif %}</td>
-                    <td style="text-align:right"><a class="btn btn-sm btn-secondary" href="{{ url_for('recap_view', evid=r.e.id) }}">📄 Récap</a></td>
+                    <td style="text-align:right"><a class="btn btn-sm btn-secondary" href="{{ url_for('recap_view', evid=r.e.id) }}"><span class="ui-icon" aria-hidden="true">description</span> Récap</a></td>
                 </tr>
                 {% endfor %}
             </tbody>

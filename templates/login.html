@@ -3,56 +3,68 @@
 
 {% block content %}
 <div class="auth-page">
-    <div class="auth-card">
-        <div class="auth-header">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Imagine Events Tunisia" style="height:74px;width:auto;display:block;margin:0 auto 10px">
-            <p class="auth-subtitle">Gestion de Dépôt — Inventaire</p>
+    <div class="auth-shell">
+        <div class="auth-brand">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Imagine Events Tunisia">
+            <h2>Imagine <span>Events</span> Tunisia</h2>
+            <p>Le dépôt, les événements et le transport réunis en un seul outil — pour préparer chaque événement sans rien oublier.</p>
+            <ul>
+                <li><span class="ui-icon" aria-hidden="true">inventory_2</span> <span>Catalogue, kits et inventaire en temps réel</span></li>
+                <li><span class="ui-icon" aria-hidden="true">event</span> <span>Parcours événement en 5 étapes guidées</span></li>
+                <li><span class="ui-icon" aria-hidden="true">local_shipping</span> <span>Transport, chauffeur et clôture intégrés</span></li>
+            </ul>
         </div>
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Bon retour</h1>
+                <p class="auth-subtitle">Connectez-vous à Imagine Inventory</p>
+            </div>
 
-        <form method="POST" class="auth-form">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <div class="input-wrapper">
-                    <span class="input-icon">📧</span>
-                    <input type="email" id="email" name="email" required
-                           placeholder="vous@i-maginevents.com" autocomplete="email">
+            <form method="POST" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><span class="ui-icon" aria-hidden="true">mail</span></span>
+                        <input type="email" id="email" name="email" required
+                               placeholder="vous@i-maginevents.com" autocomplete="email">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label for="password">Mot de passe</label>
-                <div class="input-wrapper">
-                    <span class="input-icon">🔒</span>
-                    <input type="password" id="password" name="password" required
-                           placeholder="••••••••" autocomplete="current-password">
-                    <button type="button" class="toggle-pw" onclick="
-                        const p = document.getElementById('password');
-                        p.type = p.type === 'password' ? 'text' : 'password';
-                    ">👁️</button>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><span class="ui-icon" aria-hidden="true">lock</span></span>
+                        <input type="password" id="password" name="password" required
+                               placeholder="••••••••" autocomplete="current-password">
+                        <button type="button" class="toggle-pw" onclick="
+                            const p = document.getElementById('password');
+                            p.type = p.type === 'password' ? 'text' : 'password';
+                        " aria-label="Afficher / masquer le mot de passe"><span class="ui-icon" aria-hidden="true">visibility</span></button>
+                    </div>
                 </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="remember">
+                        <span class="checkmark"></span>
+                        Se souvenir de moi
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                    Se connecter
+                    <span class="btn-arrow">→</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <span>Pas encore de compte ?</span>
+                <a href="{{ url_for('register') }}">Créer un compte</a>
             </div>
 
-            <div class="form-group checkbox-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" name="remember">
-                    <span class="checkmark"></span>
-                    Se souvenir de moi
-                </label>
+            <div class="auth-badge">
+                <span><span class="ui-icon" aria-hidden="true">flag</span> Imagine Events Tunisia</span>
             </div>
-
-            <button type="submit" class="btn btn-primary btn-full">
-                Se connecter
-                <span class="btn-arrow">→</span>
-            </button>
-        </form>
-
-        <div class="auth-footer">
-            <span>Pas encore de compte ?</span>
-            <a href="{{ url_for('register') }}">Créer un compte</a>
-        </div>
-
-        <div class="auth-badge">
-            <span>🇹🇳 Imagine Events Tunisia</span>
         </div>
     </div>
 </div>

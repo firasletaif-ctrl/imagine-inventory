@@ -6,27 +6,28 @@
 <style>
   @media print { body{ -webkit-print-color-adjust:exact; print-color-adjust:exact } .no-print{display:none!important} @page{size:A4 landscape;margin:10mm} }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:Arial,sans-serif;padding:15mm;color:#1E293B;background:white}
-  .header{text-align:center;margin-bottom:4mm;border-bottom:2px solid #C41E3A;padding-bottom:3mm}
-  .header h1{color:#0B1D3A;font-size:18pt;margin-bottom:2mm}.header h1 span{color:#C41E3A}
+  body{font-family:'Inter',Arial,sans-serif;padding:12mm;color:#1E293B;background:#F1F5F9}
+  .header{text-align:center;margin-bottom:4mm;border-bottom:3px solid #C41E3A;padding-bottom:3.5mm;background:white;border-radius:10px;padding-top:4mm}
+  .header h1{color:#0B1D3A;font-size:18pt;margin-bottom:2mm;letter-spacing:.5px}.header h1 span{color:#C41E3A}
   .header p{color:#64748B;font-size:9pt}
-  table{width:100%;border-collapse:collapse;font-size:8pt;margin-top:4mm}
-  th{background:#0B1D3A;color:white;padding:4mm 3mm;text-align:left;font-weight:bold;font-size:8.5pt}
-  td{padding:3mm 3mm;border-bottom:1px solid #E2E8F0}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:8pt;margin-top:4mm;background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(11,29,58,.06)}
+  th{background:#0B1D3A;color:white;padding:3.5mm 3mm;text-align:left;font-weight:700;font-size:8pt;text-transform:uppercase;letter-spacing:.6px}
+  td{padding:2.8mm 3mm;border-bottom:1px solid #E2E8F0}
   tr:nth-child(even){background:#F8FAFC}
-  .dispo{background:#DCFCE7}.indispo{background:#FDE8EC}
+  tr:hover{background:#E8EFF8}
+  .dispo{background:#F0FDF4}.indispo{background:#FFF5F6}
   .footer{text-align:center;margin-top:5mm;font-size:7pt;color:#94A3B8;border-top:1px solid #CBD5E1;padding-top:3mm}
-  .no-print{text-align:center;margin:10mm;background:#FEF3C7;padding:8mm;border-radius:5px;font-size:11pt}
-  .no-print button{background:#C41E3A;color:white;border:none;padding:5mm 15mm;font-size:14pt;border-radius:5px;cursor:pointer;font-weight:bold}
-  .no-print button:hover{background:#A01830}
-  .badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:7pt;font-weight:bold}
-  .badge-ok{background:#DCFCE7;color:#16A34A}.badge-no{background:#FDE8EC;color:#C41E3A}
+  .no-print{text-align:center;margin:8mm auto;max-width:640px;background:#FEF3C7;border:1px solid #FDE68A;padding:8mm;border-radius:14px;font-size:11pt}
+  .no-print button{background:linear-gradient(135deg,#E63946,#C41E3A);color:white;border:none;padding:5mm 12mm;font-size:13pt;border-radius:10px;cursor:pointer;font-weight:800;box-shadow:0 6px 18px rgba(196,30,58,.3);min-height:48px}
+  .no-print button:hover{filter:brightness(1.07)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:7pt;font-weight:800}
+  .badge-ok{background:#DCFCE7;color:#166534}.badge-no{background:#FDE8EC;color:#A01830}
 </style>
-</head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap"><style>.ui-icon{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;font-size:1.12em;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:"liga";-webkit-font-smoothing:antialiased;vertical-align:-.16em;}</style></head>
 <body>
 <div class="no-print">
-  <p>⬇️ <strong>Cliquez sur le bouton ci-dessous pour imprimer ou enregistrer en PDF</strong></p>
-  <button onclick="window.print()">🖨️ Imprimer / Enregistrer PDF</button>
+  <p><span class="ui-icon" aria-hidden="true">download</span> <strong>Cliquez sur le bouton ci-dessous pour imprimer ou enregistrer en PDF</strong></p>
+  <button onclick="window.print()"><span class="ui-icon" aria-hidden="true">print</span> Imprimer / Enregistrer PDF</button>
   <p style="margin-top:5mm;font-size:9pt;color:#92400E">Ou faites CTRL+P puis choisissez "Enregistrer en PDF"</p>
   <p style="margin-top:3mm"><a href="{{ url_for('dashboard') }}" style="color:#1E4D8C">← Retour au depot</a></p>
 </div>

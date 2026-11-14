@@ -4,41 +4,41 @@
 {% if can_manage %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endif %}
 <style>
 .driver-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem}
-.mission-card{background:#fff;border:1px solid var(--gray-200);border-radius:16px;padding:1.15rem;box-shadow:var(--shadow-sm)}
+.mission-card{background:#fff;border:1px solid var(--gray-200);border-radius:18px;padding:1.2rem;box-shadow:var(--shadow-sm);transition:transform .2s,box-shadow .2s}.mission-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
 .mission-card.today{border:2px solid var(--red);box-shadow:0 0 0 3px var(--red-pale)}
 .mission-top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}
 .mission-date{font-size:.76rem;font-weight:800;text-transform:uppercase;color:var(--red);letter-spacing:.6px}
 .mission-title{font-size:1.08rem;color:var(--blue-deep);margin:.2rem 0 .55rem}
 .transport-times{display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem;margin:.7rem 0;font-size:.8rem;color:var(--gray-600)}
 .progress-track{height:8px;border-radius:20px;background:var(--gray-100);overflow:hidden;margin:.5rem 0}.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:20px}
-#liveTrackingMap{height:380px;border-radius:14px;background:#e9eef5}.tracking-list{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}.tracking-chip{background:#DCFCE7;color:#166534;border-radius:10px;padding:.55rem .75rem;font-size:.8rem;font-weight:600}
+#liveTrackingMap{height:380px;border-radius:16px;background:#e9eef5}.tracking-list{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}.tracking-chip{background:#DCFCE7;color:#166534;border-radius:10px;padding:.55rem .75rem;font-size:.8rem;font-weight:600}
 </style>
 {% endblock %}
 {% block content %}
 <div class="form-page" style="max-width:1200px">
   <div class="dash-header">
-    <div><h1 class="dash-title">🚚 Chauffeur & Transport</h1><p class="dash-subtitle">Missions, navigation et contrôle du matériel</p></div>
-    <a class="btn btn-secondary" href="{{ url_for('driver_recaps') }}">📑 Voir les récaps</a>
+    <div><h1 class="dash-title"><span class="ui-icon" aria-hidden="true">local_shipping</span> Chauffeur & Transport</h1><p class="dash-subtitle">Missions, navigation et contrôle du matériel</p></div>
+    <a class="btn btn-secondary" href="{{ url_for('driver_recaps') }}"><span class="ui-icon" aria-hidden="true">article</span> Voir les récaps</a>
   </div>
 
   {% if can_manage %}
   <div class="detail-section" style="margin-bottom:1.2rem">
-    <h3 style="margin-bottom:.7rem">📍 Point de départ habituel</h3>
+    <h3 style="margin-bottom:.7rem"><span class="ui-icon" aria-hidden="true">location_on</span> Point de départ habituel</h3>
     <form method="POST" action="{{ url_for('driver_depot_save') }}" id="depotForm" style="display:flex;gap:.6rem;flex-wrap:wrap">
       <input name="depot_address" value="{{ depot_address }}" required style="flex:1;min-width:240px" placeholder="Nom ou adresse du dépôt" oninput="document.getElementById('depotLat').value='';document.getElementById('depotLng').value=''">
       <input type="hidden" name="depot_lat" id="depotLat" value="{{ depot_lat }}">
       <input type="hidden" name="depot_lng" id="depotLng" value="{{ depot_lng }}">
-      <button type="button" class="btn btn-secondary" id="gpsDepotBtn" onclick="captureDepotGPS()">📍 Utiliser ma position GPS</button>
+      <button type="button" class="btn btn-secondary" id="gpsDepotBtn" onclick="captureDepotGPS()"><span class="ui-icon" aria-hidden="true">location_on</span> Utiliser ma position GPS</button>
       <button class="btn btn-primary">Enregistrer</button>
     </form>
-    <small id="depotGpsStatus" style="color:var(--gray-500)">{% if depot_lat and depot_lng %}✅ Position enregistrée : {{ depot_lat }}, {{ depot_lng }}{% else %}Tu peux saisir une adresse complète, un Plus Code Google comme V6P7+RFW, ou utiliser la position GPS du téléphone.{% endif %}</small>
+    <small id="depotGpsStatus" style="color:var(--gray-500)">{% if depot_lat and depot_lng %}<span class="ui-icon" aria-hidden="true">check_circle</span> Position enregistrée : {{ depot_lat }}, {{ depot_lng }}{% else %}Tu peux saisir une adresse complète, un Plus Code Google comme V6P7+RFW, ou utiliser la position GPS du téléphone.{% endif %}</small>
   </div>
   {% endif %}
 
   {% if can_manage %}
   <div class="detail-section" style="margin-bottom:1.2rem">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:.7rem;flex-wrap:wrap">
-      <div><h2>📡 Suivi GPS en direct</h2><p style="font-size:.84rem;color:var(--gray-500)">Positions actualisées toutes les 15 secondes pendant que le chauffeur partage sa position.</p></div>
+      <div><h2><span class="ui-icon" aria-hidden="true">sensors</span> Suivi GPS en direct</h2><p style="font-size:.84rem;color:var(--gray-500)">Positions actualisées toutes les 15 secondes pendant que le chauffeur partage sa position.</p></div>
       <span id="trackingRefresh" style="font-size:.76rem;color:var(--gray-500)">Chargement…</span>
     </div>
     <div id="liveTrackingMap"></div>
@@ -58,11 +58,11 @@
         </div>
         <span class="status-badge {% if evt.status == 'completed' %}s-ok{% elif evt.status == 'cancelled' %}s-late{% else %}s-active{% endif %}">{{ evt.status }}</span>
       </div>
-      <div style="font-size:.88rem;color:var(--gray-600)">📍 {{ evt.location or 'Destination non renseignée' }}</div>
+      <div style="font-size:.88rem;color:var(--gray-600)"><span class="ui-icon" aria-hidden="true">location_on</span> {{ evt.location or 'Destination non renseignée' }}</div>
       <div class="transport-times">
-        <span>📦 Chargement : <b>{{ evt.transport_load_time or '—' }}</b></span>
-        <span>🚚 Départ : <b>{{ evt.transport_departure_time or '—' }}</b></span>
-        <span>📍 Livraison : <b>{{ evt.transport_delivery_time or evt.start_time or '—' }}</b></span>
+        <span><span class="ui-icon" aria-hidden="true">inventory_2</span> Chargement : <b>{{ evt.transport_load_time or '—' }}</b></span>
+        <span><span class="ui-icon" aria-hidden="true">local_shipping</span> Départ : <b>{{ evt.transport_departure_time or '—' }}</b></span>
+        <span><span class="ui-icon" aria-hidden="true">location_on</span> Livraison : <b>{{ evt.transport_delivery_time or evt.start_time or '—' }}</b></span>
         <span>↩️ Reprise matériel : <b>{{ evt.transport_recovery_time or '—' }}</b></span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--gray-500)"><span>{{ mission.items }} article(s)</span><b>{{ mission.done }}/{{ mission.total }} contrôles</b></div>
@@ -72,7 +72,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="empty-state"><div class="empty-icon">🚚</div><h3>Aucune mission affectée</h3><p>Les événements auxquels le chauffeur est affecté apparaîtront ici.</p></div>
+  <div class="empty-state"><div class="empty-icon"><span class="ui-icon" aria-hidden="true">local_shipping</span></div><h3>Aucune mission affectée</h3><p>Les événements auxquels le chauffeur est affecté apparaîtront ici.</p></div>
   {% endif %}
 </div>
 {% endblock %}
@@ -81,15 +81,15 @@
 <script>
 function captureDepotGPS(){
   var btn=document.getElementById('gpsDepotBtn'),status=document.getElementById('depotGpsStatus');
-  if(!navigator.geolocation){status.textContent='⚠️ Géolocalisation indisponible sur cet appareil.';return;}
-  btn.disabled=true;status.textContent='📍 Recherche de la position précise du dépôt...';
+  if(!navigator.geolocation){status.textContent='Géolocalisation indisponible sur cet appareil.';return;}
+  btn.disabled=true;status.textContent='Recherche de la position précise du dépôt...';
   navigator.geolocation.getCurrentPosition(function(p){
     document.getElementById('depotLat').value=p.coords.latitude.toFixed(7);
     document.getElementById('depotLng').value=p.coords.longitude.toFixed(7);
-    status.textContent='✅ Position trouvée avec une précision d’environ '+Math.round(p.coords.accuracy)+' m. Appuie maintenant sur Enregistrer.';
+    status.textContent='Position trouvée avec une précision d’environ '+Math.round(p.coords.accuracy)+' m. Appuie maintenant sur Enregistrer.';
     btn.disabled=false;
   },function(e){
-    status.textContent='⚠️ Position impossible. Autorise la localisation pour ce site dans les réglages du téléphone.';
+    status.textContent='Position impossible. Autorise la localisation pour ce site dans les réglages du téléphone.';
     btn.disabled=false;
   },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
 }
@@ -108,15 +108,15 @@ async function refreshTracking(){
     var active={},list=document.getElementById('trackingList'),html='',bounds=[];
     d.trackers.forEach(function(t){
       active[t.id]=true;var pos=[t.latitude,t.longitude];bounds.push(pos);
-      var popup='<b>🚚 '+escapeHtml(t.driver)+'</b><br>'+escapeHtml(t.event)+'<br>Vitesse : '+t.speed_kmh+' km/h<br>Actualisé : '+t.updated_at+'<br><a href="'+t.mission_url+'">Ouvrir la mission</a>';
+      var popup='<b><span class="ui-icon">local_shipping</span> '+escapeHtml(t.driver)+'</b><br>'+escapeHtml(t.event)+'<br>Vitesse : '+t.speed_kmh+' km/h<br>Actualisé : '+t.updated_at+'<br><a href="'+t.mission_url+'">Ouvrir la mission</a>';
       if(trackingMarkers[t.id])trackingMarkers[t.id].setLatLng(pos).setPopupContent(popup);else trackingMarkers[t.id]=L.marker(pos).addTo(trackingMap).bindPopup(popup);
-      html+='<a class="tracking-chip" href="'+t.mission_url+'">🟢 '+escapeHtml(t.driver)+' · '+escapeHtml(t.event)+' · '+t.updated_at+'</a>';
+      html+='<a class="tracking-chip" href="'+t.mission_url+'"><span class="ui-icon">circle</span> '+escapeHtml(t.driver)+' · '+escapeHtml(t.event)+' · '+t.updated_at+'</a>';
     });
     Object.keys(trackingMarkers).forEach(function(id){if(!active[id]){trackingMap.removeLayer(trackingMarkers[id]);delete trackingMarkers[id];}});
     list.innerHTML=html||'<span style="font-size:.84rem;color:var(--gray-500)">Aucun chauffeur ne partage actuellement sa position.</span>';
     document.getElementById('trackingRefresh').textContent='Actualisé à '+new Date().toLocaleTimeString('fr-FR');
     if(bounds.length===1)trackingMap.setView(bounds[0],15);else if(bounds.length>1)trackingMap.fitBounds(bounds,{padding:[30,30]});
-  }catch(e){document.getElementById('trackingRefresh').textContent='⚠️ '+e.message;}
+  }catch(e){document.getElementById('trackingRefresh').textContent=e.message;}
 }
 function escapeHtml(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 window.addEventListener('load',initTrackingMap);

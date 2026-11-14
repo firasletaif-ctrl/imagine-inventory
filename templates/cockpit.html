@@ -4,17 +4,17 @@
 {% block head %}
 <style>
   /* Cadre de l'ecran : reprend les variables de style.css (aucune nouvelle couleur) */
-  .cockpit-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:14px;
-    overflow:hidden;box-shadow:var(--shadow-sm)}
+  .cockpit-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:18px;
+    overflow:hidden;box-shadow:var(--shadow-md)}
   .cockpit-panel iframe{width:100%;height:1500px;border:0;display:block;background:var(--gray-50)}
   .cockpit-hint{display:flex;gap:.6rem;align-items:flex-start;background:var(--blue-pale);
-    border:1px solid #C9DAF0;color:var(--blue-deep);border-radius:12px;padding:.75rem 1rem;
+    border:1px solid #C9DAF0;color:var(--blue-deep);border-radius:14px;padding:.8rem 1.05rem;
     font-size:.82rem;margin-bottom:1rem;line-height:1.5}
   .cockpit-hint b{font-weight:700}
   .cockpit-tools{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
   .cockpit-tools a{display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;font-weight:600;
     color:var(--blue-deep);background:var(--gray-50);border:1px solid var(--gray-200);
-    border-radius:100px;padding:.4rem .8rem;text-decoration:none}
+    border-radius:100px;padding:.5rem .95rem;min-height:38px;text-decoration:none;transition:background .18s,border-color .18s}
   .cockpit-tools a:hover{background:var(--blue-pale);border-color:#C9DAF0}
   @media(max-width:900px){.cockpit-panel iframe{height:2200px}}
 </style>
@@ -24,19 +24,19 @@
 <div class="form-page" style="max-width:1400px">
 
     <div class="page-header">
-        <h1>💼 Cockpit commercial</h1>
+        <h1><span class="ui-icon" aria-hidden="true">business_center</span> Cockpit commercial</h1>
         <p>Pipeline de leads, devis et marges, propositions et plan d'acquisition — sauvegardé dans la base d'Imagine Inventory.</p>
     </div>
 
     <div class="cockpit-tools">
-        <a href="#pipeline" onclick="cockpitGo('pipeline');return false;">📋 Pipeline</a>
-        <a href="#devis" onclick="cockpitGo('devis');return false;">🧮 Devis &amp; marges</a>
-        <a href="#acquisition" onclick="cockpitGo('acquisition');return false;">🚀 Acquisition</a>
-        <a href="#plan" onclick="cockpitGo('plan');return false;">🗺️ Plan 90 jours</a>
+        <a href="#pipeline" onclick="cockpitGo('pipeline');return false;"><span class="ui-icon" aria-hidden="true">assignment</span> Pipeline</a>
+        <a href="#devis" onclick="cockpitGo('devis');return false;"><span class="ui-icon" aria-hidden="true">calculate</span> Devis &amp; marges</a>
+        <a href="#acquisition" onclick="cockpitGo('acquisition');return false;"><span class="ui-icon" aria-hidden="true">rocket_launch</span> Acquisition</a>
+        <a href="#plan" onclick="cockpitGo('plan');return false;"><span class="ui-icon" aria-hidden="true">map</span> Plan 90 jours</a>
     </div>
 
     <div class="cockpit-hint">
-        <span style="font-size:1.05rem;line-height:1">ℹ️</span>
+        <span style="font-size:1.05rem;line-height:1"><span class="ui-icon" aria-hidden="true">info</span></span>
         <div>Vos données sont enregistrées dans la base du site (pas dans le navigateur) : elles vous suivent
         d'un poste à l'autre. <b>Accès réservé</b> — permission « Cockpit commercial » à attribuer dans
         <b>Gérer les rôles</b>.</div>
