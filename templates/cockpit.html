@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Cockpit commercial{% endblock %}
+
+{% block head %}
+<style>
+  /* Cadre de l'ecran : reprend les variables de style.css (aucune nouvelle couleur) */
+  .cockpit-panel{background:var(--white);border:1px solid var(--gray-200);border-radius:14px;
+    overflow:hidden;box-shadow:var(--shadow-sm)}
+  .cockpit-panel iframe{width:100%;height:1500px;border:0;display:block;background:var(--gray-50)}
+  .cockpit-hint{display:flex;gap:.6rem;align-items:flex-start;background:var(--blue-pale);
+    border:1px solid #C9DAF0;color:var(--blue-deep);border-radius:12px;padding:.75rem 1rem;
+    font-size:.82rem;margin-bottom:1rem;line-height:1.5}
+  .cockpit-hint b{font-weight:700}
+  .cockpit-tools{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+  .cockpit-tools a{display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;font-weight:600;
+    color:var(--blue-deep);background:var(--gray-50);border:1px solid var(--gray-200);
+    border-radius:100px;padding:.4rem .8rem;text-decoration:none}
+  .cockpit-tools a:hover{background:var(--blue-pale);border-color:#C9DAF0}
+  @media(max-width:900px){.cockpit-panel iframe{height:2200px}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page" style="max-width:1400px">
+
+    <div class="page-header">
+        <h1>💼 Cockpit commercial</h1>
+        <p>Pipeline de leads, devis et marges, propositions et plan d'acquisition — sauvegardé dans la base d'Imagine Inventory.</p>
+    </div>
+
+    <div class="cockpit-tools">
+        <a href="#pipeline" onclick="cockpitGo('pipeline');return false;">📋 Pipeline</a>
+        <a href="#devis" onclick="cockpitGo('devis');return false;">🧮 Devis &amp; marges</a>
+        <a href="#acquisition" onclick="cockpitGo('acquisition');return false;">🚀 Acquisition</a>
+        <a href="#plan" onclick="cockpitGo('plan');return false;">🗺️ Plan 90 jours</a>
+    </div>
+
+    <div class="cockpit-hint">
+        <span style="font-size:1.05rem;line-height:1">ℹ️</span>
+        <div>Vos données sont enregistrées dans la base du site (pas dans le navigateur) : elles vous suivent
+        d'un poste à l'autre. <b>Accès réservé</b> — permission « Cockpit commercial » à attribuer dans
+        <b>Gérer les rôles</b>.</div>
+    </div>
+
+    <div class="cockpit-panel">
+        <iframe id="cockpitFrame" title="Cockpit commercial"
+                src="{{ url_for('static', filename='cockpit/cockpit-agence.html') }}?embed=1&amp;api={{ url_for('cockpit_api_state') }}&amp;v=1"
+                loading="lazy"></iframe>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var frame = document.getElementById('cockpitFrame');
+    if (!frame) return;
+
+    /* L'iframe annonce sa hauteur reelle : le cadre s'adapte, pas de double ascenseur. */
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'cockpit-height') return;
+      frame.style.height = Math.max(700, Number(e.data.height) || 0) + 'px';
+    });
+
+    /* Raccourcis au-dessus du cadre : on pilote le cockpit sans le recharger. */
+    window.cockpitGo = function (route) {
+      try { frame.contentWindow.location.hash = '#' + route; } catch (err) { /* cross-origin : ignore */ }
+    };
+  })();
+</script>
+{% endblock %}
