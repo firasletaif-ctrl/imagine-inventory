@@ -3,8 +3,8 @@
 
 {% block head %}
 <style>
-.eqcal-card{background:white;border-radius:14px;border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);overflow:hidden}
-.cal-toolbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1.1rem;background:var(--blue-deep);color:white;flex-wrap:wrap}
+.eqcal-card{background:white;border-radius:16px;border:1px solid var(--gray-200);box-shadow:var(--shadow-md);overflow:hidden}
+.cal-toolbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.85rem 1.15rem;background:linear-gradient(135deg,var(--blue-deep),var(--blue-dark));color:white;flex-wrap:wrap}
 .cal-nav{display:flex;align-items:center;gap:.5rem}
 .cal-month-label{font-size:1.05rem;font-weight:800;letter-spacing:.5px;min-width:175px;text-align:center;text-transform:capitalize}
 .cal-navbtn{background:rgba(255,255,255,.12);color:white;border:none;border-radius:8px;width:32px;height:32px;font-size:1rem;cursor:pointer;transition:background .15s}
@@ -37,8 +37,8 @@
 .eqday-row{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem;padding:.55rem .7rem;border:1px solid var(--gray-200);border-radius:8px;margin-bottom:.5rem;font-size:.88rem;background:var(--gray-50)}
 .eqday-row .muted{color:var(--gray-400);font-size:.8rem}
 /* Hub d'actions rapides (page destinee au scan QR) */
-.hub-actions{background:linear-gradient(135deg,#0B1D3A,#13294B);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1.5rem;box-shadow:var(--shadow-md)}
-.hub-btn{display:inline-flex;align-items:center;gap:.45rem;border:none;color:white;font-weight:700;font-size:.9rem;padding:.75rem 1.15rem;border-radius:10px;cursor:pointer;text-decoration:none;transition:filter .15s,transform .1s}
+.hub-actions{background:linear-gradient(135deg,#0B1D3A,#1A3A6B);border-radius:16px;padding:1.15rem 1.4rem;margin-bottom:1.5rem;box-shadow:var(--shadow-md)}
+.hub-btn{display:inline-flex;align-items:center;gap:.45rem;border:none;color:white;font-weight:700;font-size:.9rem;padding:.8rem 1.2rem;min-height:46px;border-radius:12px;cursor:pointer;text-decoration:none;transition:filter .15s,transform .12s}
 .hub-btn:hover{filter:brightness(1.12)}
 .hub-btn:active{transform:scale(.98)}
 .hub-btn small{font-weight:500;opacity:.85}
