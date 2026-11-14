@@ -83,7 +83,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
-</head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap"><style>.ui-icon{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;font-size:1.12em;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:"liga";-webkit-font-smoothing:antialiased;vertical-align:-.16em;}</style></head>
 <body>
 <div class="wrap">
   <div class="brand"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="Imagine Events Tunisia" style="height:46px;width:auto"></div>
@@ -97,20 +97,20 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
     {% if eq.primary_image() %}
     <img class="photo" src="{{ url_for('uploaded_file', fn=eq.primary_image()) }}" alt="{{ eq.name }}">
     {% else %}
-    <div class="photo-ph">{{ eq.category.icon if eq.category else '📦' }}</div>
+    <div class="photo-ph">{{ (eq.category.icon if eq.category else '📦')|material_icon }}</div>
     {% endif %}
     <div class="body">
-      <div class="cat">{{ eq.category.icon if eq.category else '📦' }} {{ eq.category.name if eq.category else 'Matériel' }}</div>
+      <div class="cat">{{ (eq.category.icon if eq.category else '📦')|material_icon }} {{ eq.category.name if eq.category else 'Matériel' }}</div>
       <h1>{{ eq.name }}</h1>
       <div class="ref">{{ eq.reference or '' }}</div>
-      <div class="loc">📍 {{ eq.location }} · État : {{ eq.condition }}</div>
+      <div class="loc"><span class="ui-icon" aria-hidden="true">location_on</span> {{ eq.location }} · État : {{ eq.condition }}</div>
     </div>
     <div class="avail">
         <div>
           <div class="txt">{{ eq.available_quantity }} / {{ eq.total_quantity }} disponibles</div>
-          {% if eq.in_repair %}<div class="rep">🔧 {{ eq.in_repair }} en réparation</div>{% endif %}
+          {% if eq.in_repair %}<div class="rep"><span class="ui-icon" aria-hidden="true">build</span> {{ eq.in_repair }} en réparation</div>{% endif %}
         </div>
-        <span class="pill {% if eq.available_quantity > 0 %}ok{% else %}no{% endif %}">{{ '✅ DISPONIBLE' if eq.available_quantity > 0 else '🔴 TOUT SORTI' }}</span>
+        <span class="pill {% if eq.available_quantity > 0 %}ok{% else %}no{% endif %}">{% if eq.available_quantity > 0 %}<span class="ui-icon" aria-hidden="true">check_circle</span> DISPONIBLE{% else %}<span class="ui-icon" aria-hidden="true">cancel</span> TOUT SORTI{% endif %}</span>
     </div>
   </div>
 
@@ -118,20 +118,20 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
   <div class="actions">
     {% if has_perm('borrow_equipment') %}
     <button class="abtn green" {% if eq.available_quantity <= 0 %}style="opacity:.5;pointer-events:none"{% endif %} onclick="openBorrow()">
-      📤 EMPRUNTER <small>{{ eq.available_quantity }} dispo</small>
+      <span class="ui-icon" aria-hidden="true">outbox</span> EMPRUNTER <small>{{ eq.available_quantity }} dispo</small>
     </button>
     {% endif %}
     {% if has_perm('return_equipment') and active_borrows %}
     <button class="abtn blue" onclick="document.getElementById('borrowsSec').scrollIntoView({behavior:'smooth'})">
-      ✅ RETOURNER <small>{{ active_borrows|length }} emprunt(s) en cours</small>
+      <span class="ui-icon" aria-hidden="true">check_circle</span> RETOURNER <small>{{ active_borrows|length }} emprunt(s) en cours</small>
     </button>
     {% endif %}
     {% if has_perm('repair_stock','manage_equipment') %}
-    <button class="abtn orange" onclick="openRepair()">🔧 SIGNALER EN RÉPARATION</button>
+    <button class="abtn orange" onclick="openRepair()"><span class="ui-icon" aria-hidden="true">build</span> SIGNALER EN RÉPARATION</button>
     {% endif %}
     <div class="row2">
-      <a class="abtn gray" href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" target="_blank">🔲 ÉTIQUETTE</a>
-      <a class="abtn gray" href="{{ url_for('equipment_detail', eid=eq.id) }}">📄 FICHE</a>
+      <a class="abtn gray" href="{{ url_for('equipment_qrcode_print', eid=eq.id) }}" target="_blank"><span class="ui-icon" aria-hidden="true">qr_code_2</span> ÉTIQUETTE</a>
+      <a class="abtn gray" href="{{ url_for('equipment_detail', eid=eq.id) }}"><span class="ui-icon" aria-hidden="true">description</span> FICHE</a>
     </div>
   </div>
 
@@ -143,7 +143,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
     <div class="brow">
       <div class="info">
         <div class="who">{{ b.quantity }}x — {{ b.user.full_name if b.user else '?' }}</div>
-        <div class="meta">{% if b.pickup_date %}📦 {{ b.pickup_date.strftime('%d/%m/%Y') }} · {% endif %}⏰ retour {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.event_name %} · 🎯 {{ b.event_name }}{% endif %}</div>
+        <div class="meta">{% if b.pickup_date %}<span class="ui-icon" aria-hidden="true">inventory_2</span> {{ b.pickup_date.strftime('%d/%m/%Y') }} · {% endif %}<span class="ui-icon" aria-hidden="true">schedule</span> retour {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.event_name %} · <span class="ui-icon" aria-hidden="true">gps_fixed</span> {{ b.event_name }}{% endif %}</div>
       </div>
       {% if b.user_id == current_user.id or has_perm('manage_users') %}
       <button class="rbtn" onclick='openReturn({{ b.id }}, {{ b.quantity }}, "{{ b.user.full_name | e }}")'>Retourner</button>
@@ -162,18 +162,18 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
 <!-- Modal emprunter -->
 <div class="modal-overlay" id="borrowModal">
   <div class="modal">
-    <h2>📤 Emprunter : {{ eq.name }} <button class="x" onclick="closeM('borrowModal')">✕</button></h2>
+    <h2><span class="ui-icon" aria-hidden="true">outbox</span> Emprunter : {{ eq.name }} <button class="x" onclick="closeM('borrowModal')"><span class="ui-icon" aria-hidden="true">close</span></button></h2>
     <form method="POST" action="{{ url_for('borrow_equipment', eid=eq.id) }}">
       <div class="fg">
         <label>Quantité (max {{ eq.available_quantity }})</label>
         <input type="number" name="quantity" value="1" min="1" max="{{ eq.available_quantity }}" required>
       </div>
       <div class="frow">
-        <div class="fg"><label>📦 Date de prise</label><input type="date" name="pickup_date" value="{{ today.strftime('%Y-%m-%d') }}"></div>
-        <div class="fg"><label>⏰ Retour prévu</label><input type="date" name="return_date" min="{{ today.strftime('%Y-%m-%d') }}" required></div>
+        <div class="fg"><label><span class="ui-icon" aria-hidden="true">inventory_2</span> Date de prise</label><input type="date" name="pickup_date" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+        <div class="fg"><label><span class="ui-icon" aria-hidden="true">schedule</span> Retour prévu</label><input type="date" name="return_date" min="{{ today.strftime('%Y-%m-%d') }}" required></div>
       </div>
       <div class="fg">
-        <label>🎯 Événement</label>
+        <label><span class="ui-icon" aria-hidden="true">gps_fixed</span> Événement</label>
         <select name="event_id" onchange="fillEvent(this)">
           <option value="">— Aucun —</option>
           {% for ev in upcoming_events %}
@@ -185,7 +185,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
       <div class="fg"><label>Notes</label><textarea name="notes" rows="2" placeholder="Détails..."></textarea></div>
       <div class="mfoot">
         <button type="button" class="cancel" onclick="closeM('borrowModal')">Annuler</button>
-        <button class="go">✅ Confirmer</button>
+        <button class="go"><span class="ui-icon" aria-hidden="true">check_circle</span> Confirmer</button>
       </div>
     </form>
   </div>
@@ -194,16 +194,16 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
 <!-- Modal retour -->
 <div class="modal-overlay" id="returnModal">
   <div class="modal">
-    <h2>✅ Retourner <button class="x" onclick="closeM('returnModal')">✕</button></h2>
+    <h2><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner <button class="x" onclick="closeM('returnModal')"><span class="ui-icon" aria-hidden="true">close</span></button></h2>
     <form id="returnForm" method="POST" action="">
       <p id="returnInfo" style="font-size:.9rem;color:#475569;margin-bottom:1rem;line-height:1.6"></p>
       <div class="fg">
-        <label>🔧 Quantité en réparation (0 si tout est propre)</label>
+        <label><span class="ui-icon" aria-hidden="true">build</span> Quantité en réparation (0 si tout est propre)</label>
         <input type="number" id="repairQty" name="repair_qty" min="0" value="0" required>
       </div>
       <div class="mfoot">
         <button type="button" class="cancel" onclick="closeM('returnModal')">Annuler</button>
-        <button class="go">✅ Confirmer le retour</button>
+        <button class="go"><span class="ui-icon" aria-hidden="true">check_circle</span> Confirmer le retour</button>
       </div>
     </form>
   </div>
@@ -212,7 +212,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
 <!-- Modal reparation -->
 <div class="modal-overlay" id="repairModal">
   <div class="modal">
-    <h2>🔧 Signaler en réparation <button class="x" onclick="closeM('repairModal')">✕</button></h2>
+    <h2><span class="ui-icon" aria-hidden="true">build</span> Signaler en réparation <button class="x" onclick="closeM('repairModal')"><span class="ui-icon" aria-hidden="true">close</span></button></h2>
     <form method="POST" action="{{ url_for('report_repair', eid=eq.id) }}">
       <p style="font-size:.9rem;color:#475569;margin-bottom:1rem">
         <strong>{{ eq.name }}</strong> — {{ eq.total_quantity - (eq.in_repair or 0) }} unité(s) hors réparation.
@@ -223,7 +223,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
       </div>
       <div class="mfoot">
         <button type="button" class="cancel" onclick="closeM('repairModal')">Annuler</button>
-        <button class="go">🔧 Passer en réparation</button>
+        <button class="go"><span class="ui-icon" aria-hidden="true">build</span> Passer en réparation</button>
       </div>
     </form>
   </div>

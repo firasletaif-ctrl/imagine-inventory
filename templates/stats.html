@@ -30,7 +30,7 @@
 {% block content %}
 <div class="form-page" style="max-width:1150px">
     <div class="page-header">
-        <h1>📊 Statistiques du dépôt</h1>
+        <h1><span class="ui-icon" aria-hidden="true">bar_chart</span> Statistiques du dépôt</h1>
         <p>Vue d'ensemble de votre activité — mise à jour en temps réel, {{ now.strftime('%d/%m/%Y à %H:%M') }}.</p>
     </div>
 
@@ -47,7 +47,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1rem">
         <!-- Top matériel -->
         <div class="stat-panel">
-            <h2>🏆 Matériel le plus emprunté (top 10)</h2>
+            <h2><span class="ui-icon" aria-hidden="true">emoji_events</span> Matériel le plus emprunté (top 10)</h2>
             {% if top10 %}
             {% for t in top10 %}
             <div class="hbar-row">
@@ -64,7 +64,7 @@
 
         <!-- Emprunts par mois -->
         <div class="stat-panel">
-            <h2>📈 Emprunts par mois (12 derniers mois)</h2>
+            <h2><span class="ui-icon" aria-hidden="true">trending_up</span> Emprunts par mois (12 derniers mois)</h2>
             <div class="vbars">
                 {% for m in months %}
                 <div class="vbar-col">
@@ -78,7 +78,7 @@
 
         <!-- Par catégorie -->
         <div class="stat-panel">
-            <h2>📂 Matériel par catégorie</h2>
+            <h2><span class="ui-icon" aria-hidden="true">folder_open</span> Matériel par catégorie</h2>
             {% for c in cats %}
             <div class="hbar-row">
                 <div class="hbar-name" title="{{ c.name }}">{{ c.name }}</div>
@@ -91,7 +91,7 @@
 
         <!-- Top clients -->
         <div class="stat-panel">
-            <h2>👑 Clients les plus actifs</h2>
+            <h2><span class="ui-icon" aria-hidden="true">workspace_premium</span> Clients les plus actifs</h2>
             {% if top_clients %}
             {% for c in top_clients %}
             <div class="topclient">
@@ -102,7 +102,7 @@
             {% endfor %}
             {% else %}
             <p style="color:var(--gray-500);font-size:.88rem">Liez des événements à des clients pour voir leur classement.</p>
-            <p style="margin-top:.8rem"><a class="btn btn-secondary btn-sm" href="{{ url_for('clients_list') }}">👤 Gérer les clients</a></p>
+            <p style="margin-top:.8rem"><a class="btn btn-secondary btn-sm" href="{{ url_for('clients_list') }}"><span class="ui-icon" aria-hidden="true">person</span> Gérer les clients</a></p>
             {% endif %}
         </div>
     </div>

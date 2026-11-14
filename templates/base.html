@@ -7,7 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=8">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#0B1D3A">
@@ -26,36 +27,36 @@
             <button type="button" class="sidebar-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebarCollapse()" title="Replier / déplier le menu" aria-label="Replier le menu">‹</button>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-section-label">📦 Stock &amp; matériel</div>
+            <div class="nav-section-label"><span class="ui-icon" aria-hidden="true">inventory_2</span> Stock &amp; matériel</div>
             <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                <span class="nav-icon">📋</span><span>Catalogue du matériel</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">assignment</span></span><span>Catalogue du matériel</span>
             </a>
             {% if has_perm('add_equipment','manage_equipment') %}
             <a href="{{ url_for('add_equipment') }}" class="nav-item nav-subitem {% if request.endpoint == 'add_equipment' %}active{% endif %}">
-                <span class="nav-icon">➕</span><span>Ajouter du matériel</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">add</span></span><span>Ajouter du matériel</span>
             </a>
             {% endif %}
             {% if has_perm('manage_kits','manage_equipment') %}
             <a href="{{ url_for('kits_list') }}" class="nav-item {% if request.endpoint in ('kits_list','kit_detail') %}active{% endif %}">
-                <span class="nav-icon">🧰</span><span>Kits de matériel</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">handyman</span></span><span>Kits de matériel</span>
             </a>
             {% endif %}
             <a href="{{ url_for('inventory_page') }}" class="nav-item {% if request.endpoint in ('inventory_page', 'confirm_inventory_check') %}active{% endif %}">
-                <span class="nav-icon">📦</span><span>Inventaire physique</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">inventory_2</span></span><span>Inventaire physique</span>
             </a>
             <a href="{{ url_for('borrows_page') }}" class="nav-item {% if request.endpoint == 'borrows_page' %}active{% endif %}">
-                <span class="nav-icon">📤</span><span>Emprunts &amp; retours</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">outbox</span></span><span>Emprunts &amp; retours</span>
             </a>
             <a href="{{ url_for('repairs_page') }}" class="nav-item {% if request.endpoint == 'repairs_page' %}active{% endif %}">
-                <span class="nav-icon">🔧</span><span>Réparations</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">build</span></span><span>Réparations</span>
             </a>
             {% if has_perm('manage_orders','manage_equipment') %}
             <a href="{{ url_for('orders_page') }}" class="nav-item {% if request.endpoint == 'orders_page' %}active{% endif %}">
-                <span class="nav-icon">🛒</span><span>Commandes fournisseurs</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">shopping_cart</span></span><span>Commandes fournisseurs</span>
             </a>
             {% endif %}
 
-            <div class="nav-section-label nav-section-spaced">🎪 Événements — parcours</div>
+            <div class="nav-section-label nav-section-spaced"><span class="ui-icon" aria-hidden="true">event</span> Événements — parcours</div>
             {% if has_perm('manage_clients','manage_schedule') %}
             <a href="{{ url_for('clients_list') }}" class="nav-item {% if request.endpoint in ('clients_list','client_detail','client_new','client_edit') %}active{% endif %}">
                 <span class="nav-step">1</span><span>Clients</span>
@@ -77,80 +78,80 @@
             {% endif %}
 
             {% if has_perm('view_logs','manage_equipment','manage_schedule') %}
-            <div class="nav-section-label nav-section-spaced">📊 Pilotage</div>
+            <div class="nav-section-label nav-section-spaced"><span class="ui-icon" aria-hidden="true">bar_chart</span> Pilotage</div>
             <a href="{{ url_for('stats_page') }}" class="nav-item {% if request.endpoint == 'stats_page' %}active{% endif %}">
-                <span class="nav-icon">📈</span><span>Statistiques</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">trending_up</span></span><span>Statistiques</span>
             </a>
             {% endif %}
             {% if has_perm('manage_cockpit') %}
-            <div class="nav-section-label nav-section-spaced">💼 Commercial</div>
+            <div class="nav-section-label nav-section-spaced"><span class="ui-icon" aria-hidden="true">business_center</span> Commercial</div>
             <a href="{{ url_for('cockpit_page') }}" class="nav-item {% if request.endpoint == 'cockpit_page' %}active{% endif %}" title="Pipeline de leads, devis et marges, propositions">
-                <span class="nav-icon">💼</span><span>Cockpit commercial</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">business_center</span></span><span>Cockpit commercial</span>
             </a>
             {% endif %}
             {% if has_perm('export_excel','export_pdf','manage_equipment') %}
-            <div class="nav-section-label nav-section-spaced">📤 Export</div>
+            <div class="nav-section-label nav-section-spaced"><span class="ui-icon" aria-hidden="true">outbox</span> Export</div>
             {% if has_perm('export_excel','manage_equipment') %}
             <a href="{{ url_for('export_excel') }}" class="nav-item nav-subitem">
-                <span class="nav-icon">📊</span><span>Excel</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">bar_chart</span></span><span>Excel</span>
             </a>
             {% endif %}
             {% if has_perm('export_pdf','manage_equipment') %}
             <a href="{{ url_for('export_printer') }}" class="nav-item nav-subitem" target="_blank">
-                <span class="nav-icon">🖨️</span><span>PDF / Imprimer</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">print</span></span><span>PDF / Imprimer</span>
             </a>
             {% endif %}
             {% if has_perm('photo_backup','manage_database') %}
             <a href="{{ url_for('full_backup') }}" class="nav-item nav-subitem" title="Tout le site en un fichier (données + photos) — migration / sauvegarde">
-                <span class="nav-icon">💾</span><span>Sauvegarde complète</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">save</span></span><span>Sauvegarde complète</span>
             </a>
             {% if has_perm('import_csv','manage_database') %}
             <a href="{{ url_for('import_full') }}" class="nav-item nav-subitem" title="Restaurer tout le site depuis une sauvegarde ZIP (1 clic)">
-                <span class="nav-icon">⬆️</span><span>Import complet (1 clic)</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">upload</span></span><span>Import complet (1 clic)</span>
             </a>
             {% endif %}
             {% endif %}
             <a href="{{ url_for('all_qrcodes') }}" class="nav-item nav-subitem">
-                <span class="nav-icon">🔲</span><span>QR Codes (tous)</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">qr_code_2</span></span><span>QR Codes (tous)</span>
             </a>
             {% endif %}
             {% if has_perm('manage_users','manage_roles','view_logs','clear_borrow_history','clear_activity_logs') %}
-            <div class="nav-section-label nav-section-spaced">⚙️ Administration</div>
+            <div class="nav-section-label nav-section-spaced"><span class="ui-icon" aria-hidden="true">settings</span> Administration</div>
             {% if has_perm('manage_users') %}
             <a href="{{ url_for('manage_users') }}" class="nav-item {% if request.endpoint == 'manage_users' %}active{% endif %}">
-                <span class="nav-icon">👥</span><span>Gerer les utilisateurs</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">groups</span></span><span>Gerer les utilisateurs</span>
             </a>
             {% endif %}
             {% if has_perm('manage_roles') %}
             <a href="{{ url_for('manage_roles') }}" class="nav-item {% if request.endpoint == 'manage_roles' %}active{% endif %}">
-                <span class="nav-icon">🔐</span><span>Gerer les roles</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">admin_panel_settings</span></span><span>Gerer les roles</span>
             </a>
             {% endif %}
             {% if has_perm('view_logs') %}
             <a href="{{ url_for('activity_logs') }}" class="nav-item {% if request.endpoint == 'activity_logs' %}active{% endif %}">
-                <span class="nav-icon">📜</span><span>Logs d'activite</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">history</span></span><span>Logs d'activite</span>
             </a>
             {% endif %}
             {% if has_perm('manage_database') %}
             <a href="{{ url_for('admin_cron') }}" class="nav-item {% if request.endpoint == 'admin_cron' %}active{% endif %}" title="Tâches du matin : sauvegarde + inventaire + rappels (cron Render gratuit)">
-                <span class="nav-icon">⏰</span><span>Tâches auto (Cron)</span>
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">schedule</span></span><span>Tâches auto (Cron)</span>
             </a>
             {% endif %}
             {% if has_perm('clear_borrow_history','clear_history') %}
-            <a href="#" class="nav-item nav-danger" onclick="openClearHistoryModal();return false" title="⚠️ A utiliser avec precaution">
-                <span class="nav-icon">⚠️</span><span>Effacer l'historique</span>
+            <a href="#" class="nav-item nav-danger" onclick="openClearHistoryModal();return false" title="A utiliser avec precaution">
+                <span class="nav-icon"><span class="ui-icon" aria-hidden="true">warning</span></span><span>Effacer l'historique</span>
             </a>
             {% endif %}
             {% endif %}
             <div style="margin-top:auto;padding:0.5rem 0 0">
                 <a href="{{ url_for('notifications') }}" class="nav-item nav-subitem" style="position:relative">
-                    <span class="nav-icon">🔔</span><span>Notifications</span>
+                    <span class="nav-icon"><span class="ui-icon" aria-hidden="true">notifications</span></span><span>Notifications</span>
                     {% if current_user.unread_notifications > 0 %}
                     <span style="background:var(--red);color:white;padding:0.1rem 0.45rem;border-radius:100px;font-size:.68rem;font-weight:800;margin-left:auto">{{ current_user.unread_notifications }}</span>
                     {% endif %}
                 </a>
                 <a href="{{ url_for('change_password') }}" class="nav-item nav-subitem">
-                    <span class="nav-icon">🔑</span><span>Changer mot de passe</span>
+                    <span class="nav-icon"><span class="ui-icon" aria-hidden="true">key</span></span><span>Changer mot de passe</span>
                 </a>
             </div>
         </nav>
@@ -162,15 +163,15 @@
                     <div class="user-role">{{ current_user.role_name }}</div>
                 </div>
             </div>
-            <a href="{{ url_for('logout') }}" class="logout-btn" title="Deconnexion" aria-label="Se déconnecter">🚪</a>
+            <a href="{{ url_for('logout') }}" class="logout-btn" title="Deconnexion" aria-label="Se déconnecter"><span class="ui-icon" aria-hidden="true">logout</span></a>
         </div>
     </aside>
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
     <header class="mobile-header">
-        <button class="menu-toggle" onclick="toggleMenu()" aria-label="Ouvrir le menu">☰</button>
+        <button class="menu-toggle" onclick="toggleMenu()" aria-label="Ouvrir le menu"><span class="ui-icon" aria-hidden="true">menu</span></button>
         <span class="mh-title">Imagine Inventory</span>
-        <a href="{{ url_for('notifications') }}" class="mh-bell" aria-label="Notifications">🔔
+        <a href="{{ url_for('notifications') }}" class="mh-bell" aria-label="Notifications"><span class="ui-icon" aria-hidden="true">notifications</span>
             {% if current_user.unread_notifications > 0 %}
             <span style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;padding:0 .3rem;border-radius:100px;font-size:.62rem;font-weight:800;min-width:18px;text-align:center">{{ current_user.unread_notifications }}</span>
             {% endif %}
@@ -186,7 +187,7 @@
         <div class="flash-container">
             {% for category, message in messages %}
             <div class="flash-message flash-{{ category }}" onclick="this.remove()">
-                <span class="flash-icon">{% if category == 'success' %}✅{% elif category == 'error' %}❌{% elif category == 'info' %}ℹ️{% else %}💬{% endif %}</span>
+                <span class="flash-icon">{% if category == 'success' %}<span class="ui-icon" aria-hidden="true">check_circle</span>{% elif category == 'error' %}<span class="ui-icon" aria-hidden="true">cancel</span>{% elif category == 'info' %}<span class="ui-icon" aria-hidden="true">info</span>{% else %}<span class="ui-icon" aria-hidden="true">chat</span>{% endif %}</span>
                 <span>{{ message }}</span>
             </div>
             {% endfor %}
@@ -207,10 +208,10 @@
                     </div>
                 </div>
                 <div class="footer-info">
-                    <span>📍 Rue du Lac Loch Ness, Imm Neo, 3eme etage, 1053 Les Berges du Lac, Tunis</span>
-                    <span>📞 +216 71 656 056</span>
-                    <span>📱 +216 22 902 824</span>
-                    <span>✉️ info@i-maginevents.com</span>
+                    <span><span class="ui-icon" aria-hidden="true">location_on</span> Rue du Lac Loch Ness, Imm Neo, 3eme etage, 1053 Les Berges du Lac, Tunis</span>
+                    <span><span class="ui-icon" aria-hidden="true">call</span> +216 71 656 056</span>
+                    <span><span class="ui-icon" aria-hidden="true">smartphone</span> +216 22 902 824</span>
+                    <span><span class="ui-icon" aria-hidden="true">mail</span> info@i-maginevents.com</span>
                 </div>
                 <div class="footer-copy">© 2026 Imagine Events Tunisia · Tous droits reserves</div>
             </div>

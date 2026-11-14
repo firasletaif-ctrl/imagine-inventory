@@ -4,13 +4,13 @@
 {% block content %}
 <div class="form-page" style="max-width:800px">
     <div class="dash-header">
-        <div><h1 class="dash-title">🔔 Notifications</h1><p class="dash-subtitle">{{ notifs|length }} notification(s)</p></div>
+        <div><h1 class="dash-title"><span class="ui-icon" aria-hidden="true">notifications</span> Notifications</h1><p class="dash-subtitle">{{ notifs|length }} notification(s)</p></div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
             {% if notifs|selectattr('read','eq',false)|list|length > 0 %}
-            <form method="POST" action="{{ url_for('mark_all_read') }}"><button class="btn btn-sm btn-secondary">✅ Tout marquer lu</button></form>
+            <form method="POST" action="{{ url_for('mark_all_read') }}"><button class="btn btn-sm btn-secondary"><span class="ui-icon" aria-hidden="true">check_circle</span> Tout marquer lu</button></form>
             {% endif %}
             {% if notifs|length > 0 %}
-            <form method="POST" action="{{ url_for('clear_all_notifications') }}" onsubmit="return confirm('Supprimer TOUTES vos notifications ?')"><button class="btn btn-sm btn-danger">🗑️ Tout effacer</button></form>
+            <form method="POST" action="{{ url_for('clear_all_notifications') }}" onsubmit="return confirm('Supprimer TOUTES vos notifications ?')"><button class="btn btn-sm btn-danger"><span class="ui-icon" aria-hidden="true">delete</span> Tout effacer</button></form>
             {% endif %}
         </div>
     </div>
@@ -32,11 +32,11 @@
                 {% if not n.read %}
                 <form method="POST" action="{{ url_for('mark_read',nid=n.id) }}" style="display:inline">
                     <input type="hidden" name="redirect" value="/notifications">
-                    <button class="btn btn-sm btn-secondary">Lu ✓</button>
+                    <button class="btn btn-sm btn-secondary">Lu <span class="ui-icon" aria-hidden="true">check</span></button>
                 </form>
                 {% endif %}
                 <form method="POST" action="{{ url_for('delete_notification',nid=n.id) }}" onsubmit="return confirm('Supprimer cette notification ?')" style="display:inline">
-                    <button class="btn btn-sm btn-danger" title="Supprimer">🗑️</button>
+                    <button class="btn btn-sm btn-danger" title="Supprimer"><span class="ui-icon" aria-hidden="true">delete</span></button>
                 </form>
             </div>
         </div>
@@ -44,7 +44,7 @@
     </div>
     {% else %}
     <div style="text-align:center;padding:3rem;background:white;border-radius:14px;border:1px solid var(--gray-200)">
-        <div style="font-size:3rem;margin-bottom:.5rem">🔔</div>
+        <div style="font-size:3rem;margin-bottom:.5rem"><span class="ui-icon" aria-hidden="true">notifications</span></div>
         <h3 style="color:var(--gray-600)">Aucune notification</h3>
         <p style="color:var(--gray-400)">Vous recevrez des notifications quand un evenement vous est assigne ou quand l'admin valide votre compte.</p>
     </div>

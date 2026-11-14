@@ -8,14 +8,14 @@
     </div>
 
     <div class="page-header">
-        <h1>✏️ Modifier : {{ eq.name }}</h1>
+        <h1><span class="ui-icon" aria-hidden="true">edit</span> Modifier : {{ eq.name }}</h1>
         <p>Réf: {{ eq.reference }}</p>
     </div>
 
     <!-- Images existantes EN DEHORS du formulaire principal -->
     {% if eq.images %}
     <div class="form-card" style="margin-bottom:1rem">
-        <h2>🖼️ Images actuelles</h2>
+        <h2><span class="ui-icon" aria-hidden="true">image</span> Images actuelles</h2>
         <div class="existing-images" style="display:flex;gap:.75rem;flex-wrap:wrap">
             {% for img in eq.images %}
             <div class="existing-img" style="position:relative;width:120px;height:120px;border-radius:8px;overflow:visible;border:1px solid var(--gray-200);display:inline-block">
@@ -31,7 +31,7 @@
 
     <form method="POST" enctype="multipart/form-data" class="equipment-form">
         <div class="form-card">
-            <h2>📦 Informations générales</h2>
+            <h2><span class="ui-icon" aria-hidden="true">inventory_2</span> Informations générales</h2>
             <div class="form-row">
                 <div class="form-group flex-2">
                     <label for="name">Nom du matériel *</label>
@@ -53,7 +53,7 @@
                         <option value="">— Aucune —</option>
                         {% for cat in categories %}
                         <option value="{{ cat.id }}" {% if eq.category_id == cat.id %}selected{% endif %}>
-                            {{ cat.icon }} {{ cat.name }}
+                            {{ cat.name }}
                         </option>
                         {% endfor %}
                     </select>
@@ -79,7 +79,7 @@
         </div>
 
         <div class="form-card">
-            <h2>📋 Spécifications techniques</h2>
+            <h2><span class="ui-icon" aria-hidden="true">assignment</span> Spécifications techniques</h2>
             <div class="form-group">
                 <label for="specifications">Caractéristiques</label>
                 <textarea id="specifications" name="specifications" rows="5">{{ eq.specifications }}</textarea>
@@ -88,14 +88,14 @@
         </div>
 
         <div class="form-card">
-            <h2>📸 Ajouter des photos</h2>
+            <h2><span class="ui-icon" aria-hidden="true">photo_camera</span> Ajouter des photos</h2>
             <div class="upload-zone" id="uploadZone" ondrop="return false;" ondragover="return false;">
-                <div class="upload-icon">📸</div>
+                <div class="upload-icon"><span class="ui-icon" aria-hidden="true">photo_camera</span></div>
                 <p>Glissez-déposez des images ici</p>
                 <small>PNG, JPG, WEBP — Max 16 Mo par fichier</small>
-                <div id="resizeHint" style="display:none;color:#0B1D3A;font-weight:bold;margin-top:.4rem">⏳ Optimisation des photos…</div>
+                <div id="resizeHint" style="display:none;color:#0B1D3A;font-weight:bold;margin-top:.4rem"><span class="ui-icon" aria-hidden="true">hourglass_top</span> Optimisation des photos…</div>
                 <label for="images" class="btn btn-secondary" style="font-size:1rem;padding:.8rem 1.5rem;cursor:pointer;margin-top:1rem">
-                    📸📁 Photo ou galerie
+                    <span class="ui-icon" aria-hidden="true">photo_camera</span><span class="ui-icon" aria-hidden="true">folder</span> Photo ou galerie
                 </label>
                 <input type="file" id="images" name="images" accept="image/*" multiple onchange="previewImages(event)" style="position:absolute;width:0.1px;height:0.1px;opacity:0;overflow:hidden;z-index:-1">
             </div>
@@ -105,7 +105,7 @@
         <div class="form-actions">
             <a href="{{ url_for('equipment_detail', eid=eq.id) }}" class="btn btn-secondary">Annuler</a>
             <button type="submit" class="btn btn-accent btn-lg" id="submitBtn">
-                💾 Enregistrer les modifications
+                <span class="ui-icon" aria-hidden="true">save</span> Enregistrer les modifications
             </button>
         </div>
     </form>

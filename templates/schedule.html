@@ -87,19 +87,19 @@
 <div class="form-page" style="max-width:1200px">
     {% if has_perm('schedule_create','manage_schedule') %}
     <div class="dash-header">
-        <div><h1 class="dash-title">📅 Emploi du temps</h1><p class="dash-subtitle">Congres, evenements, planning equipe</p></div>
-        <button class="btn btn-accent" onclick="openModal('createEventModal')">➕ Nouvel evenement</button>
+        <div><h1 class="dash-title"><span class="ui-icon" aria-hidden="true">calendar_month</span> Emploi du temps</h1><p class="dash-subtitle">Congres, evenements, planning equipe</p></div>
+        <button class="btn btn-accent" onclick="openModal('createEventModal')"><span class="ui-icon" aria-hidden="true">add</span> Nouvel evenement</button>
     </div>
     {% else %}
     <div class="dash-header">
-        <div><h1 class="dash-title">📅 Emploi du temps</h1><p class="dash-subtitle">Calendrier des evenements</p></div>
+        <div><h1 class="dash-title"><span class="ui-icon" aria-hidden="true">calendar_month</span> Emploi du temps</h1><p class="dash-subtitle">Calendrier des evenements</p></div>
     </div>
     {% endif %}
 
     <!-- ══ Synchronisation Google / Apple / Outlook ══ -->
     <div class="sync-card">
         <div class="sync-head" id="syncHead" onclick="toggleSync()">
-            <span>🔗 Synchroniser avec Google Calendar <small style="font-weight:500;color:var(--gray-500)">— ou Apple Calendar / Outlook</small></span>
+            <span><span class="ui-icon" aria-hidden="true">link</span> Synchroniser avec Google Calendar <small style="font-weight:500;color:var(--gray-500)">— ou Apple Calendar / Outlook</small></span>
             <span class="sync-caret">▼</span>
         </div>
         <div class="sync-body" id="syncBody" style="display:none">
@@ -110,18 +110,18 @@
             </p>
             <div class="sync-url-row">
                 <input type="text" id="icsUrl" readonly value="{{ ics_url }}">
-                <button class="btn btn-secondary btn-sm" id="copyIcsBtn" onclick="copyIcs()">📋 Copier</button>
-                <a class="btn btn-secondary btn-sm" href="{{ ics_url }}&dl=1" title="Telecharger le fichier .ics a la main">⬇️ .ics</a>
+                <button class="btn btn-secondary btn-sm" id="copyIcsBtn" onclick="copyIcs()"><span class="ui-icon" aria-hidden="true">assignment</span> Copier</button>
+                <a class="btn btn-secondary btn-sm" href="{{ ics_url }}&dl=1" title="Telecharger le fichier .ics a la main"><span class="ui-icon" aria-hidden="true">download</span> .ics</a>
             </div>
             <ol class="sync-steps">
-                <li>Ouvre <b>Google Calendar</b> (web ou mobile) → menu ☰ → <b>Autres calendriers</b> → <b>Ajouter un calendrier</b></li>
+                <li>Ouvre <b>Google Calendar</b> (web ou mobile) → menu <span class="ui-icon" aria-hidden="true">menu</span> → <b>Autres calendriers</b> → <b>Ajouter un calendrier</b></li>
                 <li>Clique sur <b>« A partir d'une URL »</b> et colle le lien ci-dessus → <b>Ajouter le calendrier</b></li>
                 <li>C'est tout : les evenements se mettent a jour automatiquement (re-lecture periodique par Google)</li>
             </ol>
             <p class="sync-note">
-                📱 <b>Apple (iPhone/Mac) :</b> Réglages → Calendrier → Comptes → Ajouter un compte → Autres comptes proposes → Ajouter un calendrier par URL.<br>
-                📧 <b>Outlook.com :</b> Ajouter → Ajouter un calendrier par URL.<br>
-                🔒 Le lien contient une cle privee de souscription — ne le partage qu'avec l'equipe.
+                <span class="ui-icon" aria-hidden="true">smartphone</span> <b>Apple (iPhone/Mac) :</b> Réglages → Calendrier → Comptes → Ajouter un compte → Autres comptes proposes → Ajouter un calendrier par URL.<br>
+                <span class="ui-icon" aria-hidden="true">mail</span> <b>Outlook.com :</b> Ajouter → Ajouter un calendrier par URL.<br>
+                <span class="ui-icon" aria-hidden="true">lock</span> Le lien contient une cle privee de souscription — ne le partage qu'avec l'equipe.
             </p>
         </div>
     </div>
@@ -157,10 +157,10 @@
     {% if past %}
     <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem">
-            <button class="past-toggle" id="pastToggle" onclick="togglePast()"><span class="caret">▶</span> 📋 Evenements passes ({{ past|length }})</button>
+            <button class="past-toggle" id="pastToggle" onclick="togglePast()"><span class="caret">▶</span> <span class="ui-icon" aria-hidden="true">assignment</span> Evenements passes ({{ past|length }})</button>
             {% if has_perm('schedule_clear','manage_schedule') %}
             <form method="POST" action="{{ url_for('clear_past_events') }}" onsubmit="return confirm('Supprimer TOUS les evenements passes ? Cette action est irreversible.')">
-                <button class="btn btn-sm btn-danger">🗑️ Effacer tous les evenements passes</button>
+                <button class="btn btn-sm btn-danger"><span class="ui-icon" aria-hidden="true">delete</span> Effacer tous les evenements passes</button>
             </form>
             {% endif %}
         </div>
@@ -171,7 +171,7 @@
                         <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td><td><strong>{{ evt.title }}</strong></td>
                         <td>{{ evt.assignments|map(attribute='user.full_name')|join(', ') or '—' }}</td><td>{{ evt.status }}</td>
                         <td>{% if has_perm('schedule_edit','manage_schedule') %}
-                            <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline"><button class="btn btn-sm btn-danger">🗑️</button></form>
+                            <form method="POST" action="{{ url_for('delete_event',evid=evt.id) }}" onsubmit="return confirm('Supprimer cet evenement ?')" style="display:inline"><button class="btn btn-sm btn-danger"><span class="ui-icon" aria-hidden="true">delete</span></button></form>
                         {% endif %}</td>
                     </tr>{% endfor %}</tbody>
                 </table>
@@ -185,7 +185,7 @@
 <!-- Create Event Modal -->
 <div class="modal-overlay" id="createEventModal">
     <div class="modal" style="max-width:620px">
-        <div class="modal-header"><h2>➕ Nouvel evenement</h2><button class="modal-close" onclick="closeModal('createEventModal')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">add</span> Nouvel evenement</h2><button class="modal-close" onclick="closeModal('createEventModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form method="POST" action="{{ url_for('create_event') }}">
             <div class="modal-body">
                 <div class="form-group"><label>Titre *</label><input type="text" name="title" required placeholder="Ex: Congres STN 2026"></div>
@@ -225,7 +225,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('createEventModal')">Annuler</button><button class="btn btn-accent">✅ Creer</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('createEventModal')">Annuler</button><button class="btn btn-accent"><span class="ui-icon" aria-hidden="true">check_circle</span> Creer</button></div>
         </form>
     </div>
 </div>
@@ -233,7 +233,7 @@
 <!-- Edit Event Modal -->
 <div class="modal-overlay" id="editEventModal">
     <div class="modal" style="max-width:620px">
-        <div class="modal-header"><h2>✏️ Modifier l'evenement</h2><button class="modal-close" onclick="closeModal('editEventModal')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">edit</span> Modifier l'evenement</h2><button class="modal-close" onclick="closeModal('editEventModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form id="editEventForm" method="POST">
             <div class="modal-body">
                 <div class="form-group"><label>Titre *</label><input type="text" name="title" id="eeTitle" required></div>
@@ -274,7 +274,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editEventModal')">Annuler</button><button class="btn btn-accent">💾 Enregistrer</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editEventModal')">Annuler</button><button class="btn btn-accent"><span class="ui-icon" aria-hidden="true">save</span> Enregistrer</button></div>
         </form>
     </div>
 </div>
@@ -283,7 +283,7 @@
 <!-- Day Modal (panneau du jour) -->
 <div class="modal-overlay" id="dayModal">
     <div class="modal" style="max-width:580px">
-        <div class="modal-header"><h2 id="dayTitle"></h2><button class="modal-close" onclick="closeModal('dayModal')">✕</button></div>
+        <div class="modal-header"><h2 id="dayTitle"></h2><button class="modal-close" onclick="closeModal('dayModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <div class="modal-body" id="dayBody"></div>
         <div class="modal-footer" id="dayFooter"></div>
     </div>
@@ -373,32 +373,32 @@ function openDay(iso, highlightId){
     var p = iso.split('-');
     var d = new Date(parseInt(p[0],10), parseInt(p[1],10) - 1, parseInt(p[2],10));
     var dayName = DOWS[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
-    document.getElementById('dayTitle').textContent = '📅 ' + dayName;
+    document.getElementById('dayTitle').textContent = dayName;
     var body = document.getElementById('dayBody');
     var foot = document.getElementById('dayFooter');
     if (!evts.length){
-        body.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray-500)"><div style="font-size:2.5rem;margin-bottom:.5rem">🗓️</div><p>Aucun événement ce jour.</p></div>';
+        body.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray-500)"><div style="font-size:2.5rem;margin-bottom:.5rem"><span class="ui-icon">calendar_month</span></div><p>Aucun événement ce jour.</p></div>';
     } else {
         body.innerHTML = evts.map(function(e){
             var assignees = (e.users||[]).map(function(uid){ return USER_NAMES[uid] || ''; }).filter(Boolean).join(', ');
             var multij = (e.dend || e.date) !== e.date;
             return '<div class="day-evt" id="evt-' + e.id + '">'
-                + '<div class="day-evt-top"><span class="day-evt-time">🕐 ' + esc(e.start) + ' – ' + esc(e.end) + '</span><span class="status-badge ' + badgeCls(e.status) + '">' + esc(statusLabel(e.status)) + '</span></div>'
-                + '<div class="day-evt-title">' + esc(e.title) + (multij ? ' <span style="background:var(--blue-pale);color:var(--blue);font-size:.68rem;padding:.1rem .5rem;border-radius:100px;font-weight:700">📆 ' + fmtRange(e) + '</span>' : '') + '</div>'
-                + (e.location ? '<div class="day-evt-meta">📍 ' + esc(e.location) + '</div>' : '')
-                + (e.client ? '<div class="day-evt-meta">👤 ' + esc(e.client) + '</div>' : '')
-                + (assignees ? '<div class="day-evt-meta">👥 ' + esc(assignees) + '</div>' : '')
+                + '<div class="day-evt-top"><span class="day-evt-time"><span class="ui-icon">schedule</span> ' + esc(e.start) + ' – ' + esc(e.end) + '</span><span class="status-badge ' + badgeCls(e.status) + '">' + esc(statusLabel(e.status)) + '</span></div>'
+                + '<div class="day-evt-title">' + esc(e.title) + (multij ? ' <span style="background:var(--blue-pale);color:var(--blue);font-size:.68rem;padding:.1rem .5rem;border-radius:100px;font-weight:700"><span class="ui-icon">calendar_month</span> ' + fmtRange(e) + '</span>' : '') + '</div>'
+                + (e.location ? '<div class="day-evt-meta"><span class="ui-icon">location_on</span> ' + esc(e.location) + '</div>' : '')
+                + (e.client ? '<div class="day-evt-meta"><span class="ui-icon">person</span> ' + esc(e.client) + '</div>' : '')
+                + (assignees ? '<div class="day-evt-meta"><span class="ui-icon">groups</span> ' + esc(assignees) + '</div>' : '')
                 + (e.description ? '<div class="day-evt-desc">' + esc(e.description) + '</div>' : '')
                 + '<div class="day-evt-actions">'
-                + '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' + gcalUrl(e) + '">📆 Ajouter sur Google Calendar</a>'
-                + '<a class="btn btn-sm btn-secondary" href="/recap/' + e.id + '#checklist">📄 Récap & checklist</a>'
-                + (CAN_MANAGE ? '<button class="btn btn-sm btn-secondary" onclick="closeModal(\'dayModal\');startEdit(' + e.id + ')">✏️ Modifier</button>' : '')
-                + (CAN_MANAGE ? '<form method="POST" action="/schedule/' + e.id + '/delete" onsubmit="return confirm(\'Supprimer cet événement ? Cette action est irreversible.\')" style="margin:0;display:flex;justify-content:flex-end;flex:1"><button class="btn btn-sm btn-danger">🗑️ Supprimer</button></form>' : '')
+                + '<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="' + gcalUrl(e) + '"><span class="ui-icon">calendar_month</span> Ajouter sur Google Calendar</a>'
+                + '<a class="btn btn-sm btn-secondary" href="/recap/' + e.id + '#checklist"><span class="ui-icon">description</span> Récap & checklist</a>'
+                + (CAN_MANAGE ? '<button class="btn btn-sm btn-secondary" onclick="closeModal(\'dayModal\');startEdit(' + e.id + ')"><span class="ui-icon">edit</span> Modifier</button>' : '')
+                + (CAN_MANAGE ? '<form method="POST" action="/schedule/' + e.id + '/delete" onsubmit="return confirm(\'Supprimer cet événement ? Cette action est irreversible.\')" style="margin:0;display:flex;justify-content:flex-end;flex:1"><button class="btn btn-sm btn-danger"><span class="ui-icon">delete</span> Supprimer</button></form>' : '')
                 + '</div></div>';
         }).join('');
     }
     foot.innerHTML = CAN_MANAGE
-        ? '<button class="btn btn-accent" onclick="closeModal(\'dayModal\');newEventOnDate(\'' + iso + '\')">➕ Créer un événement ce jour</button>'
+        ? '<button class="btn btn-accent" onclick="closeModal(\'dayModal\');newEventOnDate(\'' + iso + '\')"><span class="ui-icon">add</span> Créer un événement ce jour</button>'
         : '';
     openModal('dayModal');
     if (highlightId){
@@ -463,7 +463,7 @@ function copyIcs(){
     i.focus(); i.select(); i.setSelectionRange(0, 99999);
     function done(){
         var b = document.getElementById('copyIcsBtn');
-        var old = b.innerHTML; b.innerHTML = '✅ Copié !'; b.disabled = true;
+        var old = b.innerHTML; b.innerHTML = '<span class="ui-icon">check_circle</span> Copié !'; b.disabled = true;
         setTimeout(function(){ b.innerHTML = old; b.disabled = false; }, 1500);
     }
     if (navigator.clipboard && navigator.clipboard.writeText){
@@ -939,9 +939,9 @@ function buildDropdown(dd, query, which) {
     var html = '';
     results.forEach(function(h) {
         if (h === '__CUSTOM__') {
-            html += '<div class="hotel-option custom" onclick="selectHotel(\'' + which + '\',document.getElementById(\'' + inputId + '\').value.trim())">✏️ Utiliser « ' + query.trim() + ' » (lieu personnalise)</div>';
+            html += '<div class="hotel-option custom" onclick="selectHotel(\'' + which + '\',document.getElementById(\'' + inputId + '\').value.trim())"><span class="ui-icon">edit</span> Utiliser « ' + query.trim() + ' » (lieu personnalise)</div>';
         } else {
-            html += '<div class="hotel-option" onclick="selectHotel(\'' + which + '\',\'' + h.replace(/'/g,"\\'") + '\')">🏨 ' + h + '</div>';
+            html += '<div class="hotel-option" onclick="selectHotel(\'' + which + '\',\'' + h.replace(/'/g,"\\'") + '\')"><span class="ui-icon">hotel</span> ' + h + '</div>';
         }
     });
     dd.innerHTML = html;

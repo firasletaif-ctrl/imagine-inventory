@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════════
-   Imagine Inventory — Imagine Events Tunisia · Design System v7
+   Imagine Inventory — Imagine Events Tunisia · Design System v8
    Palette inchangée : Bleu nuit (#0B1D3A / #13294B / #1E4D8C / #3A7BD5),
    Rouge Imagine (#C41E3A / #E63946), Blanc & gris neutres.
    Nouveau : ergonomie (cibles 44px, focus visibles, sidebar repliable,
@@ -78,6 +78,24 @@
     --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --focus-ring: 0 0 0 3px rgba(58, 123, 213, 0.22);
+}
+
+/* Iconographie Material Symbols : icônes vectorielles cohérentes à la place des emojis. */
+.ui-icon {
+    font-family: 'Material Symbols Outlined';
+    font-weight: 400;
+    font-style: normal;
+    font-size: 1.12em;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    vertical-align: -0.16em;
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }

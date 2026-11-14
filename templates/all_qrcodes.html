@@ -49,11 +49,11 @@
     @page{size:A4 portrait;margin:8mm}
   }
 </style>
-</head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap"><style>.ui-icon{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;font-size:1.12em;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:"liga";-webkit-font-smoothing:antialiased;vertical-align:-.16em;}</style></head>
 <body>
 
 <div class="no-print">
-  <h1>🔲 Tous les QR Codes <span>Imagine Events</span></h1>
+  <h1><span class="ui-icon" aria-hidden="true">qr_code_2</span> Tous les QR Codes <span>Imagine Events</span></h1>
   <p class="subtitle">{{ total }} matériel(s) — Page {{ page }} / {{ total_pages }} · QR compacts (≈ 4 par ligne)</p>
   <div class="pagination">
     {% if page > 1 %}<a href="{{ url_for('all_qrcodes', page=page-1) }}">← Précédent</a>{% endif %}
@@ -61,10 +61,10 @@
     {% if page < total_pages %}<a href="{{ url_for('all_qrcodes', page=page+1) }}">Suivant →</a>{% endif %}
   </div>
   <div class="actions">
-    <button onclick="window.print()">🖨️ Imprimer cette page</button>
+    <button onclick="window.print()"><span class="ui-icon" aria-hidden="true">print</span> Imprimer cette page</button>
     <a href="{{ url_for('dashboard') }}"><button class="nav-btn" type="button">← Retour au dépôt</button></a>
   </div>
-  <p class="hint">💡 L'écran et l'impression sont identiques : les QR s'impriment en petit format, plusieurs par page.</p>
+  <p class="hint"><span class="ui-icon" aria-hidden="true">lightbulb</span> L'écran et l'impression sont identiques : les QR s'impriment en petit format, plusieurs par page.</p>
 </div>
 
 <div class="grid">
@@ -73,7 +73,7 @@
     <img src="{{ url_for('equipment_qrcode', eid=eq.id) }}" alt="QR {{ eq.name }}">
     <h3>{{ eq.name }}</h3>
     <div class="ref">{{ eq.reference }}</div>
-    <div class="loc">📍 {{ eq.location }}{% if eq.category %} · {{ eq.category.name }}{% endif %}</div>
+    <div class="loc"><span class="ui-icon" aria-hidden="true">location_on</span> {{ eq.location }}{% if eq.category %} · {{ eq.category.name }}{% endif %}</div>
   </div>
   {% endfor %}
 </div>

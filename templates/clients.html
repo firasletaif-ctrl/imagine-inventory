@@ -4,7 +4,7 @@
 {% block content %}
 <div class="form-page" style="max-width:980px">
     <div class="page-header">
-        <h1>👤 Clients</h1>
+        <h1><span class="ui-icon" aria-hidden="true">person</span> Clients</h1>
         <p>Vos sociétés et particuliers, avec leur historique d'événements.</p>
     </div>
 
@@ -12,11 +12,11 @@
         <form method="GET" action="{{ url_for('clients_list') }}" style="flex:1;min-width:220px;display:flex;gap:.5rem">
             <input type="text" name="search" value="{{ search }}" placeholder="Rechercher (nom, contact, téléphone, email)..."
                    style="flex:1;padding:.6rem .9rem;border:1px solid var(--gray-200);border-radius:10px;font-size:.9rem">
-            <button class="btn btn-secondary" type="submit">🔍</button>
-            {% if search %}<a class="btn btn-secondary" href="{{ url_for('clients_list') }}">✕ Effacer</a>{% endif %}
+            <button class="btn btn-secondary" type="submit"><span class="ui-icon" aria-hidden="true">search</span></button>
+            {% if search %}<a class="btn btn-secondary" href="{{ url_for('clients_list') }}"><span class="ui-icon" aria-hidden="true">close</span> Effacer</a>{% endif %}
         </form>
         {% if has_perm('manage_clients') %}
-        <a class="btn btn-accent" href="{{ url_for('client_new') }}">➕ Nouveau client</a>
+        <a class="btn btn-accent" href="{{ url_for('client_new') }}"><span class="ui-icon" aria-hidden="true">add</span> Nouveau client</a>
         {% endif %}
     </div>
 
@@ -34,7 +34,7 @@
                     <td>{% if r.last %}{{ r.last.strftime('%d/%m/%Y') }}{% else %}—{% endif %}</td>
                     <td style="text-align:right;white-space:nowrap">
                         {% if has_perm('manage_clients') %}
-                        <a class="btn btn-sm btn-secondary" href="{{ url_for('client_edit', cid=r.c.id) }}">✏️</a>
+                        <a class="btn btn-sm btn-secondary" href="{{ url_for('client_edit', cid=r.c.id) }}"><span class="ui-icon" aria-hidden="true">edit</span></a>
                         {% endif %}
                     </td>
                 </tr>
@@ -44,9 +44,9 @@
     </div>
     {% else %}
     <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:3rem;text-align:center;box-shadow:var(--shadow-sm)">
-        <div style="font-size:3rem;margin-bottom:.8rem">👤</div>
+        <div style="font-size:3rem;margin-bottom:.8rem"><span class="ui-icon" aria-hidden="true">person</span></div>
         <p style="color:var(--gray-500);margin:0 0 1rem">{{ 'Aucun client trouvé pour cette recherche.' if search else 'Aucun client pour le moment.' }}</p>
-        {% if not search and has_perm('manage_clients') %}<a class="btn btn-accent" href="{{ url_for('client_new') }}">➕ Créer votre premier client</a>{% endif %}
+        {% if not search and has_perm('manage_clients') %}<a class="btn btn-accent" href="{{ url_for('client_new') }}"><span class="ui-icon" aria-hidden="true">add</span> Créer votre premier client</a>{% endif %}
     </div>
     {% endif %}
 </div>

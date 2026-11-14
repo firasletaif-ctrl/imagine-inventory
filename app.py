@@ -6,6 +6,7 @@ from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response, send_from_directory, has_request_context, jsonify
+from markupsafe import Markup, escape
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
 from PIL import Image, ImageOps, ImageFile
@@ -51,10 +52,51 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+# ── Cookies de session : aperçu intégré (iframe) + HTTPS ──
+# Sans SameSite=None + Secure, les navigateurs modernes bloquent le cookie
+# de session dans l'aperçu intégré (cross-site) : la connexion semble
+# réussir puis reboucle sur /login (« reste sur la même page »).
+# HTTPS (aperçu proxy + production Render) : SameSite=None + Secure.
+# HTTP local (dev localhost / réseau local) : comportement par défaut.
+from flask.sessions import SecureCookieSessionInterface
+class _CrossSiteSessionInterface(SecureCookieSessionInterface):
+    def _is_https(self):
+        try:
+            if request.is_secure:
+                return True
+            if (request.headers.get('X-Forwarded-Proto') or '').lower() == 'https':
+                return True
+            if (request.headers.get('X-Forwarded-Ssl') or '').lower() == 'on':
+                return True
+            if 'proto=https' in (request.headers.get('Forwarded') or '').lower():
+                return True
+        except Exception:
+            pass
+        return False
+    def get_cookie_samesite(self, app):
+        return 'None' if self._is_https() else app.config.get('SESSION_COOKIE_SAMESITE')
+    def get_cookie_secure(self, app):
+        return True if self._is_https() else app.config.get('SESSION_COOKIE_SECURE', False)
+app.session_interface = _CrossSiteSessionInterface()
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 db = SQLAlchemy(app)
-login_manager = LoginManager(app)
+
+class _CrossSiteLoginManager(LoginManager):
+    """Aligne aussi le cookie « se souvenir de moi » avec HTTPS/cross-site."""
+    def _set_cookie(self, response):
+        https = app.session_interface._is_https()
+        secure_before = app.config.get('REMEMBER_COOKIE_SECURE', False)
+        samesite_before = app.config.get('REMEMBER_COOKIE_SAMESITE')
+        app.config['REMEMBER_COOKIE_SECURE'] = https
+        app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if https else None
+        try:
+            super()._set_cookie(response)
+        finally:
+            app.config['REMEMBER_COOKIE_SECURE'] = secure_before
+            app.config['REMEMBER_COOKIE_SAMESITE'] = samesite_before
+
+login_manager = _CrossSiteLoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Veuillez vous connecter.'
 
@@ -487,8 +529,45 @@ class CockpitState(db.Model):
 @login_manager.user_loader
 def load_user(uid): return db.session.get(User, int(uid))
 
+@app.before_request
+def preview_auto_login():
+    """Accès direct pour l'aperçu Arena uniquement, activé par variable d'environnement.
+
+    Ne jamais activer PREVIEW_SKIP_LOGIN en production : sans ce drapeau,
+    toutes les routes et la page de connexion gardent leur comportement normal.
+    """
+    if (not app.debug or os.environ.get('PREVIEW_SKIP_LOGIN') != '1'
+            or current_user.is_authenticated):
+        return None
+    user = User.query.filter_by(email='admin@imagine-events.com').first()
+    if user:
+        login_user(user, remember=False)
+
 @app.template_filter('get_user')
 def get_user_filter(uid): return db.session.get(User, int(uid)) if uid else None
+
+@app.template_filter('material_icon')
+def material_icon(value):
+    """Renderise les anciennes icones emoji stockees en noms Material Symbols."""
+    icon_map = {
+        '📺': 'tv', '🎤': 'mic', '💡': 'lightbulb', '🎭': 'theater_comedy',
+        '🛋': 'chair', '🔌': 'power', '👑': 'workspace_premium', '👷': 'engineering',
+        '🛡': 'shield', '⏳': 'hourglass_top', '🚚': 'local_shipping',
+        '📦': 'inventory_2', '⚙': 'settings', '🔧': 'build', '📅': 'calendar_month',
+        '🔊': 'volume_up', '📷': 'photo_camera', '🪑': 'chair', '💻': 'computer',
+        '➕': 'add', '✏': 'edit', '🗑': 'delete', '🖼': 'image', '📂': 'folder_open',
+        '🛒': 'shopping_cart', '🧰': 'handyman', '📤': 'outbox', '✅': 'check_circle',
+        '🎯': 'gps_fixed', '🧹': 'cleaning_services', '🗺': 'map', '🎲': 'casino',
+        '📊': 'bar_chart', '🖨': 'print', '👥': 'groups', '🔐': 'admin_panel_settings',
+        '📜': 'history', '📥': 'move_to_inbox', '♻': 'recycling', '📸': 'photo_camera',
+        '💼': 'business_center', '🗄': 'database', '👤': 'person', '👀': 'visibility',
+        '👑': 'workspace_premium', '👷': 'engineering', '🛡': 'shield', '⏳': 'hourglass_top',
+    }
+    raw = str(value or '')
+    icon = icon_map.get(raw.replace('️', ''))
+    if not icon:
+        return escape(raw)
+    return Markup('<span class="ui-icon" aria-hidden="true">{}</span>').format(icon)
 
 @app.template_global()
 def has_perm(*perms):

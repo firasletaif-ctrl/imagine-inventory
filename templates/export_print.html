@@ -23,11 +23,11 @@
   .badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:7pt;font-weight:800}
   .badge-ok{background:#DCFCE7;color:#166534}.badge-no{background:#FDE8EC;color:#A01830}
 </style>
-</head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap"><style>.ui-icon{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;font-size:1.12em;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:"liga";-webkit-font-smoothing:antialiased;vertical-align:-.16em;}</style></head>
 <body>
 <div class="no-print">
-  <p>⬇️ <strong>Cliquez sur le bouton ci-dessous pour imprimer ou enregistrer en PDF</strong></p>
-  <button onclick="window.print()">🖨️ Imprimer / Enregistrer PDF</button>
+  <p><span class="ui-icon" aria-hidden="true">download</span> <strong>Cliquez sur le bouton ci-dessous pour imprimer ou enregistrer en PDF</strong></p>
+  <button onclick="window.print()"><span class="ui-icon" aria-hidden="true">print</span> Imprimer / Enregistrer PDF</button>
   <p style="margin-top:5mm;font-size:9pt;color:#92400E">Ou faites CTRL+P puis choisissez "Enregistrer en PDF"</p>
   <p style="margin-top:3mm"><a href="{{ url_for('dashboard') }}" style="color:#1E4D8C">← Retour au depot</a></p>
 </div>

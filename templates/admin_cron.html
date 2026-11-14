@@ -4,24 +4,24 @@
 {% block content %}
 <div class="form-page" style="max-width:860px">
     <div class="page-header">
-        <h1>⏰ Tâches automatiques</h1>
+        <h1><span class="ui-icon" aria-hidden="true">schedule</span> Tâches automatiques</h1>
         <p>Tout est automatique, 365 jours par an, 100% gratuit :</p>
     </div>
 
     <div style="display:grid;gap:.8rem;margin-bottom:1.2rem">
         <div style="background:white;border-radius:12px;border:1px solid var(--gray-200);padding:.9rem 1.1rem;box-shadow:var(--shadow-sm)">
-            ☀️ <strong>De 7h00 à 1h00 : le site reste ouvert.</strong> Un ping automatique toutes les 5 minutes l'empêche de « s'endormir » (Render met le site en sommeil après 15 min sans visite → la 1ʳᵉ page met 30-60 sec à charger).
+            <span class="ui-icon" aria-hidden="true">light_mode</span> <strong>De 7h00 à 1h00 : le site reste ouvert.</strong> Un ping automatique toutes les 5 minutes l'empêche de « s'endormir » (Render met le site en sommeil après 15 min sans visite → la 1ʳᵉ page met 30-60 sec à charger).
         </div>
         <div style="background:white;border-radius:12px;border:1px solid var(--gray-200);padding:.9rem 1.1rem;box-shadow:var(--shadow-sm)">
-            🌙 <strong>De 1h00 à 7h00 : le site dort.</strong> Aucun ping la nuit → économie de tes 750 heures gratuites Render.
+            <span class="ui-icon" aria-hidden="true">dark_mode</span> <strong>De 1h00 à 7h00 : le site dort.</strong> Aucun ping la nuit → économie de tes 750 heures gratuites Render.
         </div>
         <div style="background:white;border-radius:12px;border:1px solid var(--gray-200);padding:.9rem 1.1rem;box-shadow:var(--shadow-sm)">
-             <strong>À 7h00 (1er ping de la journée) : les tâches du matin tournent toutes seules</strong> — 💾 sauvegarde de la base (les 3 dernières gardées) · 🎲 tirage des 5 matériels d'inventaire · ⏰ rappels J-3/J-1 + retours en retard.
+             <strong>À 7h00 (1er ping de la journée) : les tâches du matin tournent toutes seules</strong> — <span class="ui-icon" aria-hidden="true">save</span> sauvegarde de la base (les 3 dernières gardées) · <span class="ui-icon" aria-hidden="true">casino</span> tirage des 5 matériels d'inventaire · <span class="ui-icon" aria-hidden="true">schedule</span> rappels J-3/J-1 + retours en retard.
         </div>
     </div>
 
     <div style="background:var(--blue-pale);border:1px solid var(--blue);border-radius:12px;padding:.9rem 1.1rem;margin-bottom:1.2rem;font-size:.9rem;color:var(--blue-deep)">
-        🕐 Dernière exécution des tâches du matin :
+        <span class="ui-icon" aria-hidden="true">schedule</span> Dernière exécution des tâches du matin :
         {% if last_run %}
         <strong>{{ last_run }}</strong>
         {% else %}
@@ -30,7 +30,7 @@
     </div>
 
     <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:1.2rem 1.4rem;box-shadow:var(--shadow-sm);margin-bottom:1.2rem">
-        <h2 style="margin-top:0;font-size:1.05rem">🔧 Mise en place du keep-alive (UNE seule fois, ~5 min, gratuit)</h2>
+        <h2 style="margin-top:0;font-size:1.05rem"><span class="ui-icon" aria-hidden="true">build</span> Mise en place du keep-alive (UNE seule fois, ~5 min, gratuit)</h2>
         <ol style="margin:.6rem 0 1rem 1.3rem;padding:0;line-height:1.9;font-size:.92rem">
             <li>Crée un compte gratuit sur <strong><a href="https://cron-job.org" target="_blank" rel="noopener">cron-job.org</a></strong> (email uniquement, <strong>aucune carte bancaire</strong>)</li>
             <li>Crée un nouveau « Cronjob » avec ces valeurs exactes :</li>
@@ -44,18 +44,18 @@
             <tr><td style="padding:.5rem .8rem"><strong>Jours / mois</strong></td><td style="padding:.5rem .8rem"><span style="font-size:.85rem">« Any » (tous les jours)</span></td></tr>
         </table>
         <ol start="3" style="margin:.9rem 0 0 1.3rem;padding:0;line-height:1.9;font-size:.92rem">
-            <li>Clique sur <strong>Create / Save</strong> → c'est terminé ✅ Le ping tourne maintenant 365 j/an</li>
+            <li>Clique sur <strong>Create / Save</strong> → c'est terminé <span class="ui-icon" aria-hidden="true">check_circle</span> Le ping tourne maintenant 365 j/an</li>
         </ol>
         <p style="margin:.9rem 0 0;font-size:.82rem;color:var(--blue-deep);background:var(--blue-pale);border-radius:8px;padding:.6rem .9rem">
-            💡 <strong>Facilite :</strong> dans <em>Settings → API</em> de cron-job.org, tu peux me donner ton token et je crée le job à ta place en 30 secondes.
+            <span class="ui-icon" aria-hidden="true">lightbulb</span> <strong>Facilite :</strong> dans <em>Settings → API</em> de cron-job.org, tu peux me donner ton token et je crée le job à ta place en 30 secondes.
         </p>
         <p style="margin:.9rem 0 0;font-size:.82rem;color:var(--gray-500)">
-            📌 Un 2ᵉ système de backup (GitHub) ping aussi le site, moins régulièrement — le site est couvert même si un des deux tombe.
+            <span class="ui-icon" aria-hidden="true">push_pin</span> Un 2ᵉ système de backup (GitHub) ping aussi le site, moins régulièrement — le site est couvert même si un des deux tombe.
         </p>
     </div>
 
     <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);padding:1.2rem 1.4rem;box-shadow:var(--shadow-sm);margin-bottom:1.2rem">
-        <h2 style="margin-top:0;font-size:1.05rem">🧪 Tester / lancer à la main</h2>
+        <h2 style="margin-top:0;font-size:1.05rem"><span class="ui-icon" aria-hidden="true">science</span> Tester / lancer à la main</h2>
         <p style="font-size:.88rem;color:var(--gray-500);margin:.3rem 0 .8rem">Lance immédiatement les tâches du jour (sauvegarde + inventaire + rappels) :</p>
         <form method="post" action="{{ url_for('admin_cron_run') }}" onsubmit="this.querySelector('button').disabled=true;return true">
             <button type="submit" style="background:var(--blue);color:white;border:none;border-radius:10px;padding:.8rem 1.6rem;font-size:.95rem;font-weight:700;cursor:pointer">
@@ -66,10 +66,10 @@
         <div style="display:flex;gap:.5rem;align-items:stretch;flex-wrap:wrap">
             <code id="cron-cmd" style="flex:1;min-width:240px;background:#0B1D3A;color:#E2E8F0;padding:.7rem 1rem;border-radius:8px;font-size:.78rem;word-break:break-all">{{ cmd }}</code>
             <button type="button" onclick="copierCmd()" id="btn-copy"
-                style="background:var(--red);color:white;border:none;border-radius:8px;padding:0 1.1rem;font-weight:700;cursor:pointer">📋 Copier</button>
+                style="background:var(--red);color:white;border:none;border-radius:8px;padding:0 1.1rem;font-weight:700;cursor:pointer"><span class="ui-icon" aria-hidden="true">assignment</span> Copier</button>
         </div>
         <p style="margin:.8rem 0 0;font-size:.8rem;color:#B45309;background:#FEF3C7;border-radius:8px;padding:.55rem .9rem">
-            🔒 Cette URL contient une clé secrète : ne la partage avec personne.
+            <span class="ui-icon" aria-hidden="true">lock</span> Cette URL contient une clé secrète : ne la partage avec personne.
         </p>
     </div>
 </div>
@@ -79,7 +79,7 @@
 <script>
 function copierCmd(){
     var t = document.getElementById('cron-cmd').innerText;
-    function ok(){ var b = document.getElementById('btn-copy'); b.textContent = '✅ Copié !'; setTimeout(function(){ b.textContent = '📋 Copier'; }, 2000); }
+    function ok(){ var b = document.getElementById('btn-copy'); b.innerHTML = '<span class="ui-icon">check_circle</span> Copié !'; setTimeout(function(){ b.innerHTML = '<span class="ui-icon">assignment</span> Copier'; }, 2000); }
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(t).then(ok, function(){ window.prompt('Copie manuelle :', t); });
     } else { window.prompt('Copie manuelle :', t); }

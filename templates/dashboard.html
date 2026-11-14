@@ -5,18 +5,18 @@
 {% if is_pending %}
 <div style="display:flex;align-items:center;justify-content:center;min-height:70vh;text-align:center">
     <div style="max-width:500px;background:white;border-radius:20px;padding:3rem 2rem;box-shadow:0 10px 40px rgba(0,0,0,.1);border:2px solid #D97706">
-        <div style="font-size:5rem;margin-bottom:1rem">⏳</div>
+        <div style="font-size:5rem;margin-bottom:1rem"><span class="ui-icon" aria-hidden="true">hourglass_top</span></div>
         <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:2rem;color:#92400E;margin-bottom:1rem">Compte en attente de validation</h1>
         <p style="color:#B45309;font-size:1.05rem;line-height:1.7;margin-bottom:1.5rem">
             Votre compte a bien ete cree.<br>
             Un administrateur doit vous assigner un role avant que vous puissiez acceder a l'application.
         </p>
         <div style="background:#FEF3C7;border-radius:10px;padding:1rem;font-size:.9rem;color:#92400E">
-            <strong>🔒 Acces restreint</strong><br>
+            <strong><span class="ui-icon" aria-hidden="true">lock</span> Acces restreint</strong><br>
             Vous n'avez actuellement acces a aucune fonctionnalite.<br>
             Veuillez contacter votre administrateur.
         </div>
-        <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="margin-top:1.5rem">🚪 Se deconnecter</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="margin-top:1.5rem"><span class="ui-icon" aria-hidden="true">logout</span> Se deconnecter</a>
     </div>
 </div>
 {% else %}
@@ -28,19 +28,19 @@
         </div>
         <div class="dash-actions">
             {% if has_perm('add_equipment','manage_equipment') %}
-            <a href="{{ url_for('add_equipment') }}" class="btn btn-accent">➕ Ajouter du materiel</a>
+            <a href="{{ url_for('add_equipment') }}" class="btn btn-accent"><span class="ui-icon" aria-hidden="true">add</span> Ajouter du materiel</a>
             {% endif %}
         </div>
     </div>
 
     <div class="stats-row">
-        <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value">{{ equipment | length }}</div><div class="stat-label">Articles au depot</div></div>
-        <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-value">{{ active_borrows | length }}</div><div class="stat-label">Emprunts actifs</div></div>
-        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">{{ equipment | selectattr('available_quantity', 'gt', 0) | list | length }}</div><div class="stat-label">Disponibles</div></div>
-        <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value">{{ active_borrows | selectattr('status', 'eq', 'late') | list | length }}</div><div class="stat-label">En retard</div></div>
-        <div class="stat-card"><div class="stat-icon">🔧</div><div class="stat-value">{{ repair_count }}</div><div class="stat-label">En réparation</div></div>
+        <div class="stat-card"><div class="stat-icon"><span class="ui-icon" aria-hidden="true">inventory_2</span></div><div class="stat-value">{{ equipment | length }}</div><div class="stat-label">Articles au depot</div></div>
+        <div class="stat-card"><div class="stat-icon"><span class="ui-icon" aria-hidden="true">outbox</span></div><div class="stat-value">{{ active_borrows | length }}</div><div class="stat-label">Emprunts actifs</div></div>
+        <div class="stat-card"><div class="stat-icon"><span class="ui-icon" aria-hidden="true">check_circle</span></div><div class="stat-value">{{ equipment | selectattr('available_quantity', 'gt', 0) | list | length }}</div><div class="stat-label">Disponibles</div></div>
+        <div class="stat-card"><div class="stat-icon"><span class="ui-icon" aria-hidden="true">warning</span></div><div class="stat-value">{{ active_borrows | selectattr('status', 'eq', 'late') | list | length }}</div><div class="stat-label">En retard</div></div>
+        <div class="stat-card"><div class="stat-icon"><span class="ui-icon" aria-hidden="true">build</span></div><div class="stat-value">{{ repair_count }}</div><div class="stat-label">En réparation</div></div>
         <a href="{{ url_for('inventory_page') }}" class="stat-card" style="text-decoration:none" title="Inventaire permanent : controler le tirage du jour">
-            <div class="stat-icon">📦</div>
+            <div class="stat-icon"><span class="ui-icon" aria-hidden="true">inventory_2</span></div>
             <div class="stat-value" style="color:{% if inv_today|length > 0 and inv_done == inv_today|length %}var(--green){% else %}var(--blue-deep){% endif %}">{{ inv_done }}/{{ inv_today|length if inv_today else 0 }}</div>
             <div class="stat-label">Inventaire du jour</div>
         </a>
@@ -49,26 +49,26 @@
     <div class="search-section">
         <form method="GET" action="{{ url_for('dashboard') }}" class="search-form">
             <div class="search-wrapper">
-                <span class="search-icon">🔍</span>
+                <span class="search-icon"><span class="ui-icon" aria-hidden="true">search</span></span>
                 <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par nom, reference, caracteristiques..." class="search-input" autocomplete="off">
-                {% if search %}<a href="{{ url_for('dashboard') }}" class="search-clear">✕</a>{% endif %}
+                {% if search %}<a href="{{ url_for('dashboard') }}" class="search-clear"><span class="ui-icon" aria-hidden="true">close</span></a>{% endif %}
             </div>
             <select name="category" class="filter-select" onchange="this.form.submit()">
-                <option value="">📂 Toutes les categories</option>
-                {% for cat in categories %}<option value="{{ cat.id }}" {% if category_filter == cat.id|string %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>{% endfor %}
+                <option value="">Toutes les catégories</option>
+                {% for cat in categories %}<option value="{{ cat.id }}" {% if category_filter == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>{% endfor %}
             </select>
         </form>
         <div class="category-chips">
             <a href="{{ url_for('dashboard') }}" class="chip {% if not category_filter %}active{% endif %}">Tout</a>
             {% for cat in categories %}
             <span style="display:inline-flex;align-items:center;gap:0">
-                <a href="{{ url_for('dashboard', category=cat.id) }}" class="chip {% if category_filter == cat.id|string %}active{% endif %}">{{ cat.icon }} {{ cat.name }}</a>
+                <a href="{{ url_for('dashboard', category=cat.id) }}" class="chip {% if category_filter == cat.id|string %}active{% endif %}">{{ cat.icon|material_icon }} {{ cat.name }}</a>
                 {% if current_user.has_permission('manage_categories') %}
                 <form method="POST" action="{{ url_for('delete_category', cid=cat.id) }}" style="display:inline;margin-left:-8px" onsubmit="return confirm('Supprimer la categorie ?')"><button style="background:none;border:none;color:var(--gray-400);cursor:pointer;font-size:.8rem;padding:0 .3rem" title="Supprimer">×</button></form>
                 {% endif %}
             </span>
             {% endfor %}
-            <button class="chip" style="border:2px dashed var(--blue);color:var(--blue);cursor:pointer" onclick="openAddCategoryModal()" title="Ajouter une categorie">➕ Nouvelle categorie</button>
+            <button class="chip" style="border:2px dashed var(--blue);color:var(--blue);cursor:pointer" onclick="openAddCategoryModal()" title="Ajouter une categorie"><span class="ui-icon" aria-hidden="true">add</span> Nouvelle categorie</button>
         </div>
     </div>
 
@@ -77,27 +77,27 @@
         <div class="equipment-card {% if eq.available_quantity == 0 %}unavailable{% endif %}" onclick="window.location='{{ url_for('equipment_detail', eid=eq.id) }}'">
             <div class="card-image">
                 {% if eq.primary_image() %}<img src="{{ url_for('uploaded_file', fn=eq.primary_image()) }}" alt="{{ eq.name }}" loading="lazy">
-                {% else %}<div class="card-placeholder"><span class="placeholder-icon">{{ eq.category.icon if eq.category else '📦' }}</span></div>{% endif %}
+                {% else %}<div class="card-placeholder"><span class="placeholder-icon">{{ (eq.category.icon if eq.category else '📦')|material_icon }}</span></div>{% endif %}
                 <div class="card-badge {% if eq.available_quantity > 0 %}badge-available{% else %}badge-unavailable{% endif %}">
-                    {% if eq.available_quantity > 0 %}✅ {{ eq.available_quantity }} dispo{% else %}🔴 Indisponible{% endif %}
+                    {% if eq.available_quantity > 0 %}<span class="ui-icon" aria-hidden="true">check_circle</span> {{ eq.available_quantity }} dispo{% else %}<span class="ui-icon" aria-hidden="true">circle</span> Indisponible{% endif %}
                 </div>
                 {% if eq.condition == 'Excellent' %}<div class="card-quality">Premium</div>{% endif %}
             </div>
             <div class="card-body">
-                <div class="card-category">{% if eq.category %}{{ eq.category.icon }} {{ eq.category.name }}{% endif %}</div>
+                <div class="card-category">{% if eq.category %}{{ eq.category.icon|material_icon }} {{ eq.category.name }}{% endif %}</div>
                 <h3 class="card-title">{{ eq.name }}</h3>
                 <p class="card-desc">{{ eq.description[:80] }}{% if eq.description | length > 80 %}...{% endif %}</p>
                 <div class="card-meta"><span class="meta-ref">{{ eq.reference }}</span><span class="meta-qty">Qte: {{ eq.total_quantity }}</span></div>
             </div>
             <div class="card-footer">
                 {% if has_perm('borrow_equipment') %}
-                <button class="btn btn-sm btn-borrow" onclick="event.stopPropagation();openBorrowModal('{{ eq.id }}','{{ eq.name | escape }}',{{ eq.available_quantity }})" {% if eq.available_quantity == 0 %}disabled{% endif %}>📤 Emprunter</button>
+                <button class="btn btn-sm btn-borrow" onclick="event.stopPropagation();openBorrowModal('{{ eq.id }}','{{ eq.name | escape }}',{{ eq.available_quantity }})" {% if eq.available_quantity == 0 %}disabled{% endif %}><span class="ui-icon" aria-hidden="true">outbox</span> Emprunter</button>
                 {% endif %}
-                <span class="card-location">📍 {{ eq.location }}</span>
+                <span class="card-location"><span class="ui-icon" aria-hidden="true">location_on</span> {{ eq.location }}</span>
             </div>
         </div>
         {% else %}
-        <div class="empty-state"><div class="empty-icon">📭</div><h3>Aucun materiel trouve</h3><p>Essayez de modifier votre recherche{% if has_perm('add_equipment','manage_equipment') %} ou ajoutez du nouveau materiel{% endif %}.</p>{% if has_perm('add_equipment','manage_equipment') %}<a href="{{ url_for('add_equipment') }}" class="btn btn-primary">➕ Ajouter du materiel</a>{% endif %}</div>
+        <div class="empty-state"><div class="empty-icon"><span class="ui-icon" aria-hidden="true">mark_email_unread</span></div><h3>Aucun materiel trouve</h3><p>Essayez de modifier votre recherche{% if has_perm('add_equipment','manage_equipment') %} ou ajoutez du nouveau materiel{% endif %}.</p>{% if has_perm('add_equipment','manage_equipment') %}<a href="{{ url_for('add_equipment') }}" class="btn btn-primary"><span class="ui-icon" aria-hidden="true">add</span> Ajouter du materiel</a>{% endif %}</div>
         {% endfor %}
     </div>
 </div>
@@ -105,19 +105,19 @@
 <!-- Borrow Modal -->
 <div class="modal-overlay" id="borrowModal">
     <div class="modal">
-        <div class="modal-header"><h2>📤 Emprunter du materiel</h2><button class="modal-close" onclick="closeAnyModal('borrowModal')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">outbox</span> Emprunter du materiel</h2><button class="modal-close" onclick="closeAnyModal('borrowModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form id="borrowForm" method="POST" onsubmit="submitBorrow(event)">
             <input type="hidden" id="borrowEquipmentId" name="equipment_id">
             <div class="modal-body">
                 <div class="form-group"><label>Materiel</label><div class="selected-equipment" id="selectedEquipmentName"></div></div>
                 <div class="form-row">
                     <div class="form-group"><label for="borrowQuantity">Quantite</label><input type="number" id="borrowQuantity" name="quantity" min="1" value="1" required><small id="maxQtyHint"></small></div>
-                    <div class="form-group"><label for="borrowPickupDate">📦 Date de prise</label><input type="date" id="borrowPickupDate" name="pickup_date" value="{{ today.strftime('%Y-%m-%d') }}"></div>
+                    <div class="form-group"><label for="borrowPickupDate"><span class="ui-icon" aria-hidden="true">inventory_2</span> Date de prise</label><input type="date" id="borrowPickupDate" name="pickup_date" value="{{ today.strftime('%Y-%m-%d') }}"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label for="borrowReturnDate">⏰ Date de retour</label><input type="date" id="borrowReturnDate" name="return_date" required min="{{ today.strftime('%Y-%m-%d') }}"></div>
+                    <div class="form-group"><label for="borrowReturnDate"><span class="ui-icon" aria-hidden="true">schedule</span> Date de retour</label><input type="date" id="borrowReturnDate" name="return_date" required min="{{ today.strftime('%Y-%m-%d') }}"></div>
                 </div>
-                <div class="form-group"><label for="borrowEventId">🎯 Associer a un evenement</label>
+                <div class="form-group"><label for="borrowEventId"><span class="ui-icon" aria-hidden="true">gps_fixed</span> Associer a un evenement</label>
                     <select id="borrowEventId" name="event_id" onchange="fillEventName()">
                         <option value="">— Aucun —</option>
                         {% for ev in upcoming_events %}
@@ -136,19 +136,19 @@
 <!-- Return Modal (avec choix reparation / propres) -->
 <div class="modal-overlay" id="returnModal">
     <div class="modal">
-        <div class="modal-header"><h2>✅ Retourner le materiel</h2><button class="modal-close" onclick="closeAnyModal('returnModal')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner le materiel</h2><button class="modal-close" onclick="closeAnyModal('returnModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form method="POST" onsubmit="submitReturn(event)">
             <input type="hidden" id="returnBorrowId" name="borrow_id">
             <div class="modal-body">
                 <div class="form-group"><label>Materiel</label><div class="selected-equipment" id="returnEquipmentName"></div></div>
                 <div class="form-group"><label>Quantite empruntee</label><div id="returnQty" style="font-weight:bold;color:var(--blue)"></div></div>
                 <div class="form-group">
-                    <label for="repairQty">🔧 Combien partent en reparation ?</label>
+                    <label for="repairQty"><span class="ui-icon" aria-hidden="true">build</span> Combien partent en reparation ?</label>
                     <input type="number" id="repairQty" name="repair_qty" min="0" value="0" oninput="updateReadyCount()">
                     <small id="repairHint"></small>
                 </div>
                 <div class="form-group">
-                    <label>✅ Propres et prets a l'utilisation</label>
+                    <label><span class="ui-icon" aria-hidden="true">check_circle</span> Propres et prets a l'utilisation</label>
                     <div id="readyCount" style="font-weight:bold;color:#16a34a;font-size:1.1rem"></div>
                 </div>
             </div>
@@ -160,15 +160,15 @@
 <!-- Add Category Modal -->
 <div class="modal-overlay" id="addCategoryModal">
     <div class="modal">
-        <div class="modal-header"><h2>➕ Nouvelle categorie</h2><button class="modal-close" onclick="closeAnyModal('addCategoryModal')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">add</span> Nouvelle categorie</h2><button class="modal-close" onclick="closeAnyModal('addCategoryModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form method="POST" action="{{ url_for('add_category') }}">
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group"><label>Icone</label><select name="icon"><option value="📺">📺 Ecrans</option><option value="🎤">🎤 Audio</option><option value="💡">💡 Eclairage</option><option value="🎭">🎭 Scene</option><option value="🛋️">🛋️ Mobilier</option><option value="🔌">🔌 Cablage</option><option value="📦">📦 General</option></select></div>
+                    <div class="form-group"><label>Icone</label><select name="icon"><option value="📺">Écrans</option><option value="🎤">Audio</option><option value="💡">Éclairage</option><option value="🎭">Scène</option><option value="🛋️">Mobilier</option><option value="🔌">Câblage</option><option value="📦">Général</option></select></div>
                     <div class="form-group" style="flex:2"><label>Nom de la categorie *</label><input type="text" name="name" required placeholder="Ex: Decoration florale"></div>
                 </div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAnyModal('addCategoryModal')">Annuler</button><button class="btn btn-accent">✅ Creer la categorie</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAnyModal('addCategoryModal')">Annuler</button><button class="btn btn-accent"><span class="ui-icon" aria-hidden="true">check_circle</span> Creer la categorie</button></div>
         </form>
     </div>
 </div>
@@ -177,13 +177,13 @@
 {% if has_perm('clear_borrow_history','clear_history') %}
 <div class="modal-overlay" id="clearHistoryModal">
     <div class="modal">
-        <div class="modal-header"><h2>⚠️ Effacer l'historique</h2><button class="modal-close" onclick="closeAnyModal('clearHistoryModal')">✕</button></div>
+        <div class="modal-header"><h2><span class="ui-icon" aria-hidden="true">warning</span> Effacer l'historique</h2><button class="modal-close" onclick="closeAnyModal('clearHistoryModal')"><span class="ui-icon" aria-hidden="true">close</span></button></div>
         <form method="POST" action="{{ url_for('clear_history') }}">
             <div class="modal-body">
-                <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin-bottom:1rem"><strong>⚠️ Attention :</strong> Cette action supprimera definitivement tous les emprunts termines de l'historique. Les emprunts en cours ne seront pas affectes.</div>
-                <div class="form-group"><label>✅ Confirmez votre mot de passe administrateur</label><input type="password" name="password" required placeholder="Votre mot de passe" autocomplete="current-password"></div>
+                <div style="background:var(--red-pale);padding:1rem;border-radius:8px;margin-bottom:1rem"><strong><span class="ui-icon" aria-hidden="true">warning</span> Attention :</strong> Cette action supprimera definitivement tous les emprunts termines de l'historique. Les emprunts en cours ne seront pas affectes.</div>
+                <div class="form-group"><label><span class="ui-icon" aria-hidden="true">check_circle</span> Confirmez votre mot de passe administrateur</label><input type="password" name="password" required placeholder="Votre mot de passe" autocomplete="current-password"></div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAnyModal('clearHistoryModal')">Annuler</button><button class="btn btn-danger">🗑️ Confirmer la suppression</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeAnyModal('clearHistoryModal')">Annuler</button><button class="btn btn-danger"><span class="ui-icon" aria-hidden="true">delete</span> Confirmer la suppression</button></div>
         </form>
     </div>
 </div>
@@ -192,17 +192,17 @@
 <!-- Active Borrows Panel -->
 {% if active_borrows %}
 <div class="borrows-panel">
-    <h2 class="section-title">📤 Emprunts en cours</h2>
+    <h2 class="section-title"><span class="ui-icon" aria-hidden="true">outbox</span> Emprunts en cours</h2>
     <div class="borrows-list">
         {% for b in active_borrows %}
         <div class="borrow-row {% if b.status == 'late' %}borrow-late{% endif %}">
-            <div class="borrow-info"><strong>{{ b.equipment.name if b.equipment else 'Matériel supprimé' }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event">🎯 {{ b.event_name }}</span>{% endif %}</div>
-            <div class="borrow-dates">{% if b.pickup_date %}<span class="borrow-return">📦 Prise: {{ b.pickup_date.strftime('%d/%m/%Y') }}</span>{% endif %}<span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}">⏰ Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} ⚠️ EN RETARD{% endif %}</span></div>
+            <div class="borrow-info"><strong>{{ b.equipment.name if b.equipment else 'Matériel supprimé' }}</strong><span class="borrow-qty">×{{ b.quantity }}</span><span class="borrow-user">par {{ b.user.full_name }}</span>{% if b.event_name %}<span class="borrow-event"><span class="ui-icon" aria-hidden="true">gps_fixed</span> {{ b.event_name }}</span>{% endif %}</div>
+            <div class="borrow-dates">{% if b.pickup_date %}<span class="borrow-return"><span class="ui-icon" aria-hidden="true">inventory_2</span> Prise: {{ b.pickup_date.strftime('%d/%m/%Y') }}</span>{% endif %}<span class="borrow-return {% if b.status == 'late' %}text-red{% endif %}"><span class="ui-icon" aria-hidden="true">schedule</span> Retour: {{ b.expected_return_date.strftime('%d/%m/%Y') }}{% if b.status == 'late' %} <span class="ui-icon" aria-hidden="true">warning</span> EN RETARD{% endif %}</span></div>
             <div class="borrow-action">
                 {% if b.user_id == current_user.id or current_user.has_permission('manage_users') %}
-                <button class="btn btn-sm btn-success" onclick="openReturnModal('{{ b.id }}','{{ (b.equipment.name if b.equipment else 'Supprimé') | escape }}',{{ b.quantity }})">✅ Retourner</button>
+                <button class="btn btn-sm btn-success" onclick="openReturnModal('{{ b.id }}','{{ (b.equipment.name if b.equipment else 'Supprimé') | escape }}',{{ b.quantity }})"><span class="ui-icon" aria-hidden="true">check_circle</span> Retourner</button>
                 {% else %}
-                <span style="color:var(--gray-400);font-size:.75rem;padding:.25rem .5rem">🔒 {{ b.user.full_name }} uniquement</span>
+                <span style="color:var(--gray-400);font-size:.75rem;padding:.25rem .5rem"><span class="ui-icon" aria-hidden="true">lock</span> {{ b.user.full_name }} uniquement</span>
                 {% endif %}
             </div>
         </div>

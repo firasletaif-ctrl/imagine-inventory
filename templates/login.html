@@ -9,9 +9,9 @@
             <h2>Imagine <span>Events</span> Tunisia</h2>
             <p>Le dépôt, les événements et le transport réunis en un seul outil — pour préparer chaque événement sans rien oublier.</p>
             <ul>
-                <li>📦 <span>Catalogue, kits et inventaire en temps réel</span></li>
-                <li>🎪 <span>Parcours événement en 5 étapes guidées</span></li>
-                <li>🚚 <span>Transport, chauffeur et clôture intégrés</span></li>
+                <li><span class="ui-icon" aria-hidden="true">inventory_2</span> <span>Catalogue, kits et inventaire en temps réel</span></li>
+                <li><span class="ui-icon" aria-hidden="true">event</span> <span>Parcours événement en 5 étapes guidées</span></li>
+                <li><span class="ui-icon" aria-hidden="true">local_shipping</span> <span>Transport, chauffeur et clôture intégrés</span></li>
             </ul>
         </div>
         <div class="auth-card">
@@ -24,7 +24,7 @@
                 <div class="form-group">
                     <label for="email">Email</label>
                     <div class="input-wrapper">
-                        <span class="input-icon">📧</span>
+                        <span class="input-icon"><span class="ui-icon" aria-hidden="true">mail</span></span>
                         <input type="email" id="email" name="email" required
                                placeholder="vous@i-maginevents.com" autocomplete="email">
                     </div>
@@ -33,13 +33,13 @@
                 <div class="form-group">
                     <label for="password">Mot de passe</label>
                     <div class="input-wrapper">
-                        <span class="input-icon">🔒</span>
+                        <span class="input-icon"><span class="ui-icon" aria-hidden="true">lock</span></span>
                         <input type="password" id="password" name="password" required
                                placeholder="••••••••" autocomplete="current-password">
                         <button type="button" class="toggle-pw" onclick="
                             const p = document.getElementById('password');
                             p.type = p.type === 'password' ? 'text' : 'password';
-                        " aria-label="Afficher / masquer le mot de passe">👁️</button>
+                        " aria-label="Afficher / masquer le mot de passe"><span class="ui-icon" aria-hidden="true">visibility</span></button>
                     </div>
                 </div>
 
@@ -63,7 +63,7 @@
             </div>
 
             <div class="auth-badge">
-                <span>🇹🇳 Imagine Events Tunisia</span>
+                <span><span class="ui-icon" aria-hidden="true">flag</span> Imagine Events Tunisia</span>
             </div>
         </div>
     </div>

@@ -44,10 +44,10 @@
   .qr-card .loc{font-size:.66rem;color:#64748B;margin-top:.2rem}
   .footer{margin-top:1.6rem;text-align:center;font-size:.76rem;color:#94A3B8}
 </style>
-</head>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap"><style>.ui-icon{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;font-size:1.12em;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;font-feature-settings:"liga";-webkit-font-smoothing:antialiased;vertical-align:-.16em;}</style></head>
 <body>
 <div class="no-print">
-  <h1>🔲 QR Code <span>Imagine Events</span></h1>
+  <h1><span class="ui-icon" aria-hidden="true">qr_code_2</span> QR Code <span>Imagine Events</span></h1>
   <p class="subtitle">{{ eq.name }} — {{ eq.reference }}</p>
 
   <div class="panel">
@@ -60,15 +60,15 @@
         <button type="button" onclick="document.getElementById('qty').value=10">10</button>
         <button type="button" onclick="document.getElementById('qty').value={{ eq.total_quantity }}">Tout ({{ eq.total_quantity }})</button>
       </div>
-      <div class="hint">💡 Ce matériel a {{ eq.total_quantity }} unité(s) en stock.<br>Chaque étiquette aura le même QR code : colle-en une sur chaque unité.</div>
+      <div class="hint"><span class="ui-icon" aria-hidden="true">lightbulb</span> Ce matériel a {{ eq.total_quantity }} unité(s) en stock.<br>Chaque étiquette aura le même QR code : colle-en une sur chaque unité.</div>
       <div style="margin-top:.8rem">
-        <button type="submit" class="actions" style="background:#0B1D3A;color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-weight:bold">👀 Afficher</button>
+        <button type="submit" class="actions" style="background:#0B1D3A;color:white;border:none;padding:10px 25px;border-radius:8px;cursor:pointer;font-weight:bold"><span class="ui-icon" aria-hidden="true">visibility</span> Afficher</button>
       </div>
     </form>
   </div>
 
   <div class="actions">
-    <button onclick="window.print()">🖨️ Imprimer ({{ qty }} étiquette(s))</button>
+    <button onclick="window.print()"><span class="ui-icon" aria-hidden="true">print</span> Imprimer ({{ qty }} étiquette(s))</button>
     <a href="{{ url_for('equipment_detail', eid=eq.id) }}"><button class="nav-btn" type="button">← Retour à la fiche</button></a>
   </div>
 </div>
@@ -79,7 +79,7 @@
     <img src="{{ url_for('equipment_qrcode', eid=eq.id) }}" alt="QR {{ eq.name }}">
     <h3>{{ eq.name }}</h3>
     <div class="ref">{{ eq.reference }}</div>
-    <div class="loc">📍 {{ eq.location }}</div>
+    <div class="loc"><span class="ui-icon" aria-hidden="true">location_on</span> {{ eq.location }}</div>
   </div>
   {% endfor %}
 </div>

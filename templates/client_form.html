@@ -5,7 +5,7 @@
 <div class="form-page" style="max-width:680px">
     <div class="breadcrumb"><a href="{{ url_for('clients_list') }}">← Tous les clients</a></div>
     <div class="page-header">
-        <h1>{{ '✏️ Modifier le client' if c else '➕ Nouveau client' }}</h1>
+        <h1>{% if c %}<span class="ui-icon" aria-hidden="true">edit</span> Modifier le client{% else %}<span class="ui-icon" aria-hidden="true">add</span> Nouveau client{% endif %}</h1>
     </div>
 
     <form method="POST" action="{{ url_for('client_update', cid=c.id) if c else url_for('client_save') }}"
@@ -38,7 +38,7 @@
         </div>
         <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.2rem">
             <a class="btn btn-secondary" href="{{ url_for('client_detail', cid=c.id) if c else url_for('clients_list') }}">Annuler</a>
-            <button class="btn btn-accent" type="submit">💾 {{ 'Enregistrer' if c else 'Créer le client' }}</button>
+            <button class="btn btn-accent" type="submit"><span class="ui-icon" aria-hidden="true">save</span> {{ 'Enregistrer' if c else 'Créer le client' }}</button>
         </div>
     </form>
 </div>

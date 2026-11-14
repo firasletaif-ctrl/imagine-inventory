@@ -4,11 +4,11 @@
 {% block content %}
 <div class="form-page" style="max-width:650px">
     <div class="breadcrumb"><a href="{{ url_for('dashboard') }}">← Retour au depot</a></div>
-    <div class="page-header"><h1>📥 Importer CSV</h1><p>Importe tes fichiers CSV de sauvegarde un par un, dans l'ordre indique.</p></div>
+    <div class="page-header"><h1><span class="ui-icon" aria-hidden="true">move_to_inbox</span> Importer CSV</h1><p>Importe tes fichiers CSV de sauvegarde un par un, dans l'ordre indique.</p></div>
 
     <div class="form-card">
         <div style="background:#DCFCE7;padding:1rem;border-radius:8px;margin-bottom:1.5rem;font-size:.85rem">
-            <strong>✅ Ordre d'import obligatoire :</strong>
+            <strong><span class="ui-icon" aria-hidden="true">check_circle</span> Ordre d'import obligatoire :</strong>
             <ol style="margin:.5rem 0 0 1.2rem;padding:0;font-family:monospace">
                 <li>roles</li><li>users</li><li>categories</li><li>equipment</li><li>equipment_images</li>
                 <li>borrows</li><li>events</li><li>event_assignments</li><li>activity_logs</li><li>notifications</li>
@@ -33,17 +33,17 @@
                 <label>Mot de passe administrateur</label>
                 <input type="password" name="password" required placeholder="Confirmation">
             </div>
-            <button class="btn btn-accent btn-full">📥 Importer</button>
+            <button class="btn btn-accent btn-full"><span class="ui-icon" aria-hidden="true">move_to_inbox</span> Importer</button>
         </form>
     </div>
 
     <div class="form-card" style="margin-top:1rem">
-        <h3>📋 Tous les outils de migration</h3>
+        <h3><span class="ui-icon" aria-hidden="true">assignment</span> Tous les outils de migration</h3>
         <table style="font-size:.85rem;width:100%">
-            <tr><td style="padding:.3rem">📸</td><td><a href="{{ url_for('export_photos_zip') }}">Exporter les photos (ZIP)</a></td><td style="color:var(--gray-400);font-size:.75rem">Sauvegarde</td></tr>
-            <tr><td style="padding:.3rem">🗑️</td><td><a href="{{ url_for('reset_all_tables') }}">Reset tables (vider la base)</a></td><td style="color:var(--gray-400);font-size:.75rem">Avant import</td></tr>
-            <tr><td style="padding:.3rem">📥</td><td><strong>Importer CSV</strong> (cette page)</td><td style="color:var(--gray-400);font-size:.75rem">10 fichiers</td></tr>
-            <tr><td style="padding:.3rem">📥</td><td><a href="{{ url_for('restore_photos') }}">Restaurer les photos (ZIP)</a></td><td style="color:var(--gray-400);font-size:.75rem">Apres import</td></tr>
+            <tr><td style="padding:.3rem"><span class="ui-icon" aria-hidden="true">photo_camera</span></td><td><a href="{{ url_for('export_photos_zip') }}">Exporter les photos (ZIP)</a></td><td style="color:var(--gray-400);font-size:.75rem">Sauvegarde</td></tr>
+            <tr><td style="padding:.3rem"><span class="ui-icon" aria-hidden="true">delete</span></td><td><a href="{{ url_for('reset_all_tables') }}">Reset tables (vider la base)</a></td><td style="color:var(--gray-400);font-size:.75rem">Avant import</td></tr>
+            <tr><td style="padding:.3rem"><span class="ui-icon" aria-hidden="true">move_to_inbox</span></td><td><strong>Importer CSV</strong> (cette page)</td><td style="color:var(--gray-400);font-size:.75rem">10 fichiers</td></tr>
+            <tr><td style="padding:.3rem"><span class="ui-icon" aria-hidden="true">move_to_inbox</span></td><td><a href="{{ url_for('restore_photos') }}">Restaurer les photos (ZIP)</a></td><td style="color:var(--gray-400);font-size:.75rem">Apres import</td></tr>
         </table>
     </div>
 </div>
