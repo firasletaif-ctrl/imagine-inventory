@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit commercial — Imagine Events Tunisia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ══════════════════════════════════════════════════════════════
+     COCKPIT — feuille de style unique, pilotée par variables.
+     Thème par défaut = charte Imagine Events
+     (bleu #0B1D3A / rouge #C41E3A / blanc).
+     Thème sombre d'origine disponible : <body class="theme-dark">
+     ══════════════════════════════════════════════════════════════ */
+  :root{
+    --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-display:"Playfair Display",Georgia,"Times New Roman",serif;
+
+    --navy:#0B1D3A; --navy-mid:#13294B; --navy-light:#1E4D8C;
+    --bg:#F1F5F9; --panel:#FFFFFF; --surface:#FFFFFF; --surface2:#F8FAFC; --surface3:#FFFFFF;
+    --line:#E2E8F0; --line2:#CBD5E1; --line3:#94A3B8;
+    --hover:#EFF4FA; --navactive:#E8EFF8; --input:#FFFFFF; --well:#E8EFF8;
+    --txt:#0F172A; --strong:#334155; --muted:#64748B; --muted2:#94A3B8;
+    --accent:#C41E3A; --accent2:#E63946; --accent-deep:#A01830; --accent-ink:#FFFFFF;
+    --accent-tint:#FDE8EC; --accent-tintline:#F5C2CB; --accent-soft:rgba(196,30,58,.10);
+    --ok:#16A34A; --warn:#D97706; --bad:#DC2626; --dead:#F5C2CB;
+    --ok-soft:#DCFCE7; --warn-soft:#FEF3C7; --bad-soft:#FEE2E2;
+    --btn:#F1F5F9; --btn-hover:#E2E8F0;
+    --toast:#0B1D3A; --toast-txt:#FFFFFF;
+    --shadow:0 1px 3px rgba(11,29,58,.06), 0 8px 24px rgba(11,29,58,.05);
+    --shadow-lg:0 18px 48px rgba(11,29,58,.18);
+  }
+  /* Thème sombre d'origine (facultatif) : ?theme=dark */
+  body.theme-dark{
+    --bg:#0B0B0E; --panel:#111116; --surface:#15151B; --surface2:#101016; --surface3:#191920;
+    --line:#23232B; --line2:#2C2C36; --line3:#4A4A57;
+    --hover:#17171E; --navactive:#1B1B22; --input:#101016; --well:#0E0E13;
+    --txt:#ECECE8; --strong:#B6B6C0; --muted:#8E8E99; --muted2:#6E6E79;
+    --accent:#C9A227; --accent2:#E4C25A; --accent-deep:#8A6B12; --accent-ink:#141007;
+    --accent-tint:#1A1709; --accent-tintline:#3A3116; --accent-soft:rgba(201,162,39,.12);
+    --ok:#3FBF87; --warn:#E0913A; --bad:#E0605A; --dead:#4A2E2E;
+    --ok-soft:#14211B; --warn-soft:#221D14; --bad-soft:#241718;
+    --btn:#1C1C24; --btn-hover:#23232D;
+    --toast:#1E1E26; --toast-txt:#ECECE8;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+    --shadow-lg:0 18px 48px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:var(--font-body);
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; letter-spacing:.01em; margin:0; color:var(--txt)}
+  a{color:var(--accent); text-decoration:none}
+  .app{display:flex; min-height:100vh}
+
+  /* ---------- SIDEBAR ---------- */
+  aside{
+    width:246px; flex:0 0 246px; background:var(--panel); border-right:1px solid var(--line);
+    padding:22px 14px; display:flex; flex-direction:column; gap:22px; position:sticky; top:0; height:100vh;
+  }
+  .brand{display:flex; align-items:center; gap:10px; padding:0 8px}
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;flex:0 0 34px;
+    background:linear-gradient(135deg,var(--accent2),var(--accent-deep));
+    display:grid;place-items:center;color:var(--accent-ink);font-family:var(--font-display);font-weight:700;font-size:17px;
+  }
+  .brand b{display:block;font-family:var(--font-display);font-size:15px;letter-spacing:.02em}
+  .brand span{display:block;font-size:10.5px;color:var(--muted2);letter-spacing:.14em;text-transform:uppercase}
+  nav{display:flex;flex-direction:column;gap:2px}
+  nav .navlabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted2);padding:0 10px 8px}
+  nav a{
+    display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--strong);
+    font-size:13.5px;border-left:2px solid transparent;
+  }
+  nav a .ico{width:16px;text-align:center;opacity:.85;font-size:13px}
+  nav a:hover{background:var(--hover);color:var(--txt)}
+  nav a.active{background:var(--navactive);color:var(--txt);border-left:2px solid var(--accent)}
+  .sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:0 4px}
+  .sidebar-foot .tiny{font-size:10.5px;color:var(--muted2);line-height:1.45;padding:0 6px}
+  .ghostbtn{
+    background:transparent;border:1px solid var(--line2);color:var(--strong);border-radius:8px;
+    padding:7px 10px;font-size:12px;cursor:pointer;text-align:left;font-family:inherit;
+  }
+  .ghostbtn:hover{border-color:var(--accent);color:var(--txt)}
+
+  /* ---------- MAIN ---------- */
+  main{flex:1; min-width:0; padding:30px 34px 70px; max-width:1320px}
+  .pagehead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .pagehead h1{font-size:27px}
+  .pagehead p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:640px}
+  .eyebrow{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+
+  .grid{display:grid;gap:14px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:22px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .kpi .lab{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+  .kpi .val{font-family:var(--font-display);font-size:26px;margin-top:6px;letter-spacing:.01em;color:var(--navy)}
+  body.theme-dark .kpi .val{color:var(--txt)}
+  .kpi .sub{font-size:11.5px;color:var(--muted2);margin-top:3px}
+  .kpi.accent{border-color:var(--accent-tintline);background:linear-gradient(180deg,var(--accent-tint),var(--surface))}
+
+  .cols{display:grid;grid-template-columns:1.45fr 1fr;gap:16px}
+  @media(max-width:1080px){.cols{grid-template-columns:1fr}}
+  .cardhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px}
+  .cardhead h3{font-size:16px}
+  .cardhead .hint{font-size:11.5px;color:var(--muted)}
+
+  /* buttons */
+  .btn{
+    font-family:inherit;font-size:12.5px;padding:8px 13px;border-radius:9px;cursor:pointer;
+    background:var(--btn);color:var(--txt);border:1px solid var(--line2);white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--line3);background:var(--btn-hover)}
+  .btn.primary{background:linear-gradient(180deg,var(--accent2),var(--accent));color:var(--accent-ink);border-color:var(--accent-deep);font-weight:600}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.mini{padding:5px 9px;font-size:11.5px}
+  .btn.danger{color:var(--bad);border-color:var(--accent-tintline);background:transparent}
+  .btn.danger:hover{border-color:var(--bad);background:var(--bad-soft)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* inputs */
+  input,select,textarea{
+    font-family:inherit;font-size:13px;background:var(--input);color:var(--txt);
+    border:1px solid var(--line2);border-radius:9px;padding:8px 11px;width:100%;outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea{resize:vertical;line-height:1.55}
+  label{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .field{margin-bottom:12px}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  @media(max-width:640px){.formgrid{grid-template-columns:1fr}}
+  .full{grid-column:1/-1}
+
+  /* lists */
+  .rowlist{display:flex;flex-direction:column;gap:9px}
+  .item{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .item .dot{width:7px;height:7px;border-radius:50%;margin-top:7px;flex:0 0 7px;background:var(--accent)}
+  .item .dot.late{background:var(--bad)}
+  .item .dot.done{background:var(--ok)}
+  .item .txt{flex:1;min-width:0}
+  .item .t1{font-size:13.5px}
+  .item .t2{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .badge{font-size:10.5px;padding:2.5px 8px;border-radius:99px;border:1px solid var(--line2);color:var(--strong);background:var(--surface2);white-space:nowrap}
+  .badge.late{color:var(--bad);border-color:var(--accent-tintline);background:var(--bad-soft)}
+  .badge.soon{color:var(--warn);border-color:#FDE68A;background:var(--warn-soft)}
+  .badge.ok{color:var(--ok);border-color:#BBF7D0;background:var(--ok-soft)}
+  body.theme-dark .badge.soon{border-color:var(--accent-tintline)}
+  body.theme-dark .badge.ok{border-color:#234434}
+  .empty{color:var(--muted);font-size:13px;padding:18px 0;text-align:center}
+
+  /* barres de progression */
+  .bar{height:6px;background:var(--well);border-radius:99px;overflow:hidden}
+  .bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent-deep),var(--accent2))}
+  .bar.ok>i{background:var(--ok)}
+  .bar.dead>i{background:var(--dead)}
+  .barline{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:4px}
+
+  /* helpers */
+  .t-ok{color:var(--ok)} .t-warn{color:var(--warn)} .t-bad{color:var(--bad)} .t-accent{color:var(--accent)}
+  .body-text{color:var(--strong);line-height:1.75}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .sep{height:1px;background:var(--line);margin:18px 0}
+  code{background:var(--accent-tint);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--accent-deep)}
+  body.theme-dark code{color:var(--accent2)}
+
+  /* kanban */
+  .kanban{display:grid;grid-template-columns:repeat(6,minmax(182px,1fr));gap:10px;overflow-x:auto;padding-bottom:12px}
+  .col{background:var(--surface2);border:1px solid var(--line);border-radius:13px;padding:11px;min-height:180px}
+  .col h4{margin:0 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;font-family:var(--font-body);font-weight:700}
+  .col h4 span{color:var(--muted2)}
+  .col[data-stage="signe"] h4{color:var(--ok)}
+  .col[data-stage="perdu"] h4{color:var(--muted2)}
+  .leadcard{background:var(--surface3);border:1px solid var(--line2);border-radius:10px;padding:10px;margin-bottom:9px;box-shadow:var(--shadow)}
+  .leadcard .co{font-size:13px;font-weight:700;letter-spacing:.01em}
+  .leadcard .ev{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .leadcard .amt{font-family:var(--font-display);font-size:14.5px;color:var(--accent);margin-top:6px}
+  .leadcard .meta{font-size:10.5px;color:var(--muted2);margin-top:5px;display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .leadcard .mini-actions{display:flex;gap:4px;margin-top:9px;opacity:.6}
+  .leadcard:hover .mini-actions{opacity:1}
+  .leadcard .mini-actions button{
+    flex:1;background:var(--btn);border:1px solid var(--line2);color:var(--strong);border-radius:6px;
+    font-size:11px;padding:3px 0;cursor:pointer;font-family:inherit;
+  }
+  .leadcard .mini-actions button:hover{color:var(--txt);border-color:var(--line3);background:var(--btn-hover)}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 8px 9px;border-bottom:1px solid var(--line)}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  td input,td select{padding:6px 8px;font-size:12.5px}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .totals{display:grid;grid-template-columns:1fr auto;gap:6px 18px;max-width:400px;margin-left:auto;margin-top:14px;font-size:13px}
+  .totals .k{color:var(--muted)}
+  .totals .v{text-align:right;font-variant-numeric:tabular-nums}
+  .totals .grand{border-top:1px solid var(--line2);padding-top:8px;margin-top:4px;font-family:var(--font-display);font-size:16px;color:var(--navy)}
+  body.theme-dark .totals .grand{color:var(--txt)}
+  .totals .grand .v{color:var(--accent)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+  .chip{font-size:11.5px;padding:5px 10px;border-radius:99px;border:1px dashed var(--line2);color:var(--strong);cursor:pointer;background:transparent;font-family:inherit}
+  .chip:hover{border-color:var(--accent);color:var(--accent);border-style:solid}
+
+  .proposal{
+    background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:20px 22px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.3px;line-height:1.65;
+    white-space:pre-wrap;max-height:540px;overflow:auto;color:var(--txt);
+  }
+  .tpl{background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:10px}
+  .tpl h4{margin:0 0 4px;font-size:13px;font-family:var(--font-body);letter-spacing:.02em;color:var(--txt)}
+  .tpl .when{font-size:11px;color:var(--accent);margin-bottom:8px;font-weight:600}
+  .tpl pre{white-space:pre-wrap;font-family:inherit;font-size:12.5px;color:var(--strong);margin:0 0 10px;line-height:1.55}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(11,29,58,.55);display:grid;place-items:center;padding:20px;z-index:60;backdrop-filter:blur(2px)}
+  body.theme-dark .overlay{background:rgba(6,6,9,.72)}
+  .modal{background:var(--panel);border:1px solid var(--line2);border-radius:16px;width:min(560px,100%);max-height:88vh;overflow:auto;padding:22px;box-shadow:var(--shadow-lg)}
+  .modal h3{font-size:18px;margin-bottom:16px}
+  .modal .foot{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--toast);border:1px solid var(--line2);color:var(--toast-txt);padding:10px 18px;border-radius:99px;
+    font-size:12.5px;opacity:0;transition:.25s;z-index:90;pointer-events:none;box-shadow:var(--shadow-lg);
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .banner{
+    background:var(--accent-tint);border:1px solid var(--accent-tintline);color:var(--accent-deep);border-radius:11px;
+    padding:10px 14px;font-size:12px;margin-bottom:18px;display:none;
+  }
+  body.theme-dark .banner{color:#E2CF9A}
+  .banner.on{display:block}
+
+  /* ---------- MODE EMBARQUÉ (intégration dans Imagine Inventory) ---------- */
+  .embedbar{display:none}
+  #embednav{display:none}
+  body.embed{background:transparent}
+  body.embed aside{display:none}
+  body.embed .app{min-height:0}
+  body.embed #embednav{
+    display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line);
+    background:var(--panel);position:sticky;top:0;z-index:20;
+  }
+  body.embed #embednav a{font-size:12.5px;padding:6px 11px;border-radius:8px;color:var(--strong);border:1px solid transparent;font-weight:600}
+  body.embed #embednav a:hover{background:var(--hover)}
+  body.embed #embednav a.active{background:var(--accent-tint);color:var(--accent-deep);border-color:var(--accent-tintline)}
+  body.embed main{padding:18px 18px 44px;max-width:none}
+  body.embed .pagehead h1{font-size:23px}
+  body.embed .banner{display:none!important}
+
+  @media(max-width:860px){
+    .app{flex-direction:column}
+    aside{width:100%;flex:none;height:auto;position:static;flex-direction:row;align-items:center;gap:14px;overflow-x:auto;padding:12px}
+    .sidebar-foot{display:none}
+    nav{flex-direction:row;gap:4px}
+    nav .navlabel{display:none}
+    main{padding:20px 16px 60px}
+    .kanban{grid-template-columns:repeat(6,minmax(190px,1fr))}
+  }
+  @media print{
+    aside,.pagehead .actions,.banner,.sidebar-foot,#embednav{display:none!important}
+    body{background:#fff;color:#000}
+    .card,.proposal{border-color:#ccc;background:#fff;color:#000;max-height:none;box-shadow:none}
+    main{padding:0}
+  }
+</style>
+</head>
+<body>
+<div id="embednav"></div>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="mark">I</div>
+      <div><b>Imagine</b><span>Cockpit commercial</span></div>
+    </div>
+    <nav id="nav">
+      <div class="navlabel">Pilotage</div>
+      <a href="#cockpit" data-route="cockpit"><span class="ico">◎</span>Cockpit</a>
+      <a href="#pipeline" data-route="pipeline"><span class="ico">▤</span>Pipeline leads</a>
+      <div class="navlabel" style="padding-top:14px">Commercial</div>
+      <a href="#devis" data-route="devis"><span class="ico">∑</span>Devis & marges</a>
+      <a href="#proposition" data-route="proposition"><span class="ico">✎</span>Proposition</a>
+      <div class="navlabel" style="padding-top:14px">Croissance</div>
+      <a href="#acquisition" data-route="acquisition"><span class="ico">↗</span>Acquisition</a>
+      <a href="#plan" data-route="plan"><span class="ico">◈</span>Plan 90 jours</a>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="ghostbtn" data-action="export">↓ Sauvegarder (JSON)</button>
+      <button class="ghostbtn" data-action="import">↑ Restaurer</button>
+      <button class="ghostbtn" data-action="exportCsv">↓ Leads (CSV)</button>
+      <div class="tiny" id="storeinfo"></div>
+    </div>
+  </aside>
+  <main id="main"></main>
+</div>
+<input type="file" id="fileinput" accept=".json" style="display:none">
+<div class="toast" id="toast"></div>
+<div id="modalhost"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   COCKPIT AGENCE — outil interne mono-fichier
+   Données : localStorage (repli mémoire si l'aperçu bloque)
+   ========================================================= */
+
+/* ---------- storage shim ---------- */
+const store = (function(){
+  let mem = {}, ok = false;
+  try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); ok = true; } catch(e){ ok = false; }
+  return {
+    persistent: ok,
+    get(k, d){ try{ const raw = ok ? localStorage.getItem(k) : mem[k]; return raw ? JSON.parse(raw) : d; }catch(e){ return d; } },
+    set(k, v){ const s = JSON.stringify(v); if(ok){ try{ localStorage.setItem(k, s); }catch(e){} } else { mem[k] = s; } }
+  };
+})();
+
+/* ---------- utils ---------- */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2,9);
+const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+const frDate = iso => { if(!iso) return '—'; const [y,m,d] = iso.split('-'); return d+'/'+m+'/'+y; };
+const fmt = n => Math.round(Number(n)||0).toLocaleString('fr-FR').replace(/\u202f|\u00a0/g,' ');
+const money = n => fmt(n) + ' TND';
+const pct = n => (Math.round((Number(n)||0)*1000)/10).toFixed(1).replace('.0','') + ' %';
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const daysFromToday = iso => {
+  if(!iso) return null;
+  const t = new Date(iso+'T00:00:00'), n = new Date(todayISO()+'T00:00:00');
+  return Math.round((n - t)/86400000); // >0 = en retard
+};
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 2200);
+}
+
+/* ---------- paramètres d'intégration ----------
+   ?embed=1          → masque la barre latérale, affiche une barre d'onglets
+   ?accent=%23c9a227 → couleur d'accent de votre charte
+   ?api=https://...  → synchronise sur la base de votre site au lieu du localStorage
+   ------------------------------------------------------ */
+const PARAMS = new URLSearchParams(location.search);
+const EMBED = PARAMS.has('embed');
+const REMOTE_API = (PARAMS.get('api') || '').replace(/\/+$/, '');
+if (EMBED) document.body.classList.add('embed');
+if (PARAMS.get('accent')) {
+  document.documentElement.style.setProperty('--accent', PARAMS.get('accent'));
+  document.documentElement.style.setProperty('--accent2', PARAMS.get('accent'));
+}
+if (PARAMS.get('theme') === 'dark') document.body.classList.add('theme-dark');
+let _remoteTimer = null;
+
+/* ---------- modèle ---------- */
+const STAGES = [
+  {id:'nouveau',     label:'Nouveau',            prob:0.10},
+  {id:'qualifie',    label:'Qualifié',           prob:0.30},
+  {id:'proposition', label:'Proposition',        prob:0.50},
+  {id:'nego',        label:'Négociation',        prob:0.70},
+  {id:'signe',       label:'Signé',              prob:1.00},
+  {id:'perdu',       label:'Perdu',              prob:0.00}
+];
+const stageOf = id => STAGES.find(s=>s.id===id) || STAGES[0];
+
+const SEED_LEADS = [
+  {id:uid(), societe:'Banque Zitouna', contact:'Mme Trabelsi', secteur:'Banque', evenement:'Séminaire annuel 300 pax', pax:300, valeur:78000, source:'Recommandation', stage:'nego', dateContact:todayISO(), next: 'Appeler pour arbitrer les 2 options de lieu', nextDate:todayISO(), notes:'Décideur = DG adjoint. Sensible au budget traiteur.'},
+  {id:uid(), societe:'Vermeg', contact:'M. Ben Ammar', secteur:'Tech', evenement:'Team building 120 pax', pax:120, valeur:34000, source:'LinkedIn', stage:'proposition', dateContact:todayISO(), next:'Relancer J+4 sur la proposition', nextDate:todayISO(), notes:'Devis envoyé lundi. Budget confirmé.'},
+  {id:uid(), societe:'Poulina Group', contact:'Mme Khelifi', secteur:'Industrie', evenement:'Lancement produit 200 pax', pax:200, valeur:52000, source:'Salon', stage:'qualifie', dateContact:todayISO(), next:'Envoyer la note de cadrage', nextDate:todayISO(), notes:'Veut un concept scénographié + influenceurs.'},
+  {id:uid(), societe:'Groupe HBK', contact:'M. Zouari', secteur:'Distribution', evenement:'Convention 450 pax', pax:450, valeur:96000, source:'Appel entrant', stage:'nouveau', dateContact:todayISO(), next:'Qualifier : date, budget, décideur', nextDate:todayISO(), notes:''},
+  {id:uid(), societe:'Délice Holding', contact:'Mme Ayari', secteur:'Agro', evenement:'Gala fournisseurs 250 pax', pax:250, valeur:61000, source:'Recommandation', stage:'signe', dateContact:todayISO(), next:'Lancer la production', nextDate:'', notes:'Signé. Acompte 40 % reçu.'}
+];
+
+const state = {
+  leads: store.get('leads', SEED_LEADS),
+  devis: store.get('devis', []),
+  proposal: store.get('proposal', {client:'', secteur:'', objectif:'', event:'', date:'', lieu:'', pax:'', budget:'', concept:'', options:''}),
+  content: store.get('content', []),
+  profile: store.get('profile', {agency:'Imagine Events Tunisia', contact:'', tel:'', mail:'', tva:19})
+};
+function save(){
+  store.set('leads', state.leads); store.set('devis', state.devis); store.set('proposal', state.proposal);
+  store.set('content', state.content); store.set('profile', state.profile);
+  if (REMOTE_API) {
+    clearTimeout(_remoteTimer);
+    _remoteTimer = setTimeout(() => {
+      try {
+        fetch(REMOTE_API + '/state', {
+          method: 'PUT', credentials: 'include',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(state)
+        });
+      } catch(e) { /* hors ligne : le miroir local reste à jour */ }
+    }, 700);
+  }
+}
+
+/* ---------- calculs ---------- */
+const activeLead = l => l.stage !== 'signe' && l.stage !== 'perdu';
+function kpis(){
+  const actives = state.leads.filter(activeLead);
+  const signed = state.leads.filter(l=>l.stage==='signe');
+  const lost = state.leads.filter(l=>l.stage==='perdu');
+  const closeRate = (signed.length + lost.length) ? signed.length/(signed.length+lost.length) : 0;
+  const caSigne = signed.reduce((s,l)=>s+Number(l.valeur||0),0);
+  const weighted = actives.reduce((s,l)=>s+Number(l.valeur||0)*stageOf(l.stage).prob,0);
+  const late = state.leads.filter(l=>l.nextDate && daysFromToday(l.nextDate)>0 && activeLead(l));
+  const today = state.leads.filter(l=>l.nextDate && daysFromToday(l.nextDate)===0 && activeLead(l));
+  return {actives, signed, lost, closeRate, caSigne, weighted, late, today, total:state.leads.length};
+}
+
+/* ---------- composants ---------- */
+function pageHead(eyebrow, title, sub, actions){
+  return `<div class="pagehead"><div><div class="eyebrow">${esc(eyebrow)}</div><h1>${title}</h1>
+    <p>${sub}</p></div><div class="actions">${actions||''}</div></div>`;
+}
+function stageBadge(stage){
+  const s = stageOf(stage);
+  const cls = stage==='signe' ? 'ok' : stage==='perdu' ? 'late' : '';
+  return `<span class="badge ${cls}">${s.label}</span>`;
+}
+
+/* =========================================================
+   VUES
+   ========================================================= */
+function viewCockpit(){
+  const k = kpis();
+  const late = k.late.slice().sort((a,b)=>daysFromToday(b.nextDate)-daysFromToday(a.nextDate));
+  const todo = [...late, ...k.today];
+  const perStage = STAGES.map(s => ({s, n: state.leads.filter(l=>l.stage===s.id).length, v: state.leads.filter(l=>l.stage===s.id).reduce((a,l)=>a+Number(l.valeur||0),0)}));
+  const maxV = Math.max(1, ...perStage.map(p=>p.v));
+  const sources = {};
+  state.leads.forEach(l=>{ sources[l.source||'Non renseigné'] = (sources[l.source||'Non renseigné']||0)+1; });
+
+  const rowsTodo = todo.length ? todo.map(l=>{
+    const d = daysFromToday(l.nextDate);
+    const cls = d>0 ? 'late' : '';
+    const badge = d>0 ? `<span class="badge late">+${d} j</span>` : `<span class="badge soon">aujourd'hui</span>`;
+    return `<div class="item"><div class="dot ${cls}"></div><div class="txt">
+      <div class="t1">${esc(l.next || 'Action à définir')}</div>
+      <div class="t2">${esc(l.societe)} · ${esc(l.evenement||'—')} · ${money(l.valeur)}</div>
+    </div>${badge}<button class="btn mini" data-action="edit-lead" data-id="${l.id}">Ouvrir</button></div>`;
+  }).join('') : `<div class="empty">Aucune relance en attente. C'est le moment de prospecter de nouveaux comptes.</div>`;
+
+  return pageHead('Vue d\'ensemble', 'Cockpit acquisition',
+    'Le seul écran à ouvrir le matin : qui relancer, combien vaut le pipeline, où vous perdez des affaires.',
+    `<button class="btn primary" data-action="new-lead">+ Nouveau lead</button>`) +
+  `<div class="grid kpis">
+    <div class="card kpi"><div class="lab">Leads actifs</div><div class="val">${k.actives.length}</div><div class="sub">${k.total} au total dans le pipeline</div></div>
+    <div class="card kpi accent"><div class="lab">Pipeline pondéré</div><div class="val">${money(k.weighted)}</div><div class="sub">pondéré par la probabilité d'étape</div></div>
+    <div class="card kpi"><div class="lab">CA signé</div><div class="val">${money(k.caSigne)}</div><div class="sub">${k.signed.length} affaire(s) gagnée(s)</div></div>
+    <div class="card kpi"><div class="lab">Taux de conversion</div><div class="val">${pct(k.closeRate)}</div><div class="sub">signés / (signés + perdus)</div></div>
+    <div class="card kpi"><div class="lab">Relances en retard</div><div class="val ${k.late.length?'t-bad':'t-ok'}">${k.late.length}</div><div class="sub">le vrai tueur de conversion</div></div>
+  </div>
+  <div class="cols">
+    <div class="card">
+      <div class="cardhead"><h3>À faire aujourd'hui</h3><span class="hint">${todo.length} action(s)</span></div>
+      <div class="rowlist">${rowsTodo}</div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="cardhead"><h3>Valeur par étape</h3></div>
+        ${perStage.map(p=>`<div style="margin-bottom:10px">
+          <div class="barline"><span>${p.s.label} <span class="muted">· ${p.n}</span></span><span>${money(p.v)}</span></div>
+          <div class="bar ${p.s.id==='signe'?'ok':p.s.id==='perdu'?'dead':''}"><i style="width:${Math.max(2,(p.v/maxV)*100)}%"></i></div>
+        </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="cardhead"><h3>Sources de leads</h3></div>
+        ${Object.keys(sources).length ? Object.entries(sources).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`<div class="item" style="padding:8px 0"><div class="txt"><div class="t1" style="font-size:12.5px">${esc(s)}</div></div><span class="badge">${n}</span></div>`).join('') : '<div class="empty">—</div>'}
+        <div class="sep"></div>
+        <div class="small muted">Leçon : si 80 % de vos leads viennent de la recommandation, votre acquisition dépend de la chance. Fixez-vous <b class="t-accent">2 sources actives</b> en plus des recommandations.</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewPipeline(){
+  const cols = STAGES.map(s=>{
+    const items = state.leads.filter(l=>l.stage===s.id);
+    const sum = items.reduce((a,l)=>a+Number(l.valeur||0),0);
+    return `<div class="col" data-stage="${s.id}">
+      <h4>${s.label} <span>${items.length} · ${fmt(sum)}</span></h4>
+      ${items.map(l=>{
+        const d = daysFromToday(l.nextDate);
+        const late = d!==null && d>0;
+        const dateTag = l.nextDate ? `<span class="badge ${late?'late':''}" style="font-size:9.5px">${late?'+'+d+'j':'J'} · ${frDate(l.nextDate)}</span>` : '';
+        return `<div class="leadcard">
+          <div class="co">${esc(l.societe)}</div>
+          <div class="ev">${esc(l.evenement||'—')}${l.pax?` · ${l.pax} pax`:''}</div>
+          <div class="amt">${money(l.valeur)}</div>
+          <div class="meta"><span>${esc(l.contact||'')}</span>${dateTag}</div>
+          <div class="mini-actions">
+            <button data-action="move" data-id="${l.id}" data-dir="-1" title="Reculer">‹</button>
+            <button data-action="edit-lead" data-id="${l.id}">Éditer</button>
+            <button data-action="move" data-id="${l.id}" data-dir="1" title="Avancer">›</button>
+          </div>
+        </div>`;
+      }).join('') || '<div class="empty" style="padding:10px 0;font-size:11.5px">Vide</div>'}
+    </div>`;
+  }).join('');
+
+  return pageHead('Commercial', 'Pipeline de leads',
+    'Faites avancer chaque carte à droite : nouveau → qualifié → proposition → négociation → signé. La valeur pondérée du cockpit se met à jour toute seule.',
+    `<input id="search" placeholder="Rechercher une société…" style="width:200px">
+     <button class="btn primary" data-action="new-lead">+ Nouveau lead</button>`)
+  + `<div class="kanban" id="kanban">${cols}</div>
+     <div class="card" style="margin-top:18px">
+       <div class="cardhead"><h3>Lecture du pipeline</h3><span class="hint">règles simples</span></div>
+       <div class="small body-text">
+         • <b>Nouveau</b> : contact identifié, rien de qualifié. Objectif : sortir la carte en 48 h.<br>
+         • <b>Qualifié</b> : date, budget, décideur connus. Sans les 3, ce n'est pas un lead.<br>
+         • <b>Proposition</b> : devis envoyé. Relance obligatoire à J+3 <i>et</i> J+8.<br>
+         • <b>Négociation</b> : objection identifiée. Une remise se paie toujours par un retrait de prestation.<br>
+         • Un lead sans <b>prochaine action datée</b> est un lead mort qui s'ignore.
+       </div>
+     </div>`;
+}
+
+/* ---------- devis ---------- */
+let draft = null;
+const LINE_PRESETS = [
+  {cat:'Lieu', label:'Location de salle', coef:1.25},
+  {cat:'Traiteur', label:'Restauration / cocktail', coef:1.35},
+  {cat:'Technique', label:'Audiovisuel (son, lumière, écran)', coef:1.40},
+  {cat:'Scéno', label:'Décoration & scénographie', coef:1.45},
+  {cat:'Animation', label:'Animation / artiste / DJ', coef:1.50},
+  {cat:'Coordination', label:'Coordination & honoraires agence', coef:2.50},
+  {cat:'Transport', label:'Transport & logistique', coef:1.20},
+  {cat:'Print', label:'Goodies, print, signalétique', coef:1.60}
+];
+function newDraft(){
+  return {id:uid(), client:'', event:'', date:'', pax:'', remise:0, tva:Number(state.profile.tva||19), lines:[], created:todayISO()};
+}
+function lineTotals(l){
+  const qty = Number(l.qty)||0, cost = Number(l.cost)||0, coef = Number(l.coef)||0;
+  const unitSale = cost*coef;
+  return {cost: qty*cost, sale: qty*unitSale, unitSale};
+}
+function draftTotals(d){
+  const cost = d.lines.reduce((a,l)=>a+lineTotals(l).cost,0);
+  const sale = d.lines.reduce((a,l)=>a+lineTotals(l).sale,0);
+  const marge = sale - cost;
+  const margePct = sale>0 ? marge/sale : 0;
+  const remise = sale * (Number(d.remise)||0)/100;
+  const htNet = sale - remise;
+  const tva = htNet * (Number(d.tva)||0)/100;
+  return {cost, sale, marge, margePct, remise, htNet, tva, ttc: htNet + tva};
+}
+
+function viewDevis(){
+  const list = state.devis.slice().sort((a,b)=> (b.created||'').localeCompare(a.created||''));
+  return pageHead('Commercial', 'Devis & marges',
+    'Construisez un devis en partant de vos coûts d\'achat et d\'un coefficient : vous voyez la marge en direct, avant de l\'envoyer au client.',
+    `<button class="btn primary" data-action="new-devis">+ Nouveau devis</button>`)
+  + `<div class="card">
+      <div class="cardhead"><h3>Devis enregistrés</h3><span class="hint">${list.length}</span></div>
+      ${list.length ? `<table><thead><tr><th>Client</th><th>Événement</th><th>Date</th><th class="num">Coût</th><th class="num">Vente TTC</th><th class="num">Marge</th><th></th></tr></thead><tbody>
+      ${list.map(d=>{ const t = draftTotals(d); return `<tr>
+        <td>${esc(d.client||'—')}</td><td class="muted">${esc(d.event||'—')}</td><td class="muted">${d.date?frDate(d.date):'—'}</td>
+        <td class="num muted">${fmt(t.cost)}</td><td class="num">${fmt(t.ttc)}</td>
+        <td class="num ${t.margePct<0.25?'t-bad':t.margePct<0.35?'t-warn':'t-ok'}">${pct(t.margePct)}</td>
+        <td class="num"><button class="btn mini" data-action="open-devis" data-id="${d.id}">Ouvrir</button></td></tr>`;}).join('')}
+      </tbody></table>` : `<div class="empty">Aucun devis. Créez le premier : 8 lignes types sont pré-remplies avec des coefficients de référence.</div>`}
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="cardhead"><h3>Coefficients de référence</h3><span class="hint">à ajuster selon votre marché</span></div>
+      <div class="small body-text">
+        Le coefficient multiplie votre <b>coût d'achat</b> pour donner le prix de vente HT. Un coefficient 1,35 sur le traiteur = 26 % de marge brute.
+        Objectif sain pour une agence : <b class="t-accent">35 à 45 % de marge globale</b>, obtenue en portant la coordination à un coefficient élevé (c'est de la valeur, pas du débit).
+        En dessous de 25 %, vous achetez du travail, pas de la marge : refusez ou réduisez le périmètre.
+      </div>
+    </div>`;
+}
+
+function viewDevisEditor(id){
+  if(!draft || draft.id !== id){
+    const found = state.devis.find(d=>d.id===id);
+    draft = found ? JSON.parse(JSON.stringify(found)) : newDraft();
+  }
+  return pageHead('Devis', draft.client ? 'Devis — '+esc(draft.client) : 'Nouveau devis',
+    'Renseignez le coût d\'achat réel. Le prix de vente, la marge et la TVA se calculent automatiquement.',
+    `<button class="btn" data-action="back-devis">← Liste</button>
+     <button class="btn" data-action="devis-to-proposal">→ Générer la proposition</button>
+     <button class="btn primary" data-action="save-devis">Enregistrer</button>`)
+  + `<div class="card">
+      <div class="formgrid">
+        <div class="field"><label>Client</label><input data-dfield="client" value="${esc(draft.client)}" placeholder="Banque Zitouna"></div>
+        <div class="field"><label>Événement</label><input data-dfield="event" value="${esc(draft.event)}" placeholder="Séminaire annuel 300 pax"></div>
+        <div class="field"><label>Date de l'événement</label><input type="date" data-dfield="date" value="${esc(draft.date)}"></div>
+        <div class="field"><label>Nombre de participants</label><input type="number" data-dfield="pax" value="${esc(draft.pax)}" placeholder="300"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="chips">
+        ${LINE_PRESETS.map((p,i)=>`<button class="chip" data-action="add-line" data-i="${i}">+ ${esc(p.label)}</button>`).join('')}
+      </div>
+      <div style="overflow-x:auto">
+      <table id="linetable">
+        <thead><tr>
+          <th style="min-width:190px">Désignation</th><th>Catégorie</th>
+          <th style="width:70px" class="num">Qté</th><th style="width:110px" class="num">Coût unit.</th>
+          <th style="width:80px" class="num">Coef</th><th style="width:110px" class="num">PV unit.</th>
+          <th style="width:110px" class="num">Total HT</th><th style="width:34px"></th>
+        </tr></thead>
+        <tbody id="linebody">${draft.lines.map((l,i)=>lineRow(l,i)).join('') || `<tr><td colspan="8" class="empty">Ajoutez une ligne (ou partez des chips ci-dessus).</td></tr>`}</tbody>
+      </table>
+      </div>
+      <div class="totals" id="totals">${totalsHTML(draft)}</div>
+      <div class="sep"></div>
+      <div class="formgrid">
+        <div class="field"><label>Remise commerciale (%)</label><input type="number" data-dfield="remise" value="${esc(draft.remise)}" step="1" min="0" max="60"></div>
+        <div class="field"><label>TVA (%)</label><input type="number" data-dfield="tva" value="${esc(draft.tva)}" step="1" min="0"></div>
+      </div>
+    </div>`;
+}
+function lineRow(l, i){
+  const t = lineTotals(l);
+  return `<tr data-row="${i}">
+    <td><input data-line="${i}" data-k="label" value="${esc(l.label)}" placeholder="Désignation"></td>
+    <td><input data-line="${i}" data-k="cat" value="${esc(l.cat)}" placeholder="Catégorie"></td>
+    <td><input class="num" type="number" data-line="${i}" data-k="qty" value="${esc(l.qty)}" min="0"></td>
+    <td><input class="num" type="number" data-line="${i}" data-k="cost" value="${esc(l.cost)}" min="0"></td>
+    <td><input class="num" type="number" data-line="${i}" data-k="coef" value="${esc(l.coef)}" step="0.05" min="1"></td>
+    <td class="num muted" data-cell="pv-${i}">${fmt(t.unitSale)}</td>
+    <td class="num" data-cell="tot-${i}">${fmt(t.sale)}</td>
+    <td><button class="btn mini danger" data-action="del-line" data-i="${i}" title="Supprimer">✕</button></td>
+  </tr>`;
+}
+function totalsHTML(d){
+  const t = draftTotals(d);
+  const margeCls = t.margePct<0.25 ? 't-bad' : t.margePct<0.35 ? 't-warn' : 't-ok';
+  return `
+    <div class="k">Coût d'achat total</div><div class="v muted">${money(t.cost)}</div>
+    <div class="k">Prix de vente HT</div><div class="v">${money(t.sale)}</div>
+    <div class="k">Marge brute</div><div class="v ${margeCls}">${money(t.marge)} · ${pct(t.margePct)}</div>
+    ${t.remise>0?`<div class="k">Remise (${Number(d.remise)}%)</div><div class="v t-warn">− ${money(t.remise)}</div>`:''}
+    <div class="k">Total HT net</div><div class="v">${money(t.htNet)}</div>
+    <div class="k">TVA (${Number(d.tva)}%)</div><div class="v muted">${money(t.tva)}</div>
+    <div class="k grand">Total TTC</div><div class="v grand">${money(t.ttc)}</div>`;
+}
+function refreshDevis(){
+  const body = $('#linebody');
+  if(!body) return;
+  if(!draft.lines.length){
+    body.innerHTML = `<tr><td colspan="8" class="empty">Ajoutez une ligne (ou partez des chips ci-dessus).</td></tr>`;
+  } else {
+    body.innerHTML = draft.lines.map((l,i)=>lineRow(l,i)).join('');
+  }
+  $('#totals').innerHTML = totalsHTML(draft);
+}
+
+/* ---------- proposition ---------- */
+function viewProposition(){
+  const p = state.proposal;
+  const text = buildProposal(p);
+  return pageHead('Commercial', 'Générateur de proposition',
+    'Remplissez 9 champs, obtenez une proposition structurée prête à envoyer (ou à mettre en page dans votre template).',
+    `<button class="btn" data-action="copy-proposal">Copier le texte</button>
+     <button class="btn" data-action="print">Imprimer / PDF</button>
+     <button class="btn primary" data-action="mail-proposal">Envoyer par e-mail</button>`)
+  + `<div class="cols">
+      <div class="card">
+        <div class="cardhead"><h3>Brief</h3><span class="hint">enregistré automatiquement</span></div>
+        <div class="formgrid">
+          <div class="field"><label>Client</label><input data-pfield="client" value="${esc(p.client)}" placeholder="Banque Zitouna"></div>
+          <div class="field"><label>Secteur / interlocuteur</label><input data-pfield="secteur" value="${esc(p.secteur)}" placeholder="Direction marketing — Mme Trabelsi"></div>
+          <div class="field"><label>Événement</label><input data-pfield="event" value="${esc(p.event)}" placeholder="Séminaire annuel"></div>
+          <div class="field"><label>Date</label><input type="date" data-pfield="date" value="${esc(p.date)}"></div>
+          <div class="field"><label>Lieu</label><input data-pfield="lieu" value="${esc(p.lieu)}" placeholder="Hôtel Laico, Tunis"></div>
+          <div class="field"><label>Participants</label><input type="number" data-pfield="pax" value="${esc(p.pax)}" placeholder="300"></div>
+          <div class="field full"><label>Budget indicatif (TND HT)</label><input type="number" data-pfield="budget" value="${esc(p.budget)}" placeholder="78000"></div>
+          <div class="field full"><label>Objectif du client</label><textarea rows="2" data-pfield="objectif" placeholder="Fédérer les équipes régionales et annoncer le plan 2027.">${esc(p.objectif)}</textarea></div>
+          <div class="field full"><label>Concept proposé</label><textarea rows="3" data-pfield="concept" placeholder="Un parcours en 3 temps autour de « Construire ensemble » : plénière scénographiée, ateliers, dîner gala.">${esc(p.concept)}</textarea></div>
+          <div class="field full"><label>Options / variantes</label><textarea rows="2" data-pfield="options" placeholder="Option A : soirée sur yacht. Option B : dîner dansant sur site.">${esc(p.options)}</textarea></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="cardhead"><h3>Aperçu</h3><span class="hint">${text.split('\n').length} lignes</span></div>
+          <div class="proposal" id="proposalText">${esc(text)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+function buildProposal(p){
+  const ag = state.profile;
+  const d = p.date ? frDate(p.date) : '[date à confirmer]';
+  const budget = p.budget ? money(p.budget) + ' HT' : '[budget à confirmer]';
+  return `PROPOSITION D'ÉVÉNEMENT
+${ag.agency || 'Agence'}${ag.tel?` · ${ag.tel}`:''}${ag.mail?` · ${ag.mail}`:''}
+Tunis, le ${frDate(todayISO())}
+
+Client : ${p.client || '[client]'}
+Interlocuteur : ${p.secteur || '[interlocuteur]'}
+Objet : ${p.event || '[événement]'} — ${d}
+
+------------------------------------------------------------------
+1. CE QUE NOUS AVONS COMPRIS
+------------------------------------------------------------------
+${p.objectif || '[Reformulez ici l\'objectif du client en une ou deux phrases. Une proposition qui commence par « nous avons compris » gagne 20 points de crédibilité.]'}
+
+------------------------------------------------------------------
+2. NOTRE PARTI PRIS
+------------------------------------------------------------------
+${p.concept || '[Décrivez le concept en 3 à 5 lignes : une idée forte, un fil rouge, ce que les participants retiendront.]'}
+
+------------------------------------------------------------------
+3. LE DISPOSITIF
+------------------------------------------------------------------
+• Date : ${d}
+• Lieu : ${p.lieu || '[lieu]'}
+• Participants : ${p.pax ? p.pax + ' personnes' : '[nombre]'}
+• Format : plénière, ateliers, temps convivial, dîner
+• Prestations incluses : scénographie et signalétique, régie son lumière vidéo,
+  restauration, animation, accueil et logistique, coordination sur site
+  (équipe ${ag.agency || 'agence'} présente du montage au démontage).
+
+------------------------------------------------------------------
+4. BUDGET
+------------------------------------------------------------------
+Enveloppe proposée : ${budget}
+Le budget détaillé figure dans le devis joint, poste par poste.
+${p.options ? `\nVariantes possibles :\n${p.options}\n` : ''}
+Conditions : 40 % à la commande, 40 % à J-15, 20 % après l'événement.
+Validité de l'offre : 15 jours.
+
+------------------------------------------------------------------
+5. POURQUOI NOUS
+------------------------------------------------------------------
+• Un interlocuteur unique, du brief au démontage.
+• Un devis transparent : chaque poste est chiffré, aucune ligne « divers ».
+• Une équipe de coordination présente le jour J, pas seulement sur le papier.
+
+------------------------------------------------------------------
+6. PROCHAINES ÉTAPES
+------------------------------------------------------------------
+1) Validation du principe et du budget cible — cette semaine.
+2) Repérage du lieu et chiffrage définitif sous 5 jours ouvrés.
+3) Signature et lancement de la production.
+
+Nous restons à votre disposition pour un point de 30 minutes.
+${ag.contact || ''}${ag.contact?' — ':''}${ag.agency || ''}${ag.tel?` · ${ag.tel}`:''}
+
+(Penser à joindre : devis détaillé, 2 à 3 références visuelles, rétroplanning.)`;
+}
+
+/* ---------- acquisition ---------- */
+const CONTENT_PLAN = [
+  {w:1, day:'Lundi', format:'Post LinkedIn', angle:'Coulisses de production', hook:"3 heures avant l'ouverture des portes, voici ce qui se passe vraiment côté régie."},
+  {w:1, day:'Mercredi', format:'Carrousel', angle:'Méthode', hook:'Notre rétroplanning type pour un séminaire 200 pax, semaine par semaine.'},
+  {w:1, day:'Vendredi', format:'Post court', angle:'Prise de position', hook:"Un événement corporate raté ne coûte pas le budget. Il coûte la crédibilité du comité d'organisation."},
+  {w:2, day:'Lundi', format:'Étude de cas', angle:'Preuve', hook:'Comment nous avons fait tenir 450 personnes dans un espace prévu pour 300 — sans dégrader le confort.'},
+  {w:2, day:'Mercredi', format:'Vidéo 30 s', angle:'Preuve visuelle', hook:'Avant / après : la même salle, 6 heures plus tard.'},
+  {w:2, day:'Vendredi', format:'Conseil', angle:'Utilité', hook:'Le seul point à vérifier dans un contrat de traiteur que 90 % des clients oublient.'},
+  {w:3, day:'Lundi', format:'Post LinkedIn', angle:'Coulisses', hook:'Le brief du client disait « simple et convivial ». Voici la traduction en 12 postes de production.'},
+  {w:3, day:'Mercredi', format:'Témoignage', angle:'Preuve sociale', hook:"Ce que la DRH a dit après le séminaire — en 20 secondes de vidéo."},
+  {w:3, day:'Vendredi', format:'Tendance', angle:'Autorité', hook:'3 tendances des événements corporate 2027 qui vont faire exploser vos budgets si vous ne les anticipez pas.'},
+  {w:4, day:'Lundi', format:'Grille utile', angle:'Lead magnet', hook:'Téléchargez notre checklist « 10 jours avant l\'événement » (gratuit, sans formulaire).'},
+  {w:4, day:'Mercredi', format:'Post LinkedIn', angle:'Équipe', hook:'Qui fait quoi dans une équipe de coordination événementielle — et pourquoi ça évite les drames.'},
+  {w:4, day:'Vendredi', format:'Offre', angle:'Conversion', hook:'Il reste 3 créneaux de production en mars. Si votre convention est déjà dans le calendrier, parlons-en maintenant.'}
+];
+const TEMPLATES = [
+  {when:'J+0 · Après un événement réussi', title:'Demande de recommandation', body:`Bonjour {contact},
+
+Merci encore pour votre confiance sur {societe}. J'espère que le résultat était à la hauteur de ce que vous attendiez.
+
+Une question, très concrète : parmi les personnes avec qui vous travaillez, y en a-t-il une ou deux pour qui ce type d'événement se pose dans les prochains mois ?
+
+Je ne demande pas un transfert de contact de votre part — juste le nom d'une personne, et je vous laisse décider du meilleur moment pour lui parler de nous.
+
+Si un mot de votre part vous semble utile, je peux vous envoyer en retour un mini-bilan (chiffres, photos, points d'amélioration) que vous pourrez réutiliser en interne.
+
+Bien à vous,`},
+  {when:'J+3 · Après envoi d\'une proposition', title:'Relance de valeur (pas de "je me permets de relancer")', body:`Bonjour {contact},
+
+Je reviens vers vous sur la proposition envoyée lundi pour {societe}.
+
+En la relisant, une chose me semble mériter votre arbitrage : [l'option A est plus confortable, l'option B tient mieux le budget]. Si vous me dites laquelle vous parle le plus, je peux resserrer le chiffrage sur cette base et vous éviter d'étudier les deux.
+
+Avez-vous 15 minutes jeudi ou vendredi pour en parler ?`,
+},
+  {when:'J+8 · Silence après proposition', title:'Break-up honnête', body:`Bonjour {contact},
+
+Sans nouvelles, je part du principe que le projet a été reporté ou confié ailleurs — c'est parfaitement normal, et je préfère le savoir plutôt que d'encombrer votre boîte mail.
+
+Deux choses si besoin, sans engagement :
+• je garde la proposition active 15 jours de plus ;
+• je peux vous transmettre notre checklist « 10 jours avant l'événement », utile même si vous produisez en interne.
+
+Bonne continuation sur {societe}, et au plaisir de retravailler ensemble.`},
+  {when:'Prospection à froid · LinkedIn / e-mail', title:'Approche par observation (pas par pitch)', body:`Bonjour {contact},
+
+Je viens de voir que {societe} [observation précise : ouvre un nouveau site / a communiqué sur son plan de croissance / organise son assemblée en mars].
+
+Chez nous, on produit ce type de rendez-vous pour des groupes comme [2 références du même secteur] : séminaires 100–400 personnes, avec la coordination incluse.
+
+Rien à vendre aujourd'hui. Si votre convention 2027 est déjà dans les tuyaux, je vous envoie volontiers notre rétroplanning type (1 page) et une fourchette de budget par participant. Ça vous donne un repère de prix avant même de nous solliciter.
+
+Dites-moi si c'est utile.`},
+  {when:'Upsell · Pendant la production', title:'Extension de mission', body:`Bonjour {contact},
+
+Point d'étape : tout est sur les rails pour {societe}.
+
+Deux sujets que je vous soumets pendant qu'il est encore temps :
+1) la captation vidéo des temps forts — environ [X] TND, livrée sous 5 jours, réutilisable en communication interne et réseaux ;
+2) l'enquête de satisfaction à chaud, tablette à la sortie — [Y] TND, et vous arrivez au comité de direction avec des chiffres plutôt qu'une impression.
+
+Si vous validez l'un des deux avant vendredi, on l'intègre au dispositif sans changer le rétroplanning.`},
+  {when:'Réactivation · Client dormant > 6 mois', title:'Réouverture par le calendrier', body:`Bonjour {contact},
+
+Je regarde notre calendrier de production pour le premier semestre et je pense à {societe} : l'an dernier à la même période, vous prépariez {evenement}.
+
+Rien n'est urgent, mais les bons lieux et les bonnes dates se réservent 4 à 6 mois à l'avance. Si vous avez une intention pour cette année, je vous envoie trois options de date et une estimation budgétaire — vous décidez ensuite.
+
+Bonjour à l'équipe,`}
+];
+const SOURCES = [
+  {t:'LinkedIn ciblé', d:'20 profils/semaine : DRH, Dir. marketing, Dir. communication des 200 plus grosses entreprises tunisiennes. Message personnalisé, jamais de copier-coller.'},
+  {t:'Recommandations structurées', d:'À J+2 de chaque événement, une demande explicite de mise en relation. Objectif : 1 nom par événement produit.'},
+  {t:'Hôtels & lieux', d:'Un contact privilégié par hôtel (Laico, Movenpick, Four Seasons, Résidence Tunis). Ils reçoivent les appels des entreprises avant vous : soyez leur option de référence, avec une commission d\'apport claire.'},
+  {t:'Traiteurs & techniques', d:'Les prestataires voient passer des appels d\'offres avant tout le monde. Un déjeuner par mois avec deux d\'entre eux = un flux régulier de leads.'},
+  {t:'Événements professionnels', d:'UTICA, CCI Tunis, chambres de commerce, salons sectoriels : venez avec un cas client imprimé, pas avec une carte de visite.'},
+  {t:'Contenu régulier', d:'3 publications par semaine sur LinkedIn (coulisses, méthode, cas clients). Un contenu de coulisses génère plus de demande entrante qu\'une plaquette.'}
+];
+
+function viewAcquisition(){
+  const done = state.content || [];
+  return pageHead('Croissance', 'Moteur d\'acquisition',
+    'Votre problème n°1 est la visibilité : voici le calendrier éditorial, les messages prêts à envoyer et les canaux à activer.',
+    `<button class="btn" data-action="print">Imprimer</button>`)
+  + `<div class="cols">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="cardhead"><h3>Calendrier éditorial — 4 semaines</h3><span class="hint">3 posts / semaine · cochez ce qui est fait</span></div>
+        ${CONTENT_PLAN.map((c,i)=>`<div class="item">
+          <input type="checkbox" data-action="toggle-content" data-i="${i}" ${done.includes(i)?'checked':''} style="width:16px;margin-top:4px;flex:0 0 16px;accent-color:var(--accent)">
+          <div class="txt">
+            <div class="t1" ${done.includes(i)?'style="text-decoration:line-through;opacity:.55"':''}>S${c.w} · ${esc(c.day)} — ${esc(c.angle)}</div>
+            <div class="t2">${esc(c.format)} · « ${esc(c.hook)} »</div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="cardhead"><h3>Canaux à activer</h3><span class="hint">2 actifs + recommandations</span></div>
+        ${SOURCES.map(s=>`<div class="item"><div class="dot"></div><div class="txt">
+          <div class="t1">${esc(s.t)}</div><div class="t2">${esc(s.d)}</div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="cardhead"><h3>Messages prêts à envoyer</h3><span class="hint">personnalisez, copiez, envoyez</span></div>
+      <div class="formgrid" style="margin-bottom:14px">
+        <div class="field"><label>Contact</label><input id="tplContact" placeholder="Mme Trabelsi"></div>
+        <div class="field"><label>Société</label><input id="tplSociete" placeholder="Banque Zitouna"></div>
+      </div>
+      <div id="tplList">
+        ${TEMPLATES.map((t,i)=>`<div class="tpl">
+          <h4>${esc(t.title)}</h4>
+          <div class="when">${esc(t.when)}</div>
+          <pre>${esc(t.body)}</pre>
+          <button class="btn mini" data-action="copy-tpl" data-i="${i}">Copier le message</button>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- plan ---------- */
+function viewPlan(){
+  const k = kpis();
+  const weeks = [
+    {n:'Semaines 1–2', title:'Rendre le pipeline visible', items:[
+      'Saisir tous les leads en cours dans le pipeline (même les vieux).',
+      'Dater une prochaine action sur chacun. Aucun lead sans date.',
+      'Calculer votre marge réelle sur les 3 derniers événements avec l\'onglet Devis. Découvrez lesquels vous avez produits à perte.',
+      'Relancer les 5 propositions sans réponse depuis plus de 8 jours (modèle « break-up honnête »).'
+    ]},
+    {n:'Semaines 3–4', title:'Poser le discours', items:[
+      'Choisir 2 secteurs cibles (ex. banque/assurance et industrie) et 1 format signature (ex. séminaire 150–400 pax).',
+      'Écrire une proposition de référence avec le générateur : elle devient votre modèle.',
+      'Mettre à jour LinkedIn : bannière, titre métier, 2 cas clients en « sélection ».',
+      'Publier les 6 premiers posts du calendrier éditorial.'
+    ]},
+    {n:'Semaines 5–8', title:'Générer de la demande entrante', items:[
+      '20 approches LinkedIn par semaine avec le modèle « observation ».',
+      '1 déjeuner par mois avec un hôtel et un traiteur : accord d\'apport d\'affaires écrit.',
+      'Publier 1 étude de cas chiffrée (contexte, dispositif, budget, résultat).',
+      'Offrir un lead magnet : la checklist J-10, échangeable contre un e-mail.'
+    ]},
+    {n:'Semaines 9–13', title:'Augmenter la valeur par affaire', items:[
+      'Intégrer systématiquement 2 options d\'upsell dans chaque devis (captation vidéo, enquête de satisfaction).',
+      'Écrire une offre « contrat annuel » : 3 événements par an, coordination incluse, prix ferme.',
+      'Demander une recommandation à chaque client à J+2 (systématique, pas au feeling).',
+      'Bilan : comparer taux de conversion, panier moyen et marge avant/après sur le cockpit.'
+    ]}
+  ];
+  return pageHead('Trajectoire', 'Plan 90 jours',
+    'Dans l\'ordre : d\'abord la visibilité sur ce qui existe déjà, puis le discours, puis la demande, puis la marge. Ne sautez pas d\'étape.',
+    `<button class="btn" data-action="print">Imprimer le plan</button>`)
+  + `<div class="grid kpis">
+      <div class="card kpi"><div class="lab">Leads à dater</div><div class="val">${state.leads.filter(l=>!l.nextDate && activeLead(l)).length}</div><div class="sub">objectif : 0</div></div>
+      <div class="card kpi"><div class="lab">Relances en retard</div><div class="val ${k.late.length?'t-bad':'t-ok'}">${k.late.length}</div><div class="sub">objectif : 0</div></div>
+      <div class="card kpi accent"><div class="lab">Panier moyen actif</div><div class="val">${money(k.actives.length? k.actives.reduce((a,l)=>a+Number(l.valeur||0),0)/k.actives.length : 0)}</div><div class="sub">le levier le plus rapide</div></div>
+    </div>
+    ${weeks.map(w=>`<div class="card" style="margin-bottom:14px">
+      <div class="cardhead"><h3>${esc(w.n)} — ${esc(w.title)}</h3></div>
+      ${w.items.map(i=>`<div class="item"><div class="dot"></div><div class="txt"><div class="t1">${esc(i)}</div></div></div>`).join('')}
+    </div>`).join('')}
+    <div class="card">
+      <div class="cardhead"><h3>Les 4 chiffres à suivre chaque lundi</h3></div>
+      <div class="small body-text">
+        1. <b>Nombre d'approches sortantes</b> de la semaine (objectif : 20).<br>
+        2. <b>Taux de réponse</b> aux approches (objectif : > 25 %).<br>
+        3. <b>Propositions envoyées</b> (objectif : 2 / semaine).<br>
+        4. <b>Marge moyenne</b> des devis validés (objectif : > 35 %).
+      </div>
+    </div>`;
+}
+
+/* =========================================================
+   ROUTEUR
+   ========================================================= */
+function route(){
+  const h = (location.hash || '#cockpit').slice(1);
+  const [base, arg] = h.split('/');
+  const main = $('#main');
+  const map = {cockpit:viewCockpit, pipeline:viewPipeline, devis:viewDevis, proposition:viewProposition, acquisition:viewAcquisition, plan:viewPlan};
+  if(base==='devis' && arg){ main.innerHTML = viewDevisEditor(arg); draft = draft && draft.id===arg ? draft : (state.devis.find(d=>d.id===arg) ? JSON.parse(JSON.stringify(state.devis.find(d=>d.id===arg))) : newDraft()); if(!state.devis.find(d=>d.id===arg)) draft.id = arg; }
+  else if(map[base]) main.innerHTML = map[base]();
+  else main.innerHTML = viewCockpit();
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active', a.dataset.route===base));
+  window.scrollTo(0,0);
+  const si = $('#storeinfo');
+  if(si) si.innerHTML = REMOTE_API ? 'Synchronisé avec votre site'
+    : store.persistent ? 'Sauvegarde locale active'
+    : 'Aperçu : données non persistées. Téléchargez le fichier et ouvrez-le dans un onglet.';
+  const b = $('.banner'); if(b) b.classList.toggle('on', !store.persistent && !REMOTE_API);
+
+  const eb = $('#embednav');
+  if(eb && EMBED){
+    eb.innerHTML = [['cockpit','Cockpit'],['pipeline','Pipeline'],['devis','Devis'],['proposition','Proposition'],['acquisition','Acquisition'],['plan','Plan 90 j']]
+      .map(([r,l]) => `<a href="#${r}" class="${base===r?'active':''}">${l}</a>`).join('');
+  }
+  postHeight();
+}
+/* hauteur communiquée au site hôte (iframe auto-dimensionnée) */
+function postHeight(){
+  if(window.parent === window) return;
+  try {
+    setTimeout(()=>{
+      window.parent.postMessage({type:'cockpit-height', height: Math.ceil(document.documentElement.scrollHeight)}, '*');
+    }, 80);
+  } catch(e){}
+}
+window.addEventListener('resize', postHeight);
+window.addEventListener('message', e => {
+  if(e.data && e.data.type === 'cockpit-set'){ state.leads = e.data.leads || state.leads; store.set('leads', state.leads); route(); }
+});
+window.addEventListener('hashchange', route);
+
+/* =========================================================
+   ÉVÉNEMENTS
+   ========================================================= */
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-action]');
+  if(!t) return;
+  const a = t.dataset.action;
+
+  if(a==='new-lead'){ openLeadModal(null); }
+  if(a==='edit-lead'){ openLeadModal(t.dataset.id); }
+  if(a==='move'){
+    const l = state.leads.find(x=>x.id===t.dataset.id);
+    if(!l) return;
+    const i = STAGES.findIndex(s=>s.id===l.stage);
+    const j = Math.min(STAGES.length-1, Math.max(0, i + Number(t.dataset.dir)));
+    l.stage = STAGES[j].id;
+    save(); route();
+  }
+  if(a==='new-devis'){ draft = newDraft(); location.hash = '#devis/'+draft.id; route(); }
+  if(a==='open-devis'){ draft = JSON.parse(JSON.stringify(state.devis.find(d=>d.id===t.dataset.id) || newDraft())); location.hash = '#devis/'+draft.id; route(); }
+  if(a==='back-devis'){ draft = null; location.hash = '#devis'; }
+  if(a==='add-line'){
+    const p = LINE_PRESETS[Number(t.dataset.i)];
+    draft.lines.push({label:p.label, cat:p.cat, qty:1, cost:0, coef:p.coef});
+    refreshDevis();
+  }
+  if(a==='del-line'){ draft.lines.splice(Number(t.dataset.i),1); refreshDevis(); }
+  if(a==='save-devis'){
+    const i = state.devis.findIndex(d=>d.id===draft.id);
+    const copy = JSON.parse(JSON.stringify(draft));
+    if(i>=0) state.devis[i] = copy; else state.devis.push(copy);
+    save(); toast('Devis enregistré'); location.hash = '#devis';
+  }
+  if(a==='devis-to-proposal'){
+    const t2 = draftTotals(draft);
+    state.proposal = Object.assign({}, state.proposal, {
+      client: draft.client, event: draft.event, date: draft.date,
+      pax: draft.pax, budget: Math.round(t2.htNet)
+    });
+    save(); toast('Proposition pré-remplie depuis le devis'); location.hash = '#proposition';
+  }
+  if(a==='copy-proposal'){ copyText(buildProposal(state.proposal), 'Proposition copiée'); }
+  if(a==='print'){ window.print(); }
+  if(a==='mail-proposal'){
+    const p = state.proposal;
+    const sub = encodeURIComponent('Proposition — '+(p.event||'votre événement'));
+    const body = encodeURIComponent(buildProposal(p));
+    window.location.href = 'mailto:?subject='+sub+'&body='+body;
+  }
+  if(a==='copy-tpl'){
+    const tpl = TEMPLATES[Number(t.dataset.i)];
+    const contact = ($('#tplContact') && $('#tplContact').value.trim()) || '[contact]';
+    const societe = ($('#tplSociete') && $('#tplSociete').value.trim()) || '[société]';
+    const txt = tpl.body.replace(/\{contact\}/g, contact).replace(/\{societe\}/g, societe).replace(/\{evenement\}/g, 'votre événement');
+    copyText(txt, 'Message copié');
+  }
+  if(a==='toggle-content'){
+    const i = Number(t.dataset.i);
+    const arr = state.content || [];
+    const k = arr.indexOf(i);
+    if(k>=0) arr.splice(k,1); else arr.push(i);
+    state.content = arr; save();
+    const item = t.closest('.item'); const title = item.querySelector('.t1');
+    if(title) title.style.cssText = k>=0 ? '' : 'text-decoration:line-through;opacity:.55';
+  }
+  if(a==='export'){ download('cockpit-agence-'+todayISO()+'.json', JSON.stringify(state,null,2), 'application/json'); }
+  if(a==='exportCsv'){
+    const head = ['societe','contact','secteur','evenement','pax','valeur','source','stage','next','nextDate','notes'];
+    const csv = [head.join(';')].concat(state.leads.map(l=>head.map(h=>'"'+String(l[h]==null?'':l[h]).replace(/"/g,'""')+'"').join(';'))).join('\n');
+    download('leads-'+todayISO()+'.csv', '\ufeff'+csv, 'text/csv');
+  }
+  if(a==='import'){ $('#fileinput').click(); }
+  if(a==='modal-close'){ closeModal(); }
+});
+
+/* inputs devis / proposition */
+document.addEventListener('input', e=>{
+  const el = e.target;
+  if(el.dataset && el.dataset.dfield!==undefined && draft){
+    const k = el.dataset.dfield;
+    draft[k] = el.value;
+    if(k==='remise' || k==='tva'){ const tot = $('#totals'); if(tot) tot.innerHTML = totalsHTML(draft); }
+    return;
+  }
+  if(el.dataset && el.dataset.line!==undefined && draft){
+    const i = Number(el.dataset.line), k = el.dataset.k;
+    draft.lines[i][k] = el.value;
+    const t = lineTotals(draft.lines[i]);
+    const pv = document.querySelector('[data-cell="pv-'+i+'"]');
+    const tot = document.querySelector('[data-cell="tot-'+i+'"]');
+    if(pv) pv.textContent = fmt(t.unitSale);
+    if(tot) tot.textContent = fmt(t.sale);
+    const tt = $('#totals'); if(tt) tt.innerHTML = totalsHTML(draft);
+    return;
+  }
+  if(el.dataset && el.dataset.pfield!==undefined){
+    state.proposal[el.dataset.pfield] = el.value;
+    save();
+    const pt = $('#proposalText'); if(pt) pt.textContent = buildProposal(state.proposal);
+    return;
+  }
+  if(el.id==='search'){
+    const q = el.value.toLowerCase().trim();
+    document.querySelectorAll('.leadcard').forEach(c=>{
+      c.style.display = c.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+});
+
+/* film picker */
+document.addEventListener('change', e=>{
+  if(e.target.id==='fileinput' && e.target.files && e.target.files[0]){
+    const f = e.target.files[0];
+    const r = new FileReader();
+    r.onload = () => {
+      try{
+        const d = JSON.parse(r.result);
+        if(d.leads) state.leads = d.leads;
+        if(d.devis) state.devis = d.devis;
+        if(d.proposal) state.proposal = d.proposal;
+        if(d.content) state.content = d.content;
+        if(d.profile) state.profile = d.profile;
+        save(); toast('Données restaurées'); route();
+      }catch(err){ toast('Fichier invalide'); }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  }
+});
+
+/* ---------- modal lead ---------- */
+function openLeadModal(id){
+  const l = id ? JSON.parse(JSON.stringify(state.leads.find(x=>x.id===id))) : {id:uid(), societe:'', contact:'', secteur:'', evenement:'', pax:'', valeur:'', source:'', stage:'nouveau', next:'', nextDate:'', notes:''};
+  const opts = STAGES.map(s=>`<option value="${s.id}" ${l.stage===s.id?'selected':''}>${s.label}</option>`).join('');
+  const srcs = ['Recommandation','LinkedIn','Appel entrant','Salon','Site web','Partenaire hôtel','Traiteur','Autre'];
+  $('#modalhost').innerHTML = `<div class="overlay"><div class="modal">
+    <h3>${id?'Modifier le lead':'Nouveau lead'}</h3>
+    <div class="formgrid">
+      <div class="field"><label>Société *</label><input id="m-societe" value="${esc(l.societe)}"></div>
+      <div class="field"><label>Contact</label><input id="m-contact" value="${esc(l.contact)}"></div>
+      <div class="field"><label>Secteur</label><input id="m-secteur" value="${esc(l.secteur)}"></div>
+      <div class="field"><label>Type d'événement</label><input id="m-evenement" value="${esc(l.evenement)}" placeholder="Séminaire annuel 300 pax"></div>
+      <div class="field"><label>Participants</label><input id="m-pax" type="number" value="${esc(l.pax)}"></div>
+      <div class="field"><label>Valeur estimée (TND)</label><input id="m-valeur" type="number" value="${esc(l.valeur)}"></div>
+      <div class="field"><label>Source</label><select id="m-source">${srcs.map(s=>`<option ${l.source===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label>Étape</label><select id="m-stage">${opts}</select></div>
+      <div class="field full"><label>Prochaine action</label><input id="m-next" value="${esc(l.next)}" placeholder="Appeler pour valider le lieu"></div>
+      <div class="field full"><label>Date de la prochaine action</label><input id="m-nextDate" type="date" value="${esc(l.nextDate)}"></div>
+      <div class="field full"><label>Notes</label><textarea id="m-notes" rows="2">${esc(l.notes)}</textarea></div>
+    </div>
+    <div class="foot">
+      ${id?`<button class="btn danger" data-action="modal-delete" data-id="${l.id}">Supprimer</button>`:''}
+      <button class="btn" data-action="modal-close">Annuler</button>
+      <button class="btn primary" data-action="modal-save" data-id="${l.id}">Enregistrer</button>
+    </div>
+  </div></div>`;
+  $('#modalhost').querySelector('[data-action="modal-save"]').addEventListener('click', ()=>{
+    const val = k => ($('#m-'+k) ? $('#m-'+k).value : '');
+    if(!val('societe').trim()){ toast('Le nom de la société est obligatoire'); return; }
+    const obj = {
+      id:l.id, societe:val('societe').trim(), contact:val('contact'), secteur:val('secteur'),
+      evenement:val('evenement'), pax:val('pax'), valeur:Number(val('valeur'))||0,
+      source:val('source'), stage:val('stage'), next:val('next'), nextDate:val('nextDate'), notes:val('notes')
+    };
+    const i = state.leads.findIndex(x=>x.id===l.id);
+    if(i>=0) state.leads[i] = obj; else state.leads.push(obj);
+    save(); closeModal(); route(); toast('Lead enregistré');
+  });
+  $('#modalhost').querySelector('[data-action="modal-delete"]')?.addEventListener('click', ev=>{
+    state.leads = state.leads.filter(x=>x.id!==ev.target.dataset.id);
+    save(); closeModal(); route(); toast('Lead supprimé');
+  });
+  $('#modalhost').querySelector('.overlay').addEventListener('click', ev=>{ if(ev.target.classList.contains('overlay')) closeModal(); });
+  const f = $('#m-societe'); if(f) f.focus();
+}
+function closeModal(){ $('#modalhost').innerHTML = ''; }
+
+/* ---------- clipboard & download ---------- */
+function copyText(txt, msg){
+  const done = () => toast(msg||'Copié');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>fallback());
+  } else fallback();
+  function fallback(){
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ toast('Copie bloquée : sélectionnez le texte manuellement'); }
+    document.body.removeChild(ta);
+  }
+}
+function download(name, content, type){
+  const b = new Blob([content], {type:type||'text/plain;charset=utf-8'});
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a');
+  a.href = u; a.download = name; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(u), 1000);
+  toast('Fichier téléchargé');
+}
+
+/* ---------- init ---------- */
+async function bootstrap(){
+  if (REMOTE_API) {
+    try {
+      const r = await fetch(REMOTE_API + '/state', {credentials:'include'});
+      if (r.ok) {
+        const d = await r.json();
+        if (d && typeof d === 'object') {
+          if (Array.isArray(d.leads)) state.leads = d.leads;
+          if (Array.isArray(d.devis)) state.devis = d.devis;
+          if (d.proposal && typeof d.proposal === 'object') state.proposal = Object.assign({}, state.proposal, d.proposal);
+          if (Array.isArray(d.content)) state.content = d.content;
+          if (d.profile && typeof d.profile === 'object') state.profile = Object.assign({}, state.profile, d.profile);
+          store.set('leads', state.leads); store.set('devis', state.devis);
+        }
+      }
+    } catch(e) { /* repli : données locales */ }
+  }
+  route();
+}
+bootstrap();
+</script>
+</body>
+</html>

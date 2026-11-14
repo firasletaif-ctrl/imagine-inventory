@@ -471,6 +471,18 @@ def generate_daily_checks(today):
         pass
     return InventoryCheck.query.filter_by(check_date=today).order_by(InventoryCheck.id).all()
 
+class CockpitState(db.Model):
+    """Etat du cockpit commercial (pipeline, devis, propositions, contenu).
+    Un seul enregistrement par organisation : payload JSON, comme ca aucune
+    migration lourde n'est necessaire quand le cockpit evolue.
+    Table creee automatiquement par db.create_all() dans init_db()."""
+    __tablename__ = 'cockpit_state'
+    id = db.Column(db.Integer, primary_key=True)
+    org = db.Column(db.String(50), unique=True, nullable=False, default='default')
+    payload = db.Column(db.Text, default='{}')
+    updated_at = db.Column(db.DateTime, default=tunisia_now)
+    updated_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+
 # ═══════════ H E L P E R S ═══════════
 @login_manager.user_loader
 def load_user(uid): return db.session.get(User, int(uid))
@@ -715,7 +727,7 @@ def send_email(to, subject, body_html, body_text=''):
         method='POST'
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=15):
             print(f'[EMAIL] OK -> {to}')
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()[:200] if e.fp else 'N/A'
@@ -970,6 +982,8 @@ ALL_PERMISSIONS = [
     {"key":"reset_tables","label":"Reset tables","desc":"Vider toutes les tables (mot de passe requis)","icon":"♻️","group":"Base de données"},
     {"key":"photo_backup","label":"Exporter les photos (ZIP)","desc":"Sauvegarde ZIP de toutes les photos","icon":"📸","group":"Base de données"},
     {"key":"photo_restore","label":"Restaurer les photos","desc":"Restaurer / stocker les photos en base (ZIP)","icon":"📥","group":"Base de données"},
+    # ── 💼 Commercial ──
+    {"key":"manage_cockpit","label":"Cockpit commercial","desc":"Pipeline de leads, devis et marges, propositions commerciales, plan d'acquisition","icon":"💼","group":"Commercial"},
     # ── 🔓 Accès global (hérité — compatible avec les anciens rôles) ──
     {"key":"manage_equipment","label":"Matériel : accès global (hérité)","desc":"Toutes les permissions du bloc matériel/stock/exports/inventaire","icon":"","group":"Accès global (hérité)"},
     {"key":"manage_schedule","label":"Planning : accès global (hérité)","desc":"Toutes les permissions du planning","icon":"📅","group":"Accès global (hérité)"},
@@ -1078,6 +1092,7 @@ def register():
                 flash('Erreur lors de la creation du compte. Reessayez.','error')
                 print(f'[REGISTER ERROR] {e}')
                 return render_template('register.html')
+    return render_template('register.html')
 
 @app.route('/logout')
 @login_required
@@ -1107,11 +1122,11 @@ def _check_keepalive_health():
             set_app_setting('keepalive_alert_date', today_s)
             send_email('firasletaif@gmail.com',
                        '⚠️ Keep-alive Imagine Inventory : pinger silencieux',
-                       f'<p>Depuis plus de <strong>2 heures</strong>, le pinger automatique '
-                       f'(cron-job.org) ne s\'est plus manifeste sur le site entre 7h et 1h.</p>'
-                       f'<p>Le site risque de s\'endormir en pleine journee (1re page lente).</p>'
-                       f'<p><strong>À faire :</strong> ouvrir <a href="https://console.cron-job.org">cron-job.org</a> '
-                       f'et verifier que le job « Imagine Events - keep alive » est bien <strong>actif</strong>.</p>',
+                       '<p>Depuis plus de <strong>2 heures</strong>, le pinger automatique '
+                       '(cron-job.org) ne s\'est plus manifeste sur le site entre 7h et 1h.</p>'
+                       '<p>Le site risque de s\'endormir en pleine journee (1re page lente).</p>'
+                       '<p><strong>À faire :</strong> ouvrir <a href="https://console.cron-job.org">cron-job.org</a> '
+                       'et verifier que le job « Imagine Events - keep alive » est bien <strong>actif</strong>.</p>',
                        'Depuis plus de 2 heures, le pinger automatique (cron-job.org) ne s est plus '
                        'manifeste sur le site entre 7h et 1h. Verifier sur console.cron-job.org que le '
                        'job "Imagine Events - keep alive" est actif.')
@@ -2373,7 +2388,7 @@ def edit_event(evid):
     EventAssignment.query.filter_by(event_id=evid).delete()
     for uid in request.form.getlist('assigned_users'):
         db.session.add(EventAssignment(event_id=evid, user_id=int(uid)))
-    db.session.commit(); log_action('edit_event', f'Evenement "{evt.title}" modifie'); flash(f'Evenement modifie.','success')
+    db.session.commit(); log_action('edit_event', f'Evenement "{evt.title}" modifie'); flash('Evenement modifie.','success')
     return redirect(url_for('schedule'))
 
 @app.route('/schedule/<int:evid>/delete', methods=['POST'])
@@ -4399,6 +4414,133 @@ def export_printer():
     """Page optimisee pour impression (CTRL+P -> PDF)"""
     return render_template('export_print.html', equipment=Equipment.query.order_by(Equipment.name).all(), now=tunisia_now())
 
+# ═══════════ C O C K P I T   C O M M E R C I A L ═══════════
+COCKPIT_ORG = 'default'
+COCKPIT_STAGES = ('nouveau', 'qualifie', 'proposition', 'nego', 'signe', 'perdu')
+COCKPIT_MAX_PAYLOAD = 2_000_000      # 2 Mo : large marge, garde-fou anti-abus
+
+
+def _cockpit_txt(v, limit=5000):
+    """Nettoie un champ texte : type sur, longueur bornee."""
+    if v is None: return ''
+    if not isinstance(v, str): v = str(v)
+    return v[:limit]
+
+
+def _cockpit_num(v, default=0.0):
+    try:
+        n = float(v)
+        return n if n == n and abs(n) != float('inf') else default   # ecarte NaN / inf
+    except (TypeError, ValueError):
+        return default
+
+
+def _cockpit_clean(data):
+    """Valide et normalise le payload envoye par le cockpit.
+    Ne leve jamais d'exception : les entrees invalides sont ignorees."""
+    if not isinstance(data, dict): return {'leads': [], 'devis': [], 'proposal': {}, 'content': [], 'profile': {}}
+    leads = []
+    for l in (data.get('leads') or [])[:2000]:
+        if not isinstance(l, dict): continue
+        stage = l.get('stage') if l.get('stage') in COCKPIT_STAGES else 'nouveau'
+        leads.append({
+            'id': _cockpit_txt(l.get('id') or uuid.uuid4().hex, 40),
+            'societe': _cockpit_txt(l.get('societe'), 200),
+            'contact': _cockpit_txt(l.get('contact'), 200),
+            'secteur': _cockpit_txt(l.get('secteur'), 120),
+            'evenement': _cockpit_txt(l.get('evenement'), 250),
+            'pax': int(_cockpit_num(l.get('pax'))),
+            'valeur': _cockpit_num(l.get('valeur')),
+            'source': _cockpit_txt(l.get('source'), 80),
+            'stage': stage,
+            'next': _cockpit_txt(l.get('next'), 300),
+            'nextDate': _cockpit_txt(l.get('nextDate'), 10),
+            'notes': _cockpit_txt(l.get('notes'), 4000),
+        })
+    devis = []
+    for d in (data.get('devis') or [])[:500]:
+        if not isinstance(d, dict): continue
+        lignes = []
+        for li in (d.get('lines') or [])[:300]:
+            if not isinstance(li, dict): continue
+            lignes.append({
+                'label': _cockpit_txt(li.get('label'), 200),
+                'cat': _cockpit_txt(li.get('cat'), 80),
+                'qty': _cockpit_num(li.get('qty')),
+                'cost': _cockpit_num(li.get('cost')),
+                'coef': _cockpit_num(li.get('coef'), 1.0),
+            })
+        devis.append({
+            'id': _cockpit_txt(d.get('id') or uuid.uuid4().hex, 40),
+            'client': _cockpit_txt(d.get('client'), 200),
+            'event': _cockpit_txt(d.get('event'), 250),
+            'date': _cockpit_txt(d.get('date'), 10),
+            'pax': int(_cockpit_num(d.get('pax'))),
+            'remise': _cockpit_num(d.get('remise')),
+            'tva': _cockpit_num(d.get('tva'), 19.0),
+            'lines': lignes,
+            'created': _cockpit_txt(d.get('created'), 10),
+        })
+    prop = data.get('proposal') if isinstance(data.get('proposal'), dict) else {}
+    proposal = {k: _cockpit_txt(prop.get(k), 3000) for k in
+                ('client','secteur','objectif','event','date','lieu','pax','budget','concept','options')}
+    content = [int(c) for c in (data.get('content') or [])[:200] if isinstance(c, (int, float))]
+    prof = data.get('profile') if isinstance(data.get('profile'), dict) else {}
+    profile = {k: _cockpit_txt(prof.get(k), 200) for k in ('agency','contact','tel','mail')}
+    profile['tva'] = _cockpit_num(prof.get('tva'), 19.0)
+    return {'leads': leads, 'devis': devis, 'proposal': proposal, 'content': content, 'profile': profile}
+
+
+@app.route('/cockpit')
+@permission_required('manage_cockpit')
+def cockpit_page():
+    """Ecran du cockpit commercial (leads, devis, propositions, acquisition)."""
+    return render_template('cockpit.html')
+
+
+@app.route('/api/cockpit/state', methods=['GET', 'PUT'])
+@login_required
+def cockpit_api_state():
+    """API JSON consommee par le cockpit (meme origine -> session deja valide).
+    Repond toujours en JSON, jamais en redirection, pour que le front sache quoi faire."""
+    if not current_user.has_permission('manage_cockpit'):
+        return jsonify({'error': 'permission_required', 'required': 'manage_cockpit'}), 403
+
+    row = CockpitState.query.filter_by(org=COCKPIT_ORG).first()
+
+    if request.method == 'GET':
+        if not row or not row.payload:
+            return jsonify({})
+        try:
+            return jsonify(json.loads(row.payload))
+        except (ValueError, TypeError):
+            return jsonify({})          # payload corrompu : on repart proprement sans planter
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'invalid_json', 'hint': 'objet JSON attendu'}), 400
+    clean = _cockpit_clean(data)
+    payload = json.dumps(clean, ensure_ascii=False)
+    if len(payload) > COCKPIT_MAX_PAYLOAD:
+        return jsonify({'error': 'payload_too_large'}), 413
+
+    try:
+        if not row:
+            row = CockpitState(org=COCKPIT_ORG)
+            db.session.add(row)
+        row.payload = payload
+        row.updated_at = tunisia_now()
+        row.updated_by = current_user.id
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f'[COCKPIT] sauvegarde impossible: {type(e).__name__}: {str(e)[:120]}')
+        return jsonify({'error': 'save_failed'}), 500
+
+    log_action('cockpit_save', f"Cockpit : {len(clean['leads'])} lead(s), {len(clean['devis'])} devis")
+    return jsonify({'ok': True, 'leads': len(clean['leads']), 'devis': len(clean['devis'])})
+
+
 # ═══════ I N I T   D B ═══════
 def init_db():
     """Cree les tables et les donnees par defaut manquantes.
@@ -4586,4 +4728,4 @@ def init_db():
 init_db()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=os.environ.get('FLASK_DEBUG', '1') == '1', host='0.0.0.0', port=5000)

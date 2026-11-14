@@ -88,6 +88,12 @@
                 <span class="nav-icon">📈</span><span>Statistiques</span>
             </a>
             {% endif %}
+            {% if has_perm('manage_cockpit') %}
+            <div class="nav-section-label nav-section-spaced">💼 Commercial</div>
+            <a href="{{ url_for('cockpit_page') }}" class="nav-item {% if request.endpoint == 'cockpit_page' %}active{% endif %}" title="Pipeline de leads, devis et marges, propositions">
+                <span class="nav-icon">💼</span><span>Cockpit commercial</span>
+            </a>
+            {% endif %}
             {% if has_perm('export_excel','export_pdf','manage_equipment') %}
             <div style="margin:.25rem 0;padding:0 .5rem">
                 <div style="font-size:.65rem;text-transform:uppercase;color:rgba(255,255,255,.3);letter-spacing:2px;padding:.25rem .5rem">📤 Export</div>
