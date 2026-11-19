@@ -2,22 +2,27 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0B1D3A">
 <title>Imagine Events</title>
 <style>
-  body{margin:0;background:#0B1D3A;color:#fff;font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
-  .box{text-align:center;padding:2rem}
-  .box img{height:80px;margin-bottom:1.2rem}
-  .box p{color:rgba(255,255,255,.7);font-size:.9rem;margin:0}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{width:100%;min-width:320px;height:100%;margin:0;overflow:hidden}
+  body{background:#0B1D3A;color:#fff;font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+  .box{text-align:center;width:min(100%,360px);padding:clamp(1rem,6vw,2rem)}
+  .box img{display:block;height:clamp(56px,18vw,80px);max-width:100%;object-fit:contain;margin:0 auto 1.2rem}
+  .box p{color:rgba(255,255,255,.7);font-size:clamp(.88rem,4vw,1rem);margin:.6rem 0;line-height:1.5}
+  .box .title{color:#fff;font-size:clamp(1rem,5vw,1.1rem);font-weight:700}
   .spin{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#E63946;border-radius:50%;margin:1.5rem auto 0;animation:s 1s linear infinite}
   @keyframes s{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 </style>
 </head>
 <body>
 <div class="box">
-  <p style="font-size:1.1rem;font-weight:bold">Imagine Events — Gestion du dépôt</p>
+  <p class="title">Imagine Events — Gestion du dépôt</p>
   <p>Ouverture de l'application…</p>
-  <div class="spin"></div>
+  <div class="spin" aria-hidden="true"></div>
 </div>
 </body>
 </html>

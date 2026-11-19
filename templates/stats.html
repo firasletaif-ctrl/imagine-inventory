@@ -44,7 +44,7 @@
         <div class="stat-card"><div class="stat-num" style="color:#B45309">{{ in_repair }}</div><div class="stat-lbl">Unités en réparation</div><div class="stat-sub"><a href="{{ url_for('repairs_page') }}" style="color:var(--blue);text-decoration:none">voir les réparations →</a></div></div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1rem">
+    <div class="stats-panels" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1rem">
         <!-- Top matériel -->
         <div class="stat-panel">
             <h2><span class="ui-icon" aria-hidden="true">emoji_events</span> Matériel le plus emprunté (top 10)</h2>

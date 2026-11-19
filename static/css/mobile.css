@@ -1,0 +1,171 @@
+/* Imagine Inventory — adaptations tactiles et petits écrans (site + WebView Capacitor). */
+:root {
+    --mobile-gutter: clamp(10px, 3.5vw, 16px);
+    --mobile-header-height: calc(var(--topbar-h, 60px) + env(safe-area-inset-top, 0px));
+}
+
+@media screen and (max-width: 768px) {
+    html, body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        -webkit-text-size-adjust: 100%;
+    }
+    body { min-width: 320px; }
+
+    .mobile-header {
+        height: var(--mobile-header-height);
+        min-height: var(--mobile-header-height);
+        padding: env(safe-area-inset-top, 0px) max(.65rem, env(safe-area-inset-right, 0px)) 0 max(.65rem, env(safe-area-inset-left, 0px));
+        gap: .55rem;
+    }
+    .mobile-header img { flex: none; }
+    .mobile-header .mh-title { min-width: 0; }
+
+    .sidebar {
+        top: env(safe-area-inset-top, 0px);
+        bottom: env(safe-area-inset-bottom, 0px);
+        height: auto;
+        width: min(300px, calc(100vw - 48px));
+    }
+    body.sb-collapsed .sidebar { width: min(300px, calc(100vw - 48px)); }
+    .sidebar-brand { padding-top: 1rem; }
+    .sidebar-nav { padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)); }
+
+    .main-content {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding: calc(var(--mobile-header-height) + .75rem) var(--mobile-gutter) calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+    .main-content > * { width: 100%; max-width: 100%; min-width: 0; }
+    .public-page .main-content.no-sidebar { padding-top: max(1rem, env(safe-area-inset-top, 0px)); }
+    .form-page, .detail-page, .page-content { width: 100%; max-width: 100% !important; min-width: 0; }
+
+    img, video, canvas, iframe { max-width: 100%; }
+    input, select, textarea {
+        max-width: 100%;
+        min-width: 0;
+        font-size: 16px !important; /* Evite le zoom automatique des champs dans Safari iOS. */
+    }
+    .form-row { grid-template-columns: minmax(0, 1fr) !important; gap: .75rem; }
+    .form-row > *, .form-group, .form-group > *, .search-wrapper { min-width: 0; max-width: 100%; }
+    .form-actions, .dash-actions, .detail-actions { flex-wrap: wrap; }
+    .form-actions > *, .dash-actions > * { min-width: 0; }
+    .btn, button { max-width: 100%; touch-action: manipulation; }
+    .btn { white-space: normal; }
+
+    .dash-header, .page-header { align-items: flex-start; min-width: 0; gap: .65rem; }
+    .dash-header > *, .page-header > * { min-width: 0; }
+    .dash-title, .page-header h1 { overflow-wrap: anywhere; }
+    .search-section { width: 100%; max-width: 100%; }
+    .search-form { min-width: 0; }
+    .search-wrapper { width: 100%; }
+    .filter-select { min-width: 0; width: 100%; }
+    .category-chips { max-width: 100%; }
+    .chip { white-space: normal; }
+
+    .history-table-wrapper, .table-scroll, .table-responsive, .table-wrap, .cal-scroll {
+        max-width: 100%;
+        overflow-x: auto !important;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+    .history-table-wrapper > table, .table-scroll > table, .table-responsive > table, .table-wrap > table { min-width: 520px; }
+
+    .modal-overlay { padding: max(8px, env(safe-area-inset-top, 0px)) 8px max(8px, env(safe-area-inset-bottom, 0px)); }
+    .modal-overlay .modal {
+        width: min(100%, 640px);
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+    .modal-body { min-width: 0; }
+
+    form[style*="min-width"], input[style*="min-width"], select[style*="min-width"], code[style*="min-width"] {
+        min-width: 0 !important;
+    }
+
+    .driver-grid, .recap-grid, .kits-layout, .kit-layout {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+    .driver-grid > *, .recap-grid > *, .kits-layout > *, .kit-layout > * { min-width: 0; }
+    .proof-preview, .proof-grid { grid-template-columns: minmax(0, 1fr); }
+    .cal-scroll { scrollbar-width: thin; }
+    .cal-toolbar { padding: .75rem; gap: .6rem; }
+    .cal-month-label { min-width: 0; }
+    .sync-url-row { min-width: 0; }
+    .sync-url-row input { min-width: 0; flex: 1 1 100%; width: 100%; }
+
+    .inv-row, .inv-eq, .inv-state, .inv-hist-row { min-width: 0; flex-wrap: wrap; }
+    .inv-hist-items { min-width: 0; overflow-wrap: anywhere; }
+    .hbar-name { width: auto; min-width: 0; }
+}
+
+@media screen and (max-width: 600px) {
+    .main-content [style*="minmax(280px"],
+    .main-content [style*="minmax(300px"],
+    .main-content [style*="minmax(340px"] {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}
+
+@media screen and (max-width: 430px) {
+    .mobile-header { gap: .4rem; padding-left: max(.55rem, env(safe-area-inset-left, 0px)); padding-right: max(.55rem, env(safe-area-inset-right, 0px)); }
+    .mobile-header .mh-title { font-size: .94rem; letter-spacing: .2px; }
+    .mobile-header img { height: 28px !important; }
+    .menu-toggle, .mobile-header .mh-bell { width: 40px; height: 40px; }
+    .main-content { padding-left: 10px; padding-right: 10px; }
+
+    .dash-title { font-size: clamp(1.22rem, 5.6vw, 1.45rem); }
+    .page-header h1 { font-size: 1.25rem; }
+    .stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+    .stat-card { min-width: 0; padding: .7rem .65rem; }
+    .stat-value, .stat-num { font-size: 1.25rem; }
+    .stat-label, .stat-lbl { font-size: .68rem; letter-spacing: .3px; }
+    .stat-card .stat-sub { overflow-wrap: anywhere; }
+
+    .detail-section, .form-card, .stat-panel { min-width: 0; padding: .85rem; }
+    .auth-card { padding: 1.35rem 1rem; }
+    .auth-brand { padding: 1.2rem 1rem; }
+    .form-actions { flex-direction: column; align-items: stretch; }
+    .form-actions .btn, .dash-actions .btn { width: 100%; }
+    .footer-info { overflow-wrap: anywhere; }
+
+    .cal-toolbar { align-items: stretch; }
+    .cal-nav { flex-wrap: wrap; justify-content: center; }
+    .cal-month-label { flex: 1 1 130px; font-size: .95rem; }
+    .cal-legend { gap: .45rem; font-size: .67rem; }
+    .cal-grid { min-width: 640px; }
+
+    .stats-panels { grid-template-columns: minmax(0, 1fr) !important; }
+    .hbar-row { display: grid !important; grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr) 34px !important; gap: .35rem; }
+    .hbar-name { width: auto; min-width: 0; font-size: .72rem; }
+    .hbar-track { min-width: 0; }
+    .hbar-val { width: auto; font-size: .72rem; }
+    .vbars { gap: .22rem; }
+    .vbar-lbl { font-size: .58rem; }
+
+    .recap-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .time-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stage-grid { grid-template-columns: minmax(0, 1fr) !important; }
+    .recap-cover { padding: 1rem; }
+    .recap-section { padding: .9rem; }
+    .recap-cover h1 { font-size: 1.25rem; overflow-wrap: anywhere; }
+}
+
+@media screen and (max-width: 360px) {
+    .mobile-header .mh-title { font-size: .88rem; }
+    .mobile-header img { height: 25px !important; }
+    .menu-toggle, .mobile-header .mh-bell { width: 38px; height: 38px; }
+    .main-content { padding-left: 8px; padding-right: 8px; }
+    .stats-row { gap: .4rem; }
+    .stat-card { padding: .62rem .52rem; }
+    .stat-icon { width: 31px; height: 31px; }
+    .btn { padding-left: .72rem; padding-right: .72rem; }
+    .auth-card { padding: 1.2rem .85rem; }
+    .cal-grid { min-width: 600px; }
+}
