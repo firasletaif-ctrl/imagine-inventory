@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-title" content="Inventory">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     {% block head %}{% endblock %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}?v=3">
 </head>
 <body class="{% if not current_user.is_authenticated %}public-page{% endif %}">
     {% if current_user.is_authenticated %}
@@ -220,7 +220,7 @@
         {% endif %}
     </main>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=8"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=9"></script>
     <script src="{{ url_for('static', filename='js/push.js') }}?v=2"></script>
     <script>
     if ('serviceWorker' in navigator) {
@@ -261,7 +261,7 @@
     try { if (localStorage.getItem('ii-sb-collapsed') === '1') document.body.classList.add('sb-collapsed'); } catch(e) {}
     document.addEventListener('click',function(e){
         var sb=document.getElementById('sidebar');
-        if(sb&&sb.classList.contains('open')&&!sb.contains(e.target)&&!e.target.classList.contains('menu-toggle')){
+        if(sb&&sb.classList.contains('open')&&!sb.contains(e.target)&&!(e.target.closest&&e.target.closest('.menu-toggle'))){
             var scrollY = parseInt(document.body.style.top || '0') * -1;
             sb.classList.remove('open');
             document.body.classList.remove('sb-open');
