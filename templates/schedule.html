@@ -165,7 +165,7 @@
             {% endif %}
         </div>
         <div id="pastWrap" style="display:none">
-            <div style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden">
+            <div class="history-table-wrapper" style="background:white;border-radius:14px;border:1px solid var(--gray-200);overflow:hidden">
                 <table class="history-table"><thead><tr><th>Date</th><th>Titre</th><th>Equipe</th><th>Statut</th><th>Action</th></tr></thead>
                     <tbody>{% for evt in past %}<tr>
                         <td>{{ evt.event_date.strftime('%d/%m/%Y') }}</td><td><strong>{{ evt.title }}</strong></td>

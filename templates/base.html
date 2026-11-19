@@ -17,8 +17,9 @@
     <meta name="apple-mobile-web-app-title" content="Inventory">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     {% block head %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}?v=1">
 </head>
-<body>
+<body class="{% if not current_user.is_authenticated %}public-page{% endif %}">
     {% if current_user.is_authenticated %}
     {% if current_user.has_any_permission() %}
     <aside class="sidebar" id="sidebar" aria-label="Navigation principale">
