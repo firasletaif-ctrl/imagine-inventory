@@ -2,6 +2,8 @@
 :root {
     --mobile-gutter: clamp(10px, 3.5vw, 16px);
     --mobile-header-height: calc(var(--topbar-h, 60px) + env(safe-area-inset-top, 0px));
+    --app-visible-height: 100dvh;
+    --app-visible-top: 0px;
 }
 
 @media screen and (max-width: 768px) {
@@ -11,7 +13,8 @@
         overflow-x: hidden;
         -webkit-text-size-adjust: 100%;
     }
-    body { min-width: 320px; }
+    body { min-width: 320px; min-height: 100vh; min-height: 100dvh; }
+    .main-content, .auth-page { min-height: 100vh; min-height: 100dvh; }
 
     .mobile-header {
         height: var(--mobile-header-height);
@@ -41,6 +44,7 @@
     .main-content > * { width: 100%; max-width: 100%; min-width: 0; }
     .public-page .main-content.no-sidebar { padding-top: max(1rem, env(safe-area-inset-top, 0px)); }
     .form-page, .detail-page, .page-content { width: 100%; max-width: 100% !important; min-width: 0; }
+    .flash-container { top: calc(var(--mobile-header-height) + .5rem); left: var(--mobile-gutter); right: var(--mobile-gutter); max-width: none; }
 
     img, video, canvas, iframe { max-width: 100%; }
     input, select, textarea {
@@ -73,12 +77,18 @@
     }
     .history-table-wrapper > table, .table-scroll > table, .table-responsive > table, .table-wrap > table { min-width: 520px; }
 
-    .modal-overlay { padding: max(8px, env(safe-area-inset-top, 0px)) 8px max(8px, env(safe-area-inset-bottom, 0px)); }
+    .modal-overlay {
+        top: var(--app-visible-top, 0px);
+        bottom: auto;
+        height: var(--app-visible-height, 100dvh);
+        align-items: flex-end;
+        padding: max(8px, env(safe-area-inset-top, 0px)) 8px max(8px, env(safe-area-inset-bottom, 0px));
+    }
     .modal-overlay .modal {
         width: min(100%, 640px);
         max-width: calc(100vw - 16px);
         max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
-        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+        max-height: calc(var(--app-visible-height, 100dvh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
         overflow: auto;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
@@ -103,6 +113,11 @@
     .inv-row, .inv-eq, .inv-state, .inv-hist-row { min-width: 0; flex-wrap: wrap; }
     .inv-hist-items { min-width: 0; overflow-wrap: anywhere; }
     .hbar-name { width: auto; min-width: 0; }
+
+    #pushPrompt, .app-toast { bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important; }
+    #pushPrompt { left: 12px !important; right: 12px !important; width: auto !important; max-width: none !important; transform: none !important; flex-wrap: wrap; }
+    #pushPrompt button { min-height: 44px; }
+    #installPrompt { top: max(12px, env(safe-area-inset-top, 0px)) !important; right: max(12px, env(safe-area-inset-right, 0px)) !important; max-width: calc(100vw - 24px); }
 }
 
 @media screen and (max-width: 600px) {

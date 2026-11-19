@@ -16,6 +16,7 @@
 
   function toast(txt, color){
     var ok = document.createElement('div');
+    ok.className = 'app-toast';
     ok.textContent = txt;
     ok.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:' + (color||'#16A34A') + ';color:white;padding:.8rem 1.4rem;border-radius:12px;z-index:9999;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:.9rem';
     document.body.appendChild(ok);

@@ -7,6 +7,25 @@
    - ombre de la recherche collante au défilement
    ═══════════════════════════════════════════════════════════════ */
 
+// Keep fixed sheets/modals inside the actually visible area when the iOS/Android
+// on-screen keyboard opens or the browser chrome changes height.
+(function syncVisualViewport() {
+    const root = document.documentElement;
+    const update = () => {
+        const vv = window.visualViewport;
+        const height = vv ? vv.height : window.innerHeight;
+        const offsetTop = vv ? vv.offsetTop : 0;
+        root.style.setProperty('--app-visible-height', Math.max(0, Math.round(height)) + 'px');
+        root.style.setProperty('--app-visible-top', Math.max(0, Math.round(offsetTop)) + 'px');
+    };
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', update, { passive: true });
+        window.visualViewport.addEventListener('scroll', update, { passive: true });
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     // Auto-dismiss flash messages after 5 seconds
     const flashes = document.querySelectorAll('.flash-message');
