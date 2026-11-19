@@ -110,7 +110,29 @@
     .sync-url-row { min-width: 0; }
     .sync-url-row input { min-width: 0; flex: 1 1 100%; width: 100%; }
 
-    .inv-row, .inv-eq, .inv-state, .inv-hist-row { min-width: 0; flex-wrap: wrap; }
+    .inv-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: stretch;
+        gap: .85rem;
+        padding: .9rem;
+    }
+    .inv-eq, .inv-state { width: 100%; min-width: 0; flex-wrap: wrap; }
+    .inv-eq { gap: .7rem; }
+    .inv-eq > div { flex: 1 1 0; min-width: 0 !important; }
+    .inv-eq-name, .inv-eq-sub { overflow-wrap: anywhere; }
+    .inv-state form {
+        display: grid !important;
+        grid-template-columns: 74px max-content minmax(0, 1fr);
+        align-items: center;
+        gap: .45rem !important;
+        width: 100%;
+    }
+    .inv-state form input[type="number"] { width: 74px !important; min-height: 48px; padding: .55rem .45rem; text-align: center; }
+    .inv-state form > span { white-space: nowrap; }
+    .inv-state form .btn { width: 100%; min-width: 0; min-height: 48px; padding: .55rem .5rem !important; line-height: 1.2; }
+    .inv-verified { white-space: normal; overflow-wrap: anywhere; }
+    .inv-hist-row { min-width: 0; flex-wrap: wrap; }
     .inv-hist-items { min-width: 0; overflow-wrap: anywhere; }
     .hbar-name { width: auto; min-width: 0; }
 

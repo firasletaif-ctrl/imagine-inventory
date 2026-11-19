@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Imagine Inventory — Main JavaScript (v7)
+   Imagine Inventory — Main JavaScript (v9)
    Comportements conservés + petites touches d'ergonomie :
    - fermeture auto des messages flash (5 s)
    - fermeture du menu mobile au clic sur un lien
@@ -79,7 +79,7 @@ document.addEventListener('click', (e) => {
     if (!sidebar) return;
     if (sidebar.classList.contains('open') &&
         !sidebar.contains(e.target) &&
-        !e.target.classList.contains('menu-toggle')) {
+        !(e.target.closest && e.target.closest('.menu-toggle'))) {
         sidebar.classList.remove('open');
         if (document.body.classList.contains('sb-open')) {
             const scrollY = parseInt(document.body.style.top || '0', 10) * -1;
